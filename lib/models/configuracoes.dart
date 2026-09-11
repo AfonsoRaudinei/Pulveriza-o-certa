@@ -1,3 +1,7 @@
+import 'package:flutter/material.dart';
+
+enum TemaApp { system, light, dark }
+
 class Configuracoes {
   const Configuracoes({
     this.limiteDesgaste = 105.0,
@@ -6,6 +10,7 @@ class Configuracoes {
     this.toleranciaMax = 104.99,
     this.nomeConsultor = '',
     this.empresaNome = '',
+    this.tema = TemaApp.system,
   });
 
   final double limiteDesgaste;
@@ -14,6 +19,15 @@ class Configuracoes {
   final double toleranciaMax;
   final String nomeConsultor;
   final String empresaNome;
+  final TemaApp tema;
+
+  ThemeMode get themeMode {
+    return switch (tema) {
+      TemaApp.system => ThemeMode.system,
+      TemaApp.light => ThemeMode.light,
+      TemaApp.dark => ThemeMode.dark,
+    };
+  }
 
   factory Configuracoes.fromJson(Map<String, dynamic> json) {
     return Configuracoes(
@@ -23,6 +37,7 @@ class Configuracoes {
       toleranciaMax: (json['toleranciaMax'] as num?)?.toDouble() ?? 104.99,
       nomeConsultor: json['nomeConsultor'] as String? ?? '',
       empresaNome: json['empresaNome'] as String? ?? '',
+      tema: _temaFromJson(json['tema']),
     );
   }
 
@@ -34,6 +49,7 @@ class Configuracoes {
       'toleranciaMax': toleranciaMax,
       'nomeConsultor': nomeConsultor,
       'empresaNome': empresaNome,
+      'tema': tema.name,
     };
   }
 
@@ -44,6 +60,7 @@ class Configuracoes {
     double? toleranciaMax,
     String? nomeConsultor,
     String? empresaNome,
+    TemaApp? tema,
   }) {
     return Configuracoes(
       limiteDesgaste: limiteDesgaste ?? this.limiteDesgaste,
@@ -52,6 +69,15 @@ class Configuracoes {
       toleranciaMax: toleranciaMax ?? this.toleranciaMax,
       nomeConsultor: nomeConsultor ?? this.nomeConsultor,
       empresaNome: empresaNome ?? this.empresaNome,
+      tema: tema ?? this.tema,
     );
+  }
+
+  static TemaApp _temaFromJson(Object? value) {
+    return switch (value) {
+      'light' => TemaApp.light,
+      'dark' => TemaApp.dark,
+      _ => TemaApp.system,
+    };
   }
 }

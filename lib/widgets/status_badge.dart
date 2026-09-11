@@ -10,7 +10,7 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = _BadgeStyle.fromStatus(status);
+    final style = _BadgeStyle.fromStatus(status, AppThemeColors.of(context));
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -38,27 +38,27 @@ class _BadgeStyle {
   final Color background;
   final Color color;
 
-  factory _BadgeStyle.fromStatus(StatusPonta status) {
+  factory _BadgeStyle.fromStatus(StatusPonta status, AppThemeColors colors) {
     return switch (status) {
-      StatusPonta.ideal => const _BadgeStyle(
+      StatusPonta.ideal => _BadgeStyle(
           '● Ideal',
-          AppColors.successLight,
-          AppColors.success,
+          colors.successLight,
+          colors.success,
         ),
-      StatusPonta.desgaste => const _BadgeStyle(
+      StatusPonta.desgaste => _BadgeStyle(
           '▲ Desgaste',
-          AppColors.dangerLight,
-          AppColors.danger,
+          colors.dangerLight,
+          colors.danger,
         ),
-      StatusPonta.irregular => const _BadgeStyle(
-          '▼ Irregular',
-          AppColors.warningLight,
-          AppColors.warning,
+      StatusPonta.irregular => _BadgeStyle(
+          '▼ Entupido',
+          colors.warningLight,
+          colors.warning,
         ),
-      StatusPonta.pendente => const _BadgeStyle(
+      StatusPonta.pendente => _BadgeStyle(
           '○ Pendente',
-          AppColors.surfaceAlt,
-          AppColors.textTertiary,
+          colors.surfaceAlt,
+          colors.textTertiary,
         ),
     };
   }

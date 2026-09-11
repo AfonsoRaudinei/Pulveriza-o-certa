@@ -136,7 +136,7 @@ class _DismissibleRegulagemCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: AppSpacing.xl),
         color: AppColors.danger,
-        child: const Icon(Icons.delete, color: AppColors.surface),
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (_) => onDelete(),
       child: _RegulagemCard(regulagem: regulagem),
@@ -231,8 +231,8 @@ class _HistoricoEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.list_alt_outlined,
-                size: 56, color: AppColors.textTertiary),
+            Icon(Icons.list_alt_outlined,
+                size: 56, color: AppThemeColors.of(context).textTertiary),
             const SizedBox(height: AppSpacing.lg),
             Text(
               'Nenhuma regulagem ainda. Crie a primeira!',

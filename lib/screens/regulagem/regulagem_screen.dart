@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -41,6 +43,9 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   final _manejoCtrl = TextEditingController();
   final _precoBicoCtrl = TextEditingController();
   final _areaCtrl = TextEditingController();
+  final _limiteEntupido = TextEditingController();
+  final _limiteDesgaste = TextEditingController();
+  Timer? _limitesDebounce;
 
   DateTime _data = DateTime.now();
   double _litroMinIdeal = 0;
@@ -70,6 +75,9 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     _manejoCtrl.dispose();
     _precoBicoCtrl.dispose();
     _areaCtrl.dispose();
+    _limiteEntupido.dispose();
+    _limiteDesgaste.dispose();
+    _limitesDebounce?.cancel();
     super.dispose();
   }
 
@@ -100,11 +108,57 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       _consultor.text =
           context.read<ConfiguracoesProvider>().configuracoes.nomeConsultor;
     }
+    final limites = context.read<ConfiguracoesProvider>().configuracoes;
+    _limiteEntupido.text = limites.limiteIrregular.toStringAsFixed(2);
+    _limiteDesgaste.text = limites.limiteDesgaste.toStringAsFixed(2);
     _recalculate();
   }
 
-  void _recalculate() {
-    final config = context.read<ConfiguracoesProvider>().configuracoes;
+  void _onLimiteChanged() {
+    final entupido = _parse(_limiteEntupido.text);
+    final desgaste = _parse(_limiteDesgaste.text);
+    if (entupido > 0 && desgaste > 0) {
+      _recalculate(
+        context.read<ConfiguracoesProvider>().configuracoes.copyWith(
+              limiteIrregular: entupido,
+              limiteDesgaste: desgaste,
+            ),
+      );
+    }
+    _limitesDebounce?.cancel();
+    _limitesDebounce = Timer(const Duration(milliseconds: 400), () {
+      unawaited(_persistLimites());
+    });
+  }
+
+  Future<void> _persistLimites() async {
+    if (!mounted || widget.readonly) return;
+    final entupido = _parse(_limiteEntupido.text);
+    final desgaste = _parse(_limiteDesgaste.text);
+    if (entupido <= 0 || desgaste <= 0) return;
+    try {
+      await context.read<ConfiguracoesProvider>().saveLimites(
+            limiteIrregular: entupido,
+            limiteDesgaste: desgaste,
+          );
+    } catch (error) {
+      debugPrint('Erro ao salvar limites de classificação: $error');
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível salvar os limites. Tente novamente.',
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
+  }
+
+  void _recalculate([Configuracoes? configOverride]) {
+    final config = configOverride ?? _configParaClassificar();
     final numeroPontas = _parseInt(_numeroPontas.text);
     _litroMinIdeal = CalcUtils.calcularLitroMinIdeal(
       vazaoLha: _parse(_vazao.text),
@@ -113,6 +167,17 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     );
     _syncPontas(numeroPontas, config);
     setState(() {});
+  }
+
+  Configuracoes _configParaClassificar() {
+    final atual = context.read<ConfiguracoesProvider>().configuracoes;
+    final entupido = _parse(_limiteEntupido.text);
+    final desgaste = _parse(_limiteDesgaste.text);
+    if (entupido <= 0 || desgaste <= 0) return atual;
+    return atual.copyWith(
+      limiteIrregular: entupido,
+      limiteDesgaste: desgaste,
+    );
   }
 
   void _syncPontas(int total, Configuracoes config) {
@@ -138,7 +203,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   }
 
   void _updateMedicao(PontaInput input) {
-    final config = context.read<ConfiguracoesProvider>().configuracoes;
+    final config = _configParaClassificar();
     final value = _parseNullable(input.value);
     _medicoes = _medicoes.map((item) {
       if (item.id != input.id) return item;
@@ -318,9 +383,32 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Cálculos Automáticos',
             locked: !_etapa2Completa,
             complete: _litroMinIdeal > 0,
-            child: _ReadonlyResult(
-              label: 'Lt/min Ideal',
-              value: '${_litroMinIdeal.toStringAsFixed(3)} L/min',
+            child: Column(
+              children: [
+                _ReadonlyResult(
+                  label: 'Lt/min Ideal',
+                  value: '${_litroMinIdeal.toStringAsFixed(3)} L/min',
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _FieldRow(
+                  left: _LabeledField(
+                    controller: _limiteEntupido,
+                    label: 'Limite entupido (%)',
+                    helper: 'Abaixo disso o bico fica Entupido. Salva sozinho.',
+                    readonly: readonly,
+                    onChanged: _onLimiteChanged,
+                    decimal: true,
+                  ),
+                  right: _LabeledField(
+                    controller: _limiteDesgaste,
+                    label: 'Limite desgaste (%)',
+                    helper: 'Acima disso o bico fica Desgaste. Salva sozinho.',
+                    readonly: readonly,
+                    onChanged: _onLimiteChanged,
+                    decimal: true,
+                  ),
+                ),
+              ],
             ),
           ),
           ProgressiveCard(

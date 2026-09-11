@@ -35,4 +35,20 @@ class ConfiguracoesProvider extends ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<void> saveTema(TemaApp tema) {
+    return save(_configuracoes.copyWith(tema: tema));
+  }
+
+  Future<void> saveLimites({
+    double? limiteDesgaste,
+    double? limiteIrregular,
+  }) {
+    return save(
+      _configuracoes.copyWith(
+        limiteDesgaste: limiteDesgaste,
+        limiteIrregular: limiteIrregular,
+      ),
+    );
+  }
 }
