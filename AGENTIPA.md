@@ -404,3 +404,33 @@ Privacy) e a decisão sobre a diretriz 4.3.
 
 Disco apenas — IPA 11 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight.
 
+## Build 112 — 2026-09-11 13:39 -03
+
+- Versão solicitada: `1.0.0+112` (também em `pubspec.yaml`)
+- Motivo: laudo PDF no padrão visual Ponta Verde (CTA share/outlined + header/KPIs/tabela/rodapé).
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 112 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (5 pods: Flutter, file_picker, printing, share_plus, shared_preferences_foundation)
+- Validação de pré-build: `./tool/validar.sh` — passou
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (170.05 MB / 170053632 bytes)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (23.90 MB / 23895574 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `112`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`
+- Upload TestFlight: não enviado
+
+### Status
+
+Disco apenas — IPA 112 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight.
+
