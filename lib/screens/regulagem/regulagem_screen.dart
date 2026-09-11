@@ -12,6 +12,8 @@ import '../../models/regulagem.dart';
 import '../../providers/configuracoes_provider.dart';
 import '../../providers/regulagens_provider.dart';
 import '../../theme.dart';
+import '../../services/regulagem_pdf_service.dart';
+import 'widgets/exportar_pdf_button.dart';
 import 'widgets/pontas_table.dart';
 import 'widgets/progressive_card.dart';
 
@@ -325,7 +327,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final config = context.watch<ConfiguracoesProvider>().configuracoes;
+    context.watch<ConfiguracoesProvider>();
     final readonly = widget.readonly;
 
     return Scaffold(
@@ -422,15 +424,48 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Medições das Pontas',
             locked: _litroMinIdeal <= 0,
             complete: _medicoes.any((item) => item.valorMedido != null),
-            child: PontasTable(
-              medicoes: _medicoes,
-              ideal: _litroMinIdeal,
-              configuracoes: config,
-              manejo: _manejo,
-              precoBico: _precoBico,
-              area: _area,
-              readonly: readonly,
-              onMedicaoChanged: _updateMedicao,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PontasTable(
+                  medicoes: _medicoes,
+                  ideal: _litroMinIdeal,
+                  configuracoes: _configParaClassificar(),
+                  manejo: _manejo,
+                  precoBico: _precoBico,
+                  area: _area,
+                  readonly: readonly,
+                  onMedicaoChanged: _updateMedicao,
+                ),
+                if (_medicoes.any((item) => item.valorMedido != null)) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  ExportarPdfButton(
+                    data: RegulagemPdfData(
+                      produtor: _produtor.text.trim(),
+                      fazenda: _fazenda.text.trim(),
+                      talhao: _talhao.text.trim().isEmpty
+                          ? null
+                          : _talhao.text.trim(),
+                      maquina: _maquina.text.trim(),
+                      consultor: _consultor.text.trim().isEmpty
+                          ? null
+                          : _consultor.text.trim(),
+                      dataRegulagem: _data,
+                      vazaoLha: _parse(_vazao.text),
+                      velocidade: _parse(_velocidade.text),
+                      espacamentoCm: _parse(_espacamento.text),
+                      numeroPontas: _parseInt(_numeroPontas.text),
+                      pressaoBar: _parseNullable(_pressao.text),
+                      litroMinIdeal: _litroMinIdeal,
+                      medicoes: _medicoes,
+                      configuracoes: _configParaClassificar(),
+                      manejo: _manejo,
+                      precoBico: _precoBico,
+                      area: _area,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
