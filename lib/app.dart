@@ -7,8 +7,8 @@ import 'providers/regulagens_provider.dart';
 import 'routes.dart';
 import 'theme.dart';
 
-class AgroCalcApp extends StatelessWidget {
-  const AgroCalcApp({super.key});
+class PontaVerdeApp extends StatelessWidget {
+  const PontaVerdeApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +18,7 @@ class AgroCalcApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => RegulagensProvider()..load()),
       ],
       child: MaterialApp(
-        title: 'AgroCalc',
+        title: 'Ponta Verde',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         initialRoute: Routes.home,

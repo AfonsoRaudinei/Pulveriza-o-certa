@@ -28,7 +28,9 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   @override
@@ -52,6 +54,25 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
     _tolMax.text = config.toleranciaMax.toStringAsFixed(2);
   }
 
+  void _feedback(String mensagem, {bool erro = false}) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: erro ? AppColors.danger : null,
+      ),
+    );
+  }
+
+  /// Âncora do popover da folha de compartilhamento (exigida em iPad).
+  Rect? _origemCompartilhar() {
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
   Future<void> _save() async {
     try {
       final config = Configuracoes(
@@ -63,20 +84,24 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
         toleranciaMax: _parse(_tolMax.text, 104.99),
       );
       await context.read<ConfiguracoesProvider>().save(config);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Configurações salvas')),
-      );
+      _feedback('Configurações salvas.');
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
     } catch (error) {
       debugPrint('Erro ao salvar configurações: $error');
+      _feedback('Não foi possível salvar as configurações.', erro: true);
     }
   }
 
   Future<void> _export() async {
     try {
-      await _storage.exportBackup();
+      await _storage.exportBackup(sharePositionOrigin: _origemCompartilhar());
+      _feedback('Backup gerado. Escolha onde salvar ou enviar.');
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
     } catch (error) {
       debugPrint('Erro ao exportar na tela: $error');
+      _feedback('Não foi possível exportar o backup.', erro: true);
     }
   }
 
@@ -89,17 +114,18 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
         'Isso irá substituir todos os dados atuais. Continuar?',
       );
       if (!ok) return;
-      await _storage.importBackup();
+      final importado = await _storage.importBackup();
+      if (!importado) return;
       if (!mounted) return;
       await configuracoesProvider.load();
       await regulagensProvider.load();
       _load();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Backup importado')),
-      );
+      _feedback('Backup importado com sucesso.');
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
     } catch (error) {
       debugPrint('Erro ao importar na tela: $error');
+      _feedback('Não foi possível importar o backup.', erro: true);
     }
   }
 
@@ -118,12 +144,12 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       await configuracoesProvider.load();
       await regulagensProvider.load();
       _load();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Todos os dados foram apagados')),
-      );
+      _feedback('Todos os dados foram apagados.');
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
     } catch (error) {
       debugPrint('Erro ao apagar tudo: $error');
+      _feedback('Não foi possível apagar os dados.', erro: true);
     }
   }
 
@@ -279,7 +305,7 @@ class _AboutCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('AgroCalc v${AppConstants.appVersion}'),
+            const Text('${AppConstants.appName} v${AppConstants.appVersion}'),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Calculadora de regulagem para grandes culturas',

@@ -34,22 +34,46 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   }
 
   Future<void> _delete(Regulagem regulagem) async {
+    final provider = context.read<RegulagensProvider>();
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      final provider = context.read<RegulagensProvider>();
       await provider.delete(regulagem.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
         SnackBar(
           content: const Text('Regulagem excluída'),
           duration: const Duration(seconds: 4),
           action: SnackBarAction(
             label: 'Desfazer',
-            onPressed: () => provider.save(regulagem),
+            onPressed: () async {
+              try {
+                await provider.save(regulagem);
+              } catch (error) {
+                debugPrint('Erro ao desfazer exclusão: $error');
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Não foi possível restaurar a regulagem.'),
+                    backgroundColor: AppColors.danger,
+                  ),
+                );
+              }
+            },
           ),
         ),
       );
     } catch (error) {
       debugPrint('Erro ao deletar no histórico: $error');
+      // Recarrega para o item excluído visualmente reaparecer na lista.
+      await provider.load();
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível excluir a regulagem.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
     }
   }
 

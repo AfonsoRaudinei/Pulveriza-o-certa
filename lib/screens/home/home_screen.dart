@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../models/regulagem.dart';
 import '../../providers/configuracoes_provider.dart';
 import '../../providers/regulagens_provider.dart';
@@ -89,7 +90,7 @@ class _DashboardTabState extends State<DashboardTab> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('AgroCalc'),
+            const Text(AppConstants.appName),
             Text(today, style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
@@ -132,7 +133,7 @@ class _WelcomeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              nome.isEmpty ? 'Bem-vindo ao AgroCalc' : 'Olá, $nome',
+              nome.isEmpty ? 'Bem-vindo ao ${AppConstants.appName}' : 'Olá, $nome',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: AppSpacing.sm),

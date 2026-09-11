@@ -229,6 +229,17 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       Navigator.pop(context);
     } catch (error) {
       debugPrint('Erro ao salvar regulagem: $error');
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível salvar a regulagem. Tente novamente.',
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
     }
   }
 
