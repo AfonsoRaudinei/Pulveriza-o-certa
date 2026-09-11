@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
   static const primary = Color(0xFF0057FF);
@@ -49,6 +48,7 @@ class AppTheme {
   static ThemeData get light {
     final base = ThemeData(
       useMaterial3: true,
+      fontFamily: 'Inter',
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
@@ -59,40 +59,50 @@ class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
-        displayLarge: GoogleFonts.inter(
-          fontSize: 28,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-        ),
-        headlineLarge: GoogleFonts.inter(
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-        headlineMedium: GoogleFonts.inter(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-        headlineSmall: GoogleFonts.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-        bodyLarge:
-            GoogleFonts.inter(fontSize: 16, color: AppColors.textPrimary),
-        bodyMedium:
-            GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary),
-        bodySmall:
-            GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-        labelLarge:
-            GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
-        labelMedium:
-            GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
-        labelSmall:
-            GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500),
-      ),
+      textTheme: base.textTheme.apply(fontFamily: 'Inter').copyWith(
+            displayLarge: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+            headlineLarge: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+            headlineMedium: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+            headlineSmall: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+            bodyLarge: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                color: AppColors.textPrimary),
+            bodyMedium: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: AppColors.textSecondary),
+            bodySmall: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                color: AppColors.textSecondary),
+            labelLarge: const TextStyle(
+                fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600),
+            labelMedium: const TextStyle(
+                fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w500),
+            labelSmall: const TextStyle(
+                fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w500),
+          ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,
