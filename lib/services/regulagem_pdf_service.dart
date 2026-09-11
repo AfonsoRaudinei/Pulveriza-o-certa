@@ -1,0 +1,936 @@
+import 'dart:math' show max, min;
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart' show Color;
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+
+import '../core/constants/app_constants.dart';
+import '../core/extensions/double_extension.dart';
+import '../core/utils/calculo_utils.dart';
+import '../models/configuracoes.dart';
+import '../models/regulagem.dart';
+import '../theme.dart';
+
+class RegulagemPdfData {
+  const RegulagemPdfData({
+    required this.produtor,
+    required this.fazenda,
+    this.talhao,
+    required this.maquina,
+    this.consultor,
+    required this.dataRegulagem,
+    required this.vazaoLha,
+    required this.velocidade,
+    required this.espacamentoCm,
+    required this.numeroPontas,
+    this.pressaoBar,
+    required this.litroMinIdeal,
+    required this.medicoes,
+    required this.configuracoes,
+    required this.manejo,
+    required this.precoBico,
+    required this.area,
+  });
+
+  final String produtor;
+  final String fazenda;
+  final String? talhao;
+  final String maquina;
+  final String? consultor;
+  final DateTime dataRegulagem;
+  final double vazaoLha;
+  final double velocidade;
+  final double espacamentoCm;
+  final int numeroPontas;
+  final double? pressaoBar;
+  final double litroMinIdeal;
+  final List<PontaMedicao> medicoes;
+  final Configuracoes configuracoes;
+  final double manejo;
+  final double precoBico;
+  final double area;
+}
+
+class RegulagemPdfService {
+  RegulagemPdfService._();
+
+  static pw.Font? _regular;
+  static pw.Font? _semiBold;
+  static pw.Font? _bold;
+
+  static Future<Uint8List> generate(RegulagemPdfData data) async {
+    await _ensureFonts();
+    final resumo = _ResumoPontasData.from(data);
+    final economia = _EconomiaResumo.from(data);
+    final orientacoes = _OrientacoesResumo.from(data.medicoes);
+    final percentuais = _percentuaisPorPonta(data);
+
+    final pdf = pw.Document(
+      title: 'Laudo Técnico — Regulagem de Pulverizador',
+      author: AppConstants.appName,
+    );
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(36),
+        theme: pw.ThemeData.withFont(
+          base: _regular!,
+          bold: _bold!,
+        ),
+        build: (context) {
+          final chartFont = _regular!.getFont(context);
+          return [
+            _buildTitle(),
+            pw.SizedBox(height: 16),
+            _buildHeaderGrid(data),
+            pw.SizedBox(height: 16),
+            _buildMachineSummary(data),
+            pw.SizedBox(height: 16),
+            _buildStatusIndicators(resumo),
+            pw.SizedBox(height: 16),
+            _buildPontasTable(data, percentuais),
+            if (economia.exibirResultado) ...[
+              pw.SizedBox(height: 20),
+              _buildEconomiaSection(economia),
+            ],
+            pw.SizedBox(height: 20),
+            _buildChart(data, chartFont),
+            pw.SizedBox(height: 20),
+            _buildOrientacoes(orientacoes),
+          ];
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  static String suggestedFilename(RegulagemPdfData data) {
+    final base = data.fazenda.trim().isNotEmpty
+        ? data.fazenda.trim()
+        : data.produtor.trim();
+    final sanitized = base
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\w\s-]', unicode: true), '')
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    final slug = sanitized.isEmpty ? 'export' : sanitized;
+    final date = DateFormat('yyyy-MM-dd').format(data.dataRegulagem);
+    return 'regulagem_${slug}_$date.pdf';
+  }
+
+  static Future<void> _ensureFonts() async {
+    if (_regular != null) return;
+    final regularData =
+        await rootBundle.load('assets/fonts/Inter-Regular.ttf');
+    final semiBoldData =
+        await rootBundle.load('assets/fonts/Inter-SemiBold.ttf');
+    final boldData = await rootBundle.load('assets/fonts/Inter-Bold.ttf');
+    _regular = pw.Font.ttf(regularData);
+    _semiBold = pw.Font.ttf(semiBoldData);
+    _bold = pw.Font.ttf(boldData);
+  }
+
+  static pw.Widget _buildTitle() {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Laudo Técnico — Regulagem de Pulverizador',
+          style: pw.TextStyle(font: _bold, fontSize: 18),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          AppConstants.appName,
+          style: pw.TextStyle(
+            font: _semiBold,
+            fontSize: 12,
+            color: _pdfColor(AppColors.textSecondary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildHeaderGrid(RegulagemPdfData data) {
+    final dateStr =
+        DateFormat('dd/MM/yyyy', 'pt_BR').format(data.dataRegulagem);
+    final fields = <(String, String)>[
+      ('Produtor', data.produtor),
+      ('Fazenda', data.fazenda),
+      ('Máquina', data.maquina),
+      ('Data', dateStr),
+    ];
+    if (data.talhao != null && data.talhao!.trim().isNotEmpty) {
+      fields.insert(2, ('Talhão', data.talhao!.trim()));
+    }
+    if (data.consultor != null && data.consultor!.trim().isNotEmpty) {
+      fields.add(('Consultor', data.consultor!.trim()));
+    }
+
+    final rows = <List<(String, String)>>[];
+    for (var i = 0; i < fields.length; i += 2) {
+      final left = fields[i];
+      final right = i + 1 < fields.length ? fields[i + 1] : ('', '');
+      rows.add([left, right]);
+    }
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: _pdfColor(AppColors.border)),
+        borderRadius: pw.BorderRadius.circular(8),
+        color: _pdfColor(AppColors.surfaceAlt),
+      ),
+      child: pw.Column(
+        children: [
+          for (final row in rows)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 6),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(child: _headerCell(row[0].$1, row[0].$2)),
+                  pw.SizedBox(width: 12),
+                  pw.Expanded(
+                    child: row[1].$1.isEmpty
+                        ? pw.SizedBox()
+                        : _headerCell(row[1].$1, row[1].$2),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _headerCell(String label, String value) {
+    if (label.isEmpty) return pw.SizedBox();
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            font: _regular,
+            fontSize: 9,
+            color: _pdfColor(AppColors.textSecondary),
+          ),
+        ),
+        pw.Text(
+          value,
+          style: pw.TextStyle(font: _semiBold, fontSize: 11),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildMachineSummary(RegulagemPdfData data) {
+    final items = <String>[
+      'Lt/min ideal: ${data.litroMinIdeal.toStringAsFixed(3)} L/min',
+      'Vazão: ${data.vazaoLha.toStringAsFixed(1)} L/ha',
+      'Velocidade: ${data.velocidade.toStringAsFixed(1)} km/h',
+      'Espaçamento: ${data.espacamentoCm.toStringAsFixed(1)} cm',
+      'Pontas: ${data.numeroPontas}',
+      if (data.pressaoBar != null)
+        'Pressão: ${data.pressaoBar!.toStringAsFixed(1)} bar',
+      if (data.area > 0) 'Área: ${data.area.toStringAsFixed(1)} ha',
+    ];
+
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: _pdfColor(AppColors.primaryLight),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Wrap(
+        spacing: 16,
+        runSpacing: 6,
+        children: items
+            .map(
+              (text) => pw.Text(
+                text,
+                style: pw.TextStyle(font: _regular, fontSize: 10),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  static pw.Widget _buildStatusIndicators(_ResumoPontasData resumo) {
+    final stats = [
+      ('Desgaste', resumo.desgaste, AppColors.danger, AppColors.dangerLight),
+      ('Entupido', resumo.irregular, AppColors.warning, AppColors.warningLight),
+      ('Tolerância', resumo.tolerancia, AppColors.info, AppColors.infoLight),
+      ('Acima Min', resumo.acimaMin, AppColors.purple, AppColors.purpleLight),
+      ('Ideal', resumo.ideal, AppColors.success, AppColors.successLight),
+    ];
+
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: stats
+          .map(
+            (stat) => pw.Expanded(
+              child: pw.Container(
+                margin: const pw.EdgeInsets.symmetric(horizontal: 2),
+                padding: const pw.EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 4,
+                ),
+                decoration: pw.BoxDecoration(
+                  color: _pdfColor(stat.$4),
+                  borderRadius: pw.BorderRadius.circular(8),
+                  border: pw.Border.all(
+                    color: _pdfColor(stat.$3).flatten(),
+                  ),
+                ),
+                child: pw.Column(
+                  children: [
+                    pw.Text(
+                      '${stat.$2}',
+                      style: pw.TextStyle(
+                        font: _bold,
+                        fontSize: 16,
+                        color: _pdfColor(stat.$3),
+                      ),
+                    ),
+                    pw.Text(
+                      stat.$1,
+                      style: pw.TextStyle(
+                        font: _regular,
+                        fontSize: 8,
+                        color: _pdfColor(AppColors.textSecondary),
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  static pw.Widget _buildPontasTable(
+    RegulagemPdfData data,
+    Map<int, double> percentuais,
+  ) {
+    final headerStyle = pw.TextStyle(
+      font: _semiBold,
+      fontSize: 9,
+      color: _pdfColor(AppColors.textSecondary),
+    );
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Medições das pontas',
+          style: pw.TextStyle(font: _semiBold, fontSize: 13),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Table(
+          border: pw.TableBorder.all(color: _pdfColor(AppColors.border)),
+          columnWidths: {
+            0: const pw.FixedColumnWidth(28),
+            1: const pw.FlexColumnWidth(2),
+            2: const pw.FlexColumnWidth(2),
+            3: const pw.FixedColumnWidth(40),
+            4: const pw.FlexColumnWidth(2.5),
+          },
+          children: [
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: _pdfColor(AppColors.surfaceAlt)),
+              children: [
+                _tableHeaderCell('#', headerStyle),
+                _tableHeaderCell('Medido (L/min)', headerStyle),
+                _tableHeaderCell('Ideal', headerStyle),
+                _tableHeaderCell('%', headerStyle, align: pw.TextAlign.right),
+                _tableHeaderCell('Status', headerStyle, align: pw.TextAlign.right),
+              ],
+            ),
+            for (final ponta in data.medicoes)
+              _buildPontaRow(ponta, data.litroMinIdeal, percentuais[ponta.id] ?? 0),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static pw.TableRow _buildPontaRow(
+    PontaMedicao ponta,
+    double ideal,
+    double percentual,
+  ) {
+    final (bg, fg) = _statusColors(ponta.status);
+    final medido = ponta.valorMedido?.toStringAsFixed(3) ?? '-';
+    final pct = percentual == 0 ? '-' : percentual.toStringAsFixed(1);
+
+    return pw.TableRow(
+      children: [
+        _tableCell('${ponta.id}'),
+        _tableCell(medido),
+        _tableCell(ideal.toStringAsFixed(3)),
+        _tableCell(pct, align: pw.TextAlign.right),
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          color: bg,
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            _statusLabel(ponta.status),
+            style: pw.TextStyle(font: _semiBold, fontSize: 9, color: fg),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _tableHeaderCell(
+    String text,
+    pw.TextStyle style, {
+    pw.TextAlign align = pw.TextAlign.left,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(text, style: style, textAlign: align),
+    );
+  }
+
+  static pw.Widget _tableCell(String text, {pw.TextAlign align = pw.TextAlign.left}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(font: _regular, fontSize: 9),
+        textAlign: align,
+      ),
+    );
+  }
+
+  static pw.Widget _buildEconomiaSection(_EconomiaResumo economia) {
+    final recomendacao = economia.trocarTudo
+        ? 'TROCA COMPLETA recomendada'
+        : 'Troca seletiva das pontas problemáticas';
+    final recBg = economia.trocarTudo
+        ? _pdfColor(AppColors.dangerLight)
+        : _pdfColor(AppColors.successLight);
+    final recFg = economia.trocarTudo
+        ? _pdfColor(AppColors.danger)
+        : _pdfColor(AppColors.success);
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Análise econômica',
+          style: pw.TextStyle(font: _semiBold, fontSize: 13),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: _pdfColor(AppColors.primaryLight),
+            borderRadius: pw.BorderRadius.circular(8),
+          ),
+          child: pw.Text(
+            'Ponta R\$: ${economia.pontaRS.toMoeda()}',
+            style: pw.TextStyle(font: _semiBold, fontSize: 11),
+          ),
+        ),
+        pw.SizedBox(height: 6),
+        pw.Row(
+          children: [
+            pw.Expanded(
+              child: _metricBox(
+                'Perda estimada',
+                economia.perdaTotal.toMoeda(),
+                AppColors.dangerLight,
+                AppColors.danger,
+              ),
+            ),
+            pw.SizedBox(width: 8),
+            pw.Expanded(
+              child: _metricBox(
+                'Custo de troca',
+                economia.custo.toMoeda(),
+                AppColors.infoLight,
+                AppColors.info,
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 6),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: recBg,
+            borderRadius: pw.BorderRadius.circular(8),
+            border: pw.Border.all(color: recFg.flatten()),
+          ),
+          child: pw.Text(
+            recomendacao,
+            style: pw.TextStyle(font: _semiBold, fontSize: 11, color: recFg),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _metricBox(
+    String label,
+    String value,
+    Color bg,
+    Color fg,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color: _pdfColor(bg),
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: _pdfColor(fg).flatten()),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            label,
+            style: pw.TextStyle(
+              font: _regular,
+              fontSize: 9,
+              color: _pdfColor(AppColors.textSecondary),
+            ),
+          ),
+          pw.Text(
+            value,
+            style: pw.TextStyle(font: _semiBold, fontSize: 11, color: _pdfColor(fg)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildChart(RegulagemPdfData data, PdfFont chartFont) {
+    if (data.litroMinIdeal <= 0 || data.medicoes.isEmpty) {
+      return pw.SizedBox();
+    }
+
+    final maxChartWidth = PdfPageFormat.a4.width - 72;
+    final idealWidth = data.medicoes.length * 36.0 + 52;
+    final chartWidth = min(maxChartWidth, max(480.0, idealWidth));
+    final subtitle =
+        'Faixa verde = ideal (${data.configuracoes.limiteIrregular.toStringAsFixed(0)}–${data.configuracoes.limiteDesgaste.toStringAsFixed(0)}%)';
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Vazão por ponta',
+          style: pw.TextStyle(font: _semiBold, fontSize: 13),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          subtitle,
+          style: pw.TextStyle(
+            font: _regular,
+            fontSize: 9,
+            color: _pdfColor(AppColors.textSecondary),
+          ),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Container(
+          padding: const pw.EdgeInsets.all(8),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: _pdfColor(AppColors.border)),
+            borderRadius: pw.BorderRadius.circular(8),
+          ),
+          child: pw.SizedBox(
+            width: chartWidth,
+            height: 180,
+            child: pw.CustomPaint(
+              size: PdfPoint(chartWidth, 180),
+              painter: (canvas, size) {
+                _paintChart(
+                  canvas: canvas,
+                  size: size,
+                  medicoes: data.medicoes,
+                  ideal: data.litroMinIdeal,
+                  limiteIrregular: data.configuracoes.limiteIrregular,
+                  limiteDesgaste: data.configuracoes.limiteDesgaste,
+                  font: chartFont,
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static void _paintChart({
+    required PdfGraphics canvas,
+    required PdfPoint size,
+    required List<PontaMedicao> medicoes,
+    required double ideal,
+    required double limiteIrregular,
+    required double limiteDesgaste,
+    required PdfFont font,
+  }) {
+    const leftPad = 40.0;
+    const rightPad = 12.0;
+    const topPad = 12.0;
+    const bottomPad = 28.0;
+
+    final chartW = size.x - leftPad - rightPad;
+    final chartH = size.y - topPad - bottomPad;
+    if (chartW <= 0 || chartH <= 0) return;
+
+    final idealMin = ideal * (limiteIrregular / 100);
+    final idealMax = ideal * (limiteDesgaste / 100);
+
+    final measured = medicoes
+        .where((item) => item.valorMedido != null)
+        .map((item) => item.valorMedido!)
+        .toList();
+    if (measured.isEmpty) return;
+
+    final yMax = max(measured.reduce(max), idealMax) * 1.12;
+    const yMin = 0.0;
+
+    double yToPx(double value) =>
+        topPad + chartH - ((value - yMin) / (yMax - yMin)) * chartH;
+
+    canvas
+      ..setFillColor(_pdfColorWithAlpha(AppColors.success, 0.14))
+      ..drawRect(
+        leftPad,
+        yToPx(idealMax),
+        chartW,
+        yToPx(idealMin) - yToPx(idealMax),
+      )
+      ..fillPath();
+
+    final idealY = yToPx(ideal);
+    canvas
+      ..setStrokeColor(_pdfColor(AppColors.success))
+      ..setLineWidth(1.5)
+      ..moveTo(leftPad, idealY)
+      ..lineTo(leftPad + chartW, idealY)
+      ..strokePath();
+
+    final slotWidth = chartW / medicoes.length;
+    final barWidth = min(24.0, slotWidth * 0.62);
+
+    for (var index = 0; index < medicoes.length; index++) {
+      final ponta = medicoes[index];
+      final centerX = leftPad + slotWidth * index + slotWidth / 2;
+
+      _paintChartLabel(
+        canvas,
+        font,
+        '${ponta.id}',
+        centerX,
+        topPad + chartH + 8,
+      );
+
+      final valor = ponta.valorMedido;
+      if (valor == null) continue;
+
+      final top = yToPx(valor);
+      final barHeight = topPad + chartH - top;
+      canvas
+        ..setFillColor(_statusBarColor(ponta.status))
+        ..drawRRect(
+          centerX - barWidth / 2,
+          top,
+          barWidth,
+          barHeight,
+          4,
+          4,
+        )
+        ..fillPath();
+    }
+
+    _paintChartYLabel(canvas, font, idealMax, yToPx(idealMax));
+    _paintChartYLabel(canvas, font, ideal, idealY);
+  }
+
+  static void _paintChartYLabel(
+    PdfGraphics canvas,
+    PdfFont font,
+    double value,
+    double y,
+  ) {
+    const fontSize = 8.0;
+    canvas
+      ..setFillColor(_pdfColor(AppColors.textSecondary))
+      ..drawString(font, fontSize, value.toStringAsFixed(2), 2, y - 4);
+  }
+
+  static void _paintChartLabel(
+    PdfGraphics canvas,
+    PdfFont font,
+    String text,
+    double centerX,
+    double y,
+  ) {
+    const fontSize = 8.0;
+    final metrics = font.stringMetrics(text) * fontSize;
+    canvas
+      ..setFillColor(_pdfColor(AppColors.textSecondary))
+      ..drawString(font, fontSize, text, centerX - metrics.width / 2, y);
+  }
+
+  static pw.Widget _buildOrientacoes(_OrientacoesResumo resumo) {
+    final cards = [
+      (
+        resumo.ideal,
+        'Ideal',
+        'Sem ação imediata. Continue o monitoramento.',
+        AppColors.success,
+        AppColors.successLight,
+      ),
+      (
+        resumo.irregular,
+        'Entupido',
+        'Limpar bicos e repetir teste. Verifique filtro e calda.',
+        AppColors.warning,
+        AppColors.warningLight,
+      ),
+      (
+        resumo.desgaste,
+        'Desgaste',
+        'Substituir urgentemente. Excesso de vazão compromete a aplicação.',
+        AppColors.danger,
+        AppColors.dangerLight,
+      ),
+    ];
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Orientações',
+          style: pw.TextStyle(font: _semiBold, fontSize: 13),
+        ),
+        pw.SizedBox(height: 8),
+        for (final card in cards)
+          pw.Container(
+            width: double.infinity,
+            margin: const pw.EdgeInsets.only(bottom: 6),
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: _pdfColor(card.$5),
+              borderRadius: pw.BorderRadius.circular(8),
+              border: pw.Border.all(color: _pdfColor(card.$4).flatten()),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  '${card.$1} ponta(s) ${card.$2}',
+                  style: pw.TextStyle(
+                    font: _semiBold,
+                    fontSize: 11,
+                    color: _pdfColor(card.$4),
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  card.$3,
+                  style: pw.TextStyle(font: _regular, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  static Map<int, double> _percentuaisPorPonta(RegulagemPdfData data) {
+    return {
+      for (final item in data.medicoes)
+        item.id: item.valorMedido == null
+            ? 0
+            : CalcUtils.calcularPercentualPonta(
+                valorMedido: item.valorMedido!,
+                litroMinIdeal: data.litroMinIdeal,
+              ),
+    };
+  }
+
+  static String _statusLabel(StatusPonta status) {
+    return switch (status) {
+      StatusPonta.ideal => 'Ideal',
+      StatusPonta.irregular => 'Entupido',
+      StatusPonta.desgaste => 'Desgaste',
+      StatusPonta.pendente => 'Pendente',
+    };
+  }
+
+  static (PdfColor bg, PdfColor fg) _statusColors(StatusPonta status) {
+    return switch (status) {
+      StatusPonta.ideal => (
+          _pdfColor(AppColors.successLight),
+          _pdfColor(AppColors.success),
+        ),
+      StatusPonta.irregular => (
+          _pdfColor(AppColors.warningLight),
+          _pdfColor(AppColors.warning),
+        ),
+      StatusPonta.desgaste => (
+          _pdfColor(AppColors.dangerLight),
+          _pdfColor(AppColors.danger),
+        ),
+      StatusPonta.pendente => (
+          _pdfColor(AppColors.surfaceAlt),
+          _pdfColor(AppColors.textTertiary),
+        ),
+    };
+  }
+
+  static PdfColor _statusBarColor(StatusPonta status) {
+    return switch (status) {
+      StatusPonta.ideal => _pdfColor(AppColors.success),
+      StatusPonta.irregular => _pdfColor(AppColors.warning),
+      StatusPonta.desgaste => _pdfColor(AppColors.danger),
+      StatusPonta.pendente => _pdfColor(AppColors.textTertiary),
+    };
+  }
+
+  static PdfColor _pdfColor(Color color) {
+    return PdfColor.fromInt(color.toARGB32());
+  }
+
+  static PdfColor _pdfColorWithAlpha(Color color, double alpha) {
+    return PdfColor(color.r, color.g, color.b, alpha);
+  }
+}
+
+class _ResumoPontasData {
+  const _ResumoPontasData({
+    required this.desgaste,
+    required this.irregular,
+    required this.tolerancia,
+    required this.acimaMin,
+    required this.ideal,
+  });
+
+  factory _ResumoPontasData.from(RegulagemPdfData data) {
+    final percentuais = data.medicoes
+        .where((item) => item.valorMedido != null)
+        .map(
+          (item) => CalcUtils.calcularPercentualPonta(
+            valorMedido: item.valorMedido!,
+            litroMinIdeal: data.litroMinIdeal,
+          ),
+        );
+    final tolerancia = CalcUtils.agregarTolerancia(
+      percentuais: percentuais,
+      configuracoes: data.configuracoes,
+    );
+
+    return _ResumoPontasData(
+      desgaste: data.medicoes
+          .where((item) => item.status == StatusPonta.desgaste)
+          .length,
+      irregular: data.medicoes
+          .where((item) => item.status == StatusPonta.irregular)
+          .length,
+      tolerancia: tolerancia.entreTolerancias,
+      acimaMin: tolerancia.acimaToleranciaMin,
+      ideal: data.medicoes
+          .where((item) => item.status == StatusPonta.ideal)
+          .length,
+    );
+  }
+
+  final int desgaste;
+  final int irregular;
+  final int tolerancia;
+  final int acimaMin;
+  final int ideal;
+}
+
+class _EconomiaResumo {
+  const _EconomiaResumo({
+    required this.perdaTotal,
+    required this.custo,
+    required this.pontaRS,
+    required this.trocarTudo,
+  });
+
+  factory _EconomiaResumo.from(RegulagemPdfData data) {
+    final perdaTotal = data.medicoes.fold<double>(0, (total, item) {
+      if (item.valorMedido == null) return total;
+      final percentual = CalcUtils.calcularPercentualPonta(
+        valorMedido: item.valorMedido!,
+        litroMinIdeal: data.litroMinIdeal,
+      );
+      return total +
+          CalcUtils.calcularPerdaEstimada(
+            percentual: percentual,
+            manejoRS: data.manejo,
+            numeroPontas: data.medicoes.length,
+            areaHa: data.area,
+          );
+    });
+    final custo = CalcUtils.calcularCustoTrocaTotal(
+      precoBicoRS: data.precoBico,
+      numeroPontas: data.medicoes.length,
+    );
+    final pontaRS = CalcUtils.calcularPontaRS(
+      manejoRS: data.manejo,
+      numeroPontas: data.medicoes.length,
+    );
+
+    return _EconomiaResumo(
+      perdaTotal: perdaTotal,
+      custo: custo,
+      pontaRS: pontaRS,
+      trocarTudo: CalcUtils.recomendarTrocaCompleta(
+        perdaEstimadaTotal: perdaTotal,
+        custoTrocaTotal: custo,
+      ),
+    );
+  }
+
+  final double perdaTotal;
+  final double custo;
+  final double pontaRS;
+  final bool trocarTudo;
+
+  bool get exibirResultado => perdaTotal > 0 && custo > 0;
+}
+
+class _OrientacoesResumo {
+  const _OrientacoesResumo({
+    required this.ideal,
+    required this.irregular,
+    required this.desgaste,
+  });
+
+  factory _OrientacoesResumo.from(List<PontaMedicao> medicoes) {
+    return _OrientacoesResumo(
+      ideal: medicoes.where((item) => item.status == StatusPonta.ideal).length,
+      irregular:
+          medicoes.where((item) => item.status == StatusPonta.irregular).length,
+      desgaste:
+          medicoes.where((item) => item.status == StatusPonta.desgaste).length,
+    );
+  }
+
+  final int ideal;
+  final int irregular;
+  final int desgaste;
+}
