@@ -20,8 +20,9 @@ class ProgressiveCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
     final borderColor =
-        complete ? AppColors.success.withValues(alpha: 0.3) : AppColors.border;
+        complete ? AppColors.success.withValues(alpha: 0.3) : colors.border;
     return AnimatedOpacity(
       opacity: locked ? 0.4 : 1,
       duration: const Duration(milliseconds: 200),
@@ -32,7 +33,7 @@ class ProgressiveCard extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: AppSpacing.xl),
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: borderColor),
           ),
@@ -72,19 +73,20 @@ class _StepMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
     final color = complete ? AppColors.success : AppColors.primary;
     return Container(
       width: AppSpacing.xxxl,
       height: AppSpacing.xxxl,
       decoration: BoxDecoration(
-        color: locked ? AppColors.surfaceAlt : color.withValues(alpha: 0.12),
+        color: locked ? colors.surfaceAlt : color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppRadius.full),
       ),
       child: Center(
         child: locked || complete
             ? Icon(
                 locked ? Icons.lock_outline : Icons.check,
-                color: locked ? AppColors.textTertiary : color,
+                color: locked ? colors.textTertiary : color,
                 size: AppSpacing.xl,
               )
             : Text(

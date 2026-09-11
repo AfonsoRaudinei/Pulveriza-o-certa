@@ -36,8 +36,8 @@ class AppButton extends StatelessWidget {
         onPressed: onPressed,
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.surface,
-          disabledBackgroundColor: AppColors.textTertiary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AppThemeColors.of(context).textTertiary,
           padding: const EdgeInsets.all(AppSpacing.lg),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),

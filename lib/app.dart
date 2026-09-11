@@ -17,19 +17,25 @@ class PontaVerdeApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ConfiguracoesProvider()..load()),
         ChangeNotifierProvider(create: (_) => RegulagensProvider()..load()),
       ],
-      child: MaterialApp(
-        title: 'Ponta Verde',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        initialRoute: Routes.home,
-        routes: AppRoutes.map,
-        locale: const Locale('pt', 'BR'),
-        supportedLocales: const [Locale('pt', 'BR')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
+      child: Consumer<ConfiguracoesProvider>(
+        builder: (context, configuracoes, _) {
+          return MaterialApp(
+            title: 'Ponta Verde',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: configuracoes.configuracoes.themeMode,
+            initialRoute: Routes.home,
+            routes: AppRoutes.map,
+            locale: const Locale('pt', 'BR'),
+            supportedLocales: const [Locale('pt', 'BR')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+          );
+        },
       ),
     );
   }

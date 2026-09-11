@@ -253,7 +253,7 @@ class _ResumoPontas extends StatelessWidget {
           icon: Icons.trending_up,
         ),
         _ResumoCard(
-          label: 'Irregular',
+          label: 'Entupido',
           value: resumo.irregular,
           color: AppColors.warning,
           icon: Icons.trending_down,
@@ -295,12 +295,13 @@ class _ResumoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
+        color: colors.surfaceAlt,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         children: [
@@ -403,8 +404,10 @@ class _PontaRowState extends State<_PontaRow> {
         );
     return Container(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: AppThemeColors.of(context).border),
+        ),
       ),
       child: Row(
         children: [
@@ -574,7 +577,7 @@ class _Orientacoes extends StatelessWidget {
           '${resumo.ideal} ponta(s) ideal: sem ação imediata. Continue o monitoramento.',
         ),
         Text(
-          '${resumo.irregular} ponta(s) irregular: limpar bicos e repetir teste.',
+          '${resumo.irregular} ponta(s) entupida: limpar bicos e repetir teste.',
         ),
         Text(
           '${resumo.desgaste} ponta(s) com desgaste: substituir urgentemente.',

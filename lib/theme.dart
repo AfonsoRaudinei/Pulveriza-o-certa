@@ -22,6 +22,22 @@ class AppColors {
   static const infoLight = Color(0xFFDBEAFE);
   static const purple = Color(0xFF8B5CF6);
   static const purpleLight = Color(0xFFEDE9FE);
+
+  static const darkBackground = Color(0xFF0F1218);
+  static const darkSurface = Color(0xFF1A1F27);
+  static const darkSurfaceAlt = Color(0xFF222830);
+  static const darkTextPrimary = Color(0xFFF3F4F6);
+  static const darkTextSecondary = Color(0xFF9CA3AF);
+  static const darkTextTertiary = Color(0xFF6B7280);
+  static const darkBorder = Color(0xFF2D3340);
+  static const darkPrimaryLight = Color(0xFF15233F);
+  static const darkSuccessLight = Color(0xFF06281E);
+  static const darkWarningLight = Color(0xFF2A1C06);
+  static const darkDangerLight = Color(0xFF2A0F0F);
+  static const darkSuccess = Color(0xFF34D399);
+  static const darkWarning = Color(0xFFFBBF24);
+  static const darkDanger = Color(0xFFF87171);
+  static const darkInfo = Color(0xFF60A5FA);
 }
 
 class AppSpacing {
@@ -44,58 +60,226 @@ class AppRadius {
   static const full = 999.0;
 }
 
+@immutable
+class AppThemeColors extends ThemeExtension<AppThemeColors> {
+  const AppThemeColors({
+    required this.background,
+    required this.surface,
+    required this.surfaceAlt,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textTertiary,
+    required this.border,
+    required this.primaryLight,
+    required this.successLight,
+    required this.warningLight,
+    required this.dangerLight,
+    required this.success,
+    required this.warning,
+    required this.danger,
+    required this.info,
+    required this.primary,
+  });
+
+  final Color background;
+  final Color surface;
+  final Color surfaceAlt;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textTertiary;
+  final Color border;
+  final Color primaryLight;
+  final Color successLight;
+  final Color warningLight;
+  final Color dangerLight;
+  final Color success;
+  final Color warning;
+  final Color danger;
+  final Color info;
+  final Color primary;
+
+  static const light = AppThemeColors(
+    background: AppColors.background,
+    surface: AppColors.surface,
+    surfaceAlt: AppColors.surfaceAlt,
+    textPrimary: AppColors.textPrimary,
+    textSecondary: AppColors.textSecondary,
+    textTertiary: AppColors.textTertiary,
+    border: AppColors.border,
+    primaryLight: AppColors.primaryLight,
+    successLight: AppColors.successLight,
+    warningLight: AppColors.warningLight,
+    dangerLight: AppColors.dangerLight,
+    success: AppColors.success,
+    warning: AppColors.warning,
+    danger: AppColors.danger,
+    info: AppColors.info,
+    primary: AppColors.primary,
+  );
+
+  static const dark = AppThemeColors(
+    background: AppColors.darkBackground,
+    surface: AppColors.darkSurface,
+    surfaceAlt: AppColors.darkSurfaceAlt,
+    textPrimary: AppColors.darkTextPrimary,
+    textSecondary: AppColors.darkTextSecondary,
+    textTertiary: AppColors.darkTextTertiary,
+    border: AppColors.darkBorder,
+    primaryLight: AppColors.darkPrimaryLight,
+    successLight: AppColors.darkSuccessLight,
+    warningLight: AppColors.darkWarningLight,
+    dangerLight: AppColors.darkDangerLight,
+    success: AppColors.darkSuccess,
+    warning: AppColors.darkWarning,
+    danger: AppColors.darkDanger,
+    info: AppColors.darkInfo,
+    primary: AppColors.primary,
+  );
+
+  static AppThemeColors of(BuildContext context) {
+    return Theme.of(context).extension<AppThemeColors>() ?? AppThemeColors.light;
+  }
+
+  @override
+  AppThemeColors copyWith({
+    Color? background,
+    Color? surface,
+    Color? surfaceAlt,
+    Color? textPrimary,
+    Color? textSecondary,
+    Color? textTertiary,
+    Color? border,
+    Color? primaryLight,
+    Color? successLight,
+    Color? warningLight,
+    Color? dangerLight,
+    Color? success,
+    Color? warning,
+    Color? danger,
+    Color? info,
+    Color? primary,
+  }) {
+    return AppThemeColors(
+      background: background ?? this.background,
+      surface: surface ?? this.surface,
+      surfaceAlt: surfaceAlt ?? this.surfaceAlt,
+      textPrimary: textPrimary ?? this.textPrimary,
+      textSecondary: textSecondary ?? this.textSecondary,
+      textTertiary: textTertiary ?? this.textTertiary,
+      border: border ?? this.border,
+      primaryLight: primaryLight ?? this.primaryLight,
+      successLight: successLight ?? this.successLight,
+      warningLight: warningLight ?? this.warningLight,
+      dangerLight: dangerLight ?? this.dangerLight,
+      success: success ?? this.success,
+      warning: warning ?? this.warning,
+      danger: danger ?? this.danger,
+      info: info ?? this.info,
+      primary: primary ?? this.primary,
+    );
+  }
+
+  @override
+  AppThemeColors lerp(ThemeExtension<AppThemeColors>? other, double t) {
+    if (other is! AppThemeColors) return this;
+    return AppThemeColors(
+      background: Color.lerp(background, other.background, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      surfaceAlt: Color.lerp(surfaceAlt, other.surfaceAlt, t)!,
+      textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
+      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
+      textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
+      border: Color.lerp(border, other.border, t)!,
+      primaryLight: Color.lerp(primaryLight, other.primaryLight, t)!,
+      successLight: Color.lerp(successLight, other.successLight, t)!,
+      warningLight: Color.lerp(warningLight, other.warningLight, t)!,
+      dangerLight: Color.lerp(dangerLight, other.dangerLight, t)!,
+      success: Color.lerp(success, other.success, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      danger: Color.lerp(danger, other.danger, t)!,
+      info: Color.lerp(info, other.info, t)!,
+      primary: Color.lerp(primary, other.primary, t)!,
+    );
+  }
+}
+
 class AppTheme {
-  static ThemeData get light {
+  static ThemeData get light => _build(
+        brightness: Brightness.light,
+        colors: AppThemeColors.light,
+      );
+
+  static ThemeData get dark => _build(
+        brightness: Brightness.dark,
+        colors: AppThemeColors.dark,
+      );
+
+  static ThemeData _build({
+    required Brightness brightness,
+    required AppThemeColors colors,
+  }) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.primary,
+      brightness: brightness,
+      primary: AppColors.primary,
+      onPrimary: Colors.white,
+      surface: colors.surface,
+      onSurface: colors.textPrimary,
+      error: colors.danger,
+      outline: colors.border,
+    );
+
     final base = ThemeData(
       useMaterial3: true,
       fontFamily: 'Inter',
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
-        primary: AppColors.primary,
-        surface: AppColors.surface,
-        error: AppColors.danger,
-      ),
+      brightness: brightness,
+      colorScheme: colorScheme,
+      extensions: <ThemeExtension<dynamic>>[colors],
     );
 
     return base.copyWith(
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: colors.background,
+      dividerColor: colors.border,
       textTheme: base.textTheme.apply(fontFamily: 'Inter').copyWith(
-            displayLarge: const TextStyle(
+            displayLarge: TextStyle(
               fontFamily: 'Inter',
               fontSize: 28,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: colors.textPrimary,
             ),
-            headlineLarge: const TextStyle(
+            headlineLarge: TextStyle(
               fontFamily: 'Inter',
               fontSize: 22,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: colors.textPrimary,
             ),
-            headlineMedium: const TextStyle(
+            headlineMedium: TextStyle(
               fontFamily: 'Inter',
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: colors.textPrimary,
             ),
-            headlineSmall: const TextStyle(
+            headlineSmall: TextStyle(
               fontFamily: 'Inter',
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: colors.textPrimary,
             ),
-            bodyLarge: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: AppColors.textPrimary),
-            bodyMedium: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14,
-                color: AppColors.textSecondary),
-            bodySmall: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12,
-                color: AppColors.textSecondary),
+            bodyLarge: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              color: colors.textPrimary,
+            ),
+            bodyMedium: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: colors.textSecondary,
+            ),
+            bodySmall: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
             labelLarge: const TextStyle(
                 fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600),
             labelMedium: const TextStyle(
@@ -103,23 +287,24 @@ class AppTheme {
             labelSmall: const TextStyle(
                 fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w500),
           ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.textPrimary,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colors.background,
+        foregroundColor: colors.textPrimary,
         centerTitle: false,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: colors.surface,
         contentPadding: const EdgeInsets.all(AppSpacing.lg),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: colors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: colors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -127,11 +312,42 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.surface,
+        color: colors.surface,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: colors.border),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: colors.surface,
+        indicatorColor: colors.primaryLight,
+        surfaceTintColor: Colors.transparent,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: brightness == Brightness.dark
+            ? colors.surfaceAlt
+            : AppColors.textPrimary,
+        contentTextStyle: TextStyle(
+          fontFamily: 'Inter',
+          color: brightness == Brightness.dark
+              ? colors.textPrimary
+              : AppColors.surface,
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colors.surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: colors.surfaceAlt,
+        selectedColor: colors.primaryLight,
+        side: BorderSide(color: colors.border),
+        labelStyle: TextStyle(
+          fontFamily: 'Inter',
+          color: colors.textPrimary,
         ),
       ),
     );
