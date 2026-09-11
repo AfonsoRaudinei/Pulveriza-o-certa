@@ -434,3 +434,33 @@ Disco apenas — IPA 11 em `build/ios/ipa/pontaverde.ipa`, payload validado, **n
 
 Disco apenas — IPA 112 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight.
 
+## Build 114 — 2026-09-11 18:34 -03
+
+- Versão solicitada: `1.0.0+114` (também em `pubspec.yaml`)
+- Motivo: release consolidada — Ordem de Aplicação (ProgressiveStepCard, 4 etapas), laudo PDF visual, exportação PDF na regulagem, histórico com editar/excluir, MedicoesResumoCard, dart format e scripts `tool/validar.sh` + `tool/inspecionar_ipa.sh`.
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 114 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (5 pods: Flutter, file_picker, printing, share_plus, shared_preferences_foundation)
+- Validação de pré-build: `./tool/validar.sh` — passou (63 testes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (~162 MB)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (22.80 MB / 23895633 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `114`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`
+- Upload TestFlight: não enviado
+
+### Status
+
+Disco apenas — IPA 114 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
+
