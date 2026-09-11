@@ -296,6 +296,30 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
         _parseInt(_numeroPontas.text) > 0;
   }
 
+  bool get _temMedicao => _medicoes.any((item) => item.valorMedido != null);
+
+  RegulagemPdfData _pdfData() {
+    return RegulagemPdfData(
+      produtor: _produtor.text.trim(),
+      fazenda: _fazenda.text.trim(),
+      talhao: _talhao.text.trim().isEmpty ? null : _talhao.text.trim(),
+      maquina: _maquina.text.trim(),
+      consultor: _consultor.text.trim().isEmpty ? null : _consultor.text.trim(),
+      dataRegulagem: _data,
+      vazaoLha: _parse(_vazao.text),
+      velocidade: _parse(_velocidade.text),
+      espacamentoCm: _parse(_espacamento.text),
+      numeroPontas: _parseInt(_numeroPontas.text),
+      pressaoBar: _parseNullable(_pressao.text),
+      litroMinIdeal: _litroMinIdeal,
+      medicoes: _medicoes,
+      configuracoes: _configParaClassificar(),
+      manejo: _manejo,
+      precoBico: _precoBico,
+      area: _area,
+    );
+  }
+
   double _parse(String text) {
     return double.tryParse(text.replaceAll(',', '.')) ?? 0;
   }
@@ -340,6 +364,11 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
                   : 'Nova Regulagem',
         ),
         actions: [
+          if (readonly && _temMedicao)
+            ExportarPdfButton(
+              data: _pdfData(),
+              variant: ExportarPdfButtonVariant.icon,
+            ),
           if (!readonly)
             TextButton(
               onPressed: _etapa1Completa ? _save : null,
@@ -437,32 +466,11 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
                   readonly: readonly,
                   onMedicaoChanged: _updateMedicao,
                 ),
-                if (_medicoes.any((item) => item.valorMedido != null)) ...[
+                if (_temMedicao && !readonly) ...[
                   const SizedBox(height: AppSpacing.lg),
                   ExportarPdfButton(
-                    data: RegulagemPdfData(
-                      produtor: _produtor.text.trim(),
-                      fazenda: _fazenda.text.trim(),
-                      talhao: _talhao.text.trim().isEmpty
-                          ? null
-                          : _talhao.text.trim(),
-                      maquina: _maquina.text.trim(),
-                      consultor: _consultor.text.trim().isEmpty
-                          ? null
-                          : _consultor.text.trim(),
-                      dataRegulagem: _data,
-                      vazaoLha: _parse(_vazao.text),
-                      velocidade: _parse(_velocidade.text),
-                      espacamentoCm: _parse(_espacamento.text),
-                      numeroPontas: _parseInt(_numeroPontas.text),
-                      pressaoBar: _parseNullable(_pressao.text),
-                      litroMinIdeal: _litroMinIdeal,
-                      medicoes: _medicoes,
-                      configuracoes: _configParaClassificar(),
-                      manejo: _manejo,
-                      precoBico: _precoBico,
-                      area: _area,
-                    ),
+                    data: _pdfData(),
+                    variant: ExportarPdfButtonVariant.outlined,
                   ),
                 ],
               ],

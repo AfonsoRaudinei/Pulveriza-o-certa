@@ -4,10 +4,17 @@ import 'package:printing/printing.dart';
 import '../../../services/regulagem_pdf_service.dart';
 import '../../../theme.dart';
 
+enum ExportarPdfButtonVariant { icon, outlined }
+
 class ExportarPdfButton extends StatefulWidget {
-  const ExportarPdfButton({super.key, required this.data});
+  const ExportarPdfButton({
+    super.key,
+    required this.data,
+    this.variant = ExportarPdfButtonVariant.outlined,
+  });
 
   final RegulagemPdfData data;
+  final ExportarPdfButtonVariant variant;
 
   @override
   State<ExportarPdfButton> createState() => _ExportarPdfButtonState();
@@ -41,16 +48,36 @@ class _ExportarPdfButtonState extends State<ExportarPdfButton> {
     }
   }
 
+  Widget _spinner({double size = 20}) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: IconTheme.of(context).color ??
+            DefaultTextStyle.of(context).style.color ??
+            AppColors.primary,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.variant == ExportarPdfButtonVariant.icon) {
+      return IconButton(
+        onPressed: _export,
+        tooltip: 'Exportar PDF',
+        icon: _loading ? _spinner() : const Icon(Icons.ios_share),
+      );
+    }
+
     return SizedBox(
       width: double.infinity,
-      child: FilledButton(
-        onPressed: _loading ? null : _export,
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppThemeColors.of(context).textTertiary,
+      child: OutlinedButton(
+        onPressed: _export,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary),
           padding: const EdgeInsets.all(AppSpacing.lg),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -61,18 +88,10 @@ class _ExportarPdfButtonState extends State<ExportarPdfButton> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_loading)
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            else ...[
-              const Icon(Icons.picture_as_pdf_outlined, size: AppSpacing.xl),
-              const SizedBox(width: AppSpacing.sm),
-            ],
+              _spinner()
+            else
+              const Icon(Icons.ios_share, size: AppSpacing.xl),
+            const SizedBox(width: AppSpacing.sm),
             Text(_loading ? 'Gerando PDF…' : 'Exportar PDF'),
           ],
         ),
