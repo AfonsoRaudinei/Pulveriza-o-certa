@@ -7,14 +7,19 @@ import 'package:intl/date_symbol_data_local.dart';
 RegulagemPdfData _sampleData({
   String? talhao,
   String? consultor,
+  List<PontaMedicao>? medicoes,
 }) {
   const config = Configuracoes();
-  final medicoes = [
-    const PontaMedicao(id: 1, valorMedido: 1.05, status: StatusPonta.ideal),
-    const PontaMedicao(id: 2, valorMedido: 0.92, status: StatusPonta.irregular),
-    const PontaMedicao(id: 3, valorMedido: 1.12, status: StatusPonta.desgaste),
-    const PontaMedicao(id: 4, valorMedido: null, status: StatusPonta.pendente),
-  ];
+  final pontas = medicoes ??
+      [
+        const PontaMedicao(id: 1, valorMedido: 1.05, status: StatusPonta.ideal),
+        const PontaMedicao(
+            id: 2, valorMedido: 0.92, status: StatusPonta.irregular),
+        const PontaMedicao(
+            id: 3, valorMedido: 1.12, status: StatusPonta.desgaste),
+        const PontaMedicao(
+            id: 4, valorMedido: null, status: StatusPonta.pendente),
+      ];
 
   return RegulagemPdfData(
     produtor: 'João Silva',
@@ -26,10 +31,10 @@ RegulagemPdfData _sampleData({
     vazaoLha: 150,
     velocidade: 12,
     espacamentoCm: 50,
-    numeroPontas: 4,
+    numeroPontas: pontas.length,
     pressaoBar: 3.5,
     litroMinIdeal: 1.0,
-    medicoes: medicoes,
+    medicoes: pontas,
     configuracoes: config,
     manejo: 450,
     precoBico: 35,
@@ -86,5 +91,20 @@ void main() {
     );
 
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
+
+  test('generate with only ideal pontas does not throw', () async {
+    final bytes = await RegulagemPdfService.generate(
+      _sampleData(
+        medicoes: const [
+          PontaMedicao(id: 1, valorMedido: 1.0, status: StatusPonta.ideal),
+          PontaMedicao(id: 2, valorMedido: 1.0, status: StatusPonta.ideal),
+          PontaMedicao(id: 3, valorMedido: 1.0, status: StatusPonta.ideal),
+        ],
+      ),
+    );
+
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+    expect(bytes.length, greaterThan(1000));
   });
 }
