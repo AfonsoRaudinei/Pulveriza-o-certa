@@ -339,3 +339,37 @@ compartilhamento normalmente.
 - Itens de qualidade (P2 do plano): acessibilidade (Semantics, alternativa ao
   swipe-delete), contraste de `textTertiary`, bugs de `key`/`didUpdateWidget`
   na tabela de pontas.
+
+## Build 10 — 2026-09-10 22:13 -03
+
+- Versão: `1.0.0+10` (também em `pubspec.yaml`).
+- Motivo: primeiro build após a correção completa dos itens P0 da auditoria
+  acima — sem login mock, sem perda de histórico por JSON corrompido,
+  feedback de erro em toda operação, fonte Inter embutida (sem
+  `google_fonts`/`http`), `PrivacyInfo.xcprivacy`, `TARGETED_DEVICE_FAMILY =
+  "1"`, `CFBundleDevelopmentRegion = pt-BR`, marca unificada "Ponta Verde".
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 10 --export-options-plist=ios/ExportOptions.plist`
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (22.5 MB).
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0` · `CFBundleVersion`: `10`
+  - `MinimumOSVersion`: `15.0` · nenhuma chave `*UsageDescription`
+  - `PrivacyInfo.xcprivacy` presente no bundle
+  - Frameworks: `App`, `Flutter`, `file_picker`, `objective_c` (FFI do
+    `path_provider`), `share_plus`, `shared_preferences_foundation`
+  - Assinatura: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA
+    (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`
+- Verificado no simulador (iPhone 17, iOS 26.2): boot direto no Dashboard sem
+  tela de login, marca "Ponta Verde" em todas as telas, `Config → Exportar
+  Dados` abre a folha de compartilhamento e gera o backup normalmente.
+
+### Status
+
+Build 10 pronto em disco, ainda **não enviado** — upload ao App Store Connect
+é uma ação de conta (usa API key + Issuer ID) e fica para o usuário rodar:
+`scripts/upload_testflight.sh <ISSUER_ID>` (dica de build number já corrigida
+para 10). Depois do upload: anexar ao grupo `Teste Externo` e enviar para Beta
+App Review. Antes do envio final para revisão, ainda faltam os artefatos de
+loja listados em `STORE.md` (URLs de privacidade/suporte públicas,
+screenshots de iPhone 6.9", texto da ficha, resposta ao questionário de App
+Privacy) e a decisão sobre a diretriz 4.3.

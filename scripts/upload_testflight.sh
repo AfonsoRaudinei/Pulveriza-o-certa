@@ -35,7 +35,7 @@ fi
 if [[ ! -f "${IPA_PATH}" ]]; then
   echo "ERRO: IPA não encontrado em ${IPA_PATH}"
   echo "Gere antes com:"
-  echo "  flutter build ipa --release --build-name 1.0.0 --build-number 8 \\"
+  echo "  flutter build ipa --release --build-name 1.0.0 --build-number 10 \\"
   echo "    --export-options-plist=ios/ExportOptions.plist"
   exit 1
 fi
