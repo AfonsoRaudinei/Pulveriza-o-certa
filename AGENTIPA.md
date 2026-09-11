@@ -273,3 +273,69 @@ Transporter; (2) anexar o build ao grupo `Teste Externo`; (3) enviar para
 Beta App Review (obrigatório para grupo externo na primeira compilação).
 Alternativa mais rápida: responder a conformidade de criptografia do build 5 já
 enviado e anexá-lo ao grupo.
+
+## Auditoria de revisão Apple — 2026-09-10 22:10 -03
+
+Revisão completa do projeto atuando como revisor Apple (ver
+`/Users/raudineisilvapereira/.claude/plans/analise-todo-o-projeto-melodic-frost.md`
+para o plano integral). Decisões tomadas com o usuário: app fica **só iPhone**
+(`TARGETED_DEVICE_FAMILY = "1"`) e marca única **"Ponta Verde"** em todo lugar.
+
+### Corrigido nesta sessão
+
+- Removida a tela de login mock (`lib/screens/login/login_screen.dart`, aceitava
+  qualquer credencial e exibia "Tela congelada na v1.0") e a rota `/login`.
+- Removido `EntitlementService` (stub morto de monetização, sem IAP no app).
+- `StorageService`: JSON de regulagens corrompido vai para quarentena
+  (`agro_regulagens_corrompido_<timestamp>`) em vez de ser apagado no próximo
+  salvamento; importação valida a estrutura antes de gravar; `StorageException`
+  com mensagens apresentáveis.
+- Feedback de erro/sucesso (SnackBar) em salvar, exportar, importar, apagar
+  tudo, salvar regulagem e excluir no histórico — nenhuma operação falha mais
+  em silêncio.
+- Fonte Inter embutida em `assets/fonts/` (`pubspec.yaml` → `fonts:`); removida
+  a dependência `google_fonts` (e `http`/`http_parser` junto). O app não tem
+  mais nenhum pacote com capacidade de rede.
+- `TARGETED_DEVICE_FAMILY` → `"1"` nas 3 configurações do target Runner.
+- Criado e registrado `ios/Runner/PrivacyInfo.xcprivacy` (Resources build
+  phase do target Runner via `xcodeproj` gem).
+- `Info.plist`: `CFBundleDevelopmentRegion` → `pt-BR`, `CFBundleLocalizations`
+  → `[pt-BR]`, removida a chave `UISupportedInterfaceOrientations~ipad`.
+- Marca unificada em "Ponta Verde" nas strings visíveis (Dashboard, Sobre,
+  `MaterialApp.title`, label do Android) — `AppConstants.appName` como fonte
+  única.
+- Removidos ~30 arquivos de debris de automação da raiz (continham dados
+  pessoais: lista de apps do Mac do usuário, e-mail, DOM da App Store Connect)
+  — movidos para fora do projeto, não versionados. **`git init` feito nesta
+  sessão** — o projeto não era um repositório git até então.
+- Criadas as páginas de Política de Privacidade e Suporte (`docs/*.html`,
+  também publicadas como Artifacts) e `STORE.md` com o texto completo da
+  ficha da loja, notas para o revisor e a mitigação da diretriz 4.3.
+- Adicionados testes de fumaça (`test/app_smoke_test.dart`): boot sem rota de
+  login e verificação da quarentena de dados corrompidos. 38 testes no total,
+  `flutter analyze` limpo.
+
+### Achado corrigido do meu próprio diagnóstico
+
+A auditoria inicial apontou `path_provider` como não linkado no iOS (sem pod,
+sem entrada no `GeneratedPluginRegistrant.m`). **Isso está incorreto** —
+`path_provider_foundation` 2.6.0 é um plugin FFI (usa o pacote `objective_c`,
+sem CocoaPod próprio) e se auto-registra via `dartPluginClass`. Confirmado
+rodando no simulador iPhone 17: `Config → Exportar Dados` abre a folha de
+compartilhamento normalmente.
+
+### Ainda falta (fora do escopo desta sessão de código)
+
+- Rodar `flutter build ipa` para gerar o **build 10** com todas as correções
+  acima e enviar com `scripts/upload_testflight.sh <ISSUER_ID>`.
+- Publicar as páginas de privacidade/suporte com um link público estável
+  (tornar os Artifacts públicos ou publicar `docs/` no GitHub Pages) e colar
+  as URLs no App Store Connect.
+- Preencher a ficha da loja com o texto de `STORE.md`, tirar os screenshots de
+  iPhone 6.9" e responder ao questionário de App Privacy ("Dados não
+  coletados").
+- Decidir e executar a mitigação da diretriz 4.3 (avaliar remover o registro
+  "AgroCalc" ocioso na mesma conta).
+- Itens de qualidade (P2 do plano): acessibilidade (Semantics, alternativa ao
+  swipe-delete), contraste de `textTertiary`, bugs de `key`/`didUpdateWidget`
+  na tabela de pontas.
