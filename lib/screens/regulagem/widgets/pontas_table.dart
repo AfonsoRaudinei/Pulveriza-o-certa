@@ -9,6 +9,7 @@ import '../../../models/configuracoes.dart';
 import '../../../models/regulagem.dart';
 import '../../../theme.dart';
 import '../../../widgets/status_badge.dart';
+import 'medicoes_resumo_card.dart';
 
 const _kIdWidth = 28.0;
 const _kMedidoWidth = 128.0;
@@ -246,86 +247,12 @@ class _ResumoPontas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 2.4,
-      mainAxisSpacing: AppSpacing.sm,
-      crossAxisSpacing: AppSpacing.sm,
-      children: [
-        _ResumoCard(
-          label: 'Desgaste',
-          value: resumo.desgaste,
-          color: AppColors.danger,
-          icon: Icons.trending_up,
-        ),
-        _ResumoCard(
-          label: 'Entupido',
-          value: resumo.irregular,
-          color: AppColors.warning,
-          icon: Icons.trending_down,
-        ),
-        _ResumoCard(
-          label: 'Tolerância',
-          value: resumo.tolerancia,
-          color: AppColors.info,
-          icon: Icons.check_circle,
-        ),
-        _ResumoCard(
-          label: 'Acima Min',
-          value: resumo.acimaMin,
-          color: AppColors.primary,
-          icon: Icons.trending_up,
-        ),
-        _ResumoCard(
-          label: 'Ideal',
-          value: resumo.ideal,
-          color: AppColors.success,
-          icon: Icons.check_circle,
-        ),
-      ],
-    );
-  }
-}
-
-class _ResumoCard extends StatelessWidget {
-  const _ResumoCard({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
-  final String label;
-  final int value;
-  final Color color;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surfaceAlt,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(label, style: Theme.of(context).textTheme.labelMedium),
-          ),
-          Text(
-            '$value',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(color: color),
-          ),
-        ],
-      ),
+    return MedicoesResumoCard(
+      desgaste: resumo.desgaste,
+      irregular: resumo.irregular,
+      tolerancia: resumo.tolerancia,
+      acimaMin: resumo.acimaMin,
+      ideal: resumo.ideal,
     );
   }
 }
@@ -510,7 +437,8 @@ class _MedidoField extends StatelessWidget {
         isDense: true,
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: const BorderSide(color: AppColors.border),
@@ -644,7 +572,8 @@ class _RecomendacaoBanner extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final color = trocarTudo ? colors.danger : colors.success;
     final background = trocarTudo ? colors.dangerLight : colors.successLight;
-    final icon = trocarTudo ? Icons.warning_amber_rounded : Icons.check_circle_outline;
+    final icon =
+        trocarTudo ? Icons.warning_amber_rounded : Icons.check_circle_outline;
     final text = trocarTudo
         ? 'TROCA COMPLETA recomendada'
         : 'Troca seletiva das pontas problemáticas';
@@ -664,7 +593,10 @@ class _RecomendacaoBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: color),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(color: color),
             ),
           ),
         ],
@@ -912,7 +844,8 @@ class _Orientacoes extends StatelessWidget {
         _OrientacaoCard(
           count: resumo.desgaste,
           title: 'Desgaste',
-          message: 'Substituir urgentemente. Excesso de vazão compromete a aplicação.',
+          message:
+              'Substituir urgentemente. Excesso de vazão compromete a aplicação.',
           color: colors.danger,
           background: colors.dangerLight,
           icon: Icons.trending_up,
@@ -970,10 +903,11 @@ class _OrientacaoCard extends StatelessWidget {
                   children: [
                     Text(
                       '$count',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: color,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.w700,
+                              ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
