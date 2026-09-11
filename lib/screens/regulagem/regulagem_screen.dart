@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -36,16 +38,12 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   final _espacamento = TextEditingController();
   final _numeroPontas = TextEditingController();
   final _pressao = TextEditingController();
-  final _linhas = TextEditingController();
-  final _espacamentoLinhas = TextEditingController();
-  final _eficiencia = TextEditingController();
-  final _populacao = TextEditingController();
+  final _manejoCtrl = TextEditingController();
+  final _precoBicoCtrl = TextEditingController();
+  final _areaCtrl = TextEditingController();
 
-  TipoOperacao _tipo = TipoOperacao.pulverizador;
   DateTime _data = DateTime.now();
   double _litroMinIdeal = 0;
-  double _larguraUtil = 0;
-  double _rendimento = 0;
   double _manejo = 0;
   double _precoBico = 0;
   double _area = 0;
@@ -69,10 +67,9 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     _espacamento.dispose();
     _numeroPontas.dispose();
     _pressao.dispose();
-    _linhas.dispose();
-    _espacamentoLinhas.dispose();
-    _eficiencia.dispose();
-    _populacao.dispose();
+    _manejoCtrl.dispose();
+    _precoBicoCtrl.dispose();
+    _areaCtrl.dispose();
     super.dispose();
   }
 
@@ -90,20 +87,14 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       _numeroPontas.text =
           regulagem.numeroPontas == 0 ? '' : '${regulagem.numeroPontas}';
       _pressao.text = _value(regulagem.pressaoBar);
-      _linhas.text = regulagem.nLinhas == null ? '' : '${regulagem.nLinhas}';
-      _espacamentoLinhas.text = _value(regulagem.espacamentoLinhasM);
-      _eficiencia.text = _value(regulagem.eficiencia);
-      _populacao.text = regulagem.populacaoDesejada == null
-          ? ''
-          : '${regulagem.populacaoDesejada}';
-      _tipo = regulagem.tipoOperacao;
       _data = regulagem.dataRegulagem;
       _litroMinIdeal = regulagem.litroMinIdeal;
-      _larguraUtil = regulagem.larguraUtil ?? 0;
-      _rendimento = regulagem.rendimento ?? 0;
       _manejo = regulagem.manejoRS ?? 0;
       _precoBico = regulagem.precoBicoRS ?? 0;
       _area = regulagem.areaHa ?? 0;
+      _manejoCtrl.text = _value(regulagem.manejoRS);
+      _precoBicoCtrl.text = _value(regulagem.precoBicoRS);
+      _areaCtrl.text = _value(regulagem.areaHa);
       _medicoes = List<PontaMedicao>.from(regulagem.medicoes);
     } else {
       _consultor.text =
@@ -120,18 +111,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       velocidade: _parse(_velocidade.text),
       espacamentoCm: _parse(_espacamento.text),
     );
-    _larguraUtil = CalcUtils.calcularLarguraUtil(
-      nLinhas: _parseInt(_linhas.text),
-      espacamentoLinhasM: _parse(_espacamentoLinhas.text),
-    );
-    _rendimento = CalcUtils.calcularRendimentoOperacional(
-      larguraUtil: _larguraUtil,
-      velocidade: _parse(_velocidade.text),
-      eficiencia: _parse(_eficiencia.text),
-    );
-    if (_tipo == TipoOperacao.pulverizador) {
-      _syncPontas(numeroPontas, config);
-    }
+    _syncPontas(numeroPontas, config);
     setState(() {});
   }
 
@@ -175,10 +155,10 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     setState(() {});
   }
 
-  void _updateEconomia(EconomiaInput input) {
-    _manejo = _parse(input.manejo);
-    _precoBico = _parse(input.precoBico);
-    _area = _parse(input.area);
+  void _updateEconomiaFromControllers() {
+    _manejo = _parse(_manejoCtrl.text);
+    _precoBico = _parse(_precoBicoCtrl.text);
+    _area = _parse(_areaCtrl.text);
     setState(() {});
   }
 
@@ -191,30 +171,23 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
         fazenda: _fazenda.text.trim(),
         talhao: _talhao.text.trim().isEmpty ? null : _talhao.text.trim(),
         maquina: _maquina.text.trim(),
-        tipoOperacao: _tipo,
+        tipoOperacao: TipoOperacao.pulverizador,
         dataRegulagem: _data,
         consultor:
             _consultor.text.trim().isEmpty ? null : _consultor.text.trim(),
-        vazaoLha: _tipo == TipoOperacao.pulverizador ? _parse(_vazao.text) : 0,
+        vazaoLha: _parse(_vazao.text),
         velocidade: _parse(_velocidade.text),
-        espacamentoCm:
-            _tipo == TipoOperacao.pulverizador ? _parse(_espacamento.text) : 0,
-        numeroPontas: _tipo == TipoOperacao.pulverizador
-            ? _parseInt(_numeroPontas.text)
-            : 0,
+        espacamentoCm: _parse(_espacamento.text),
+        numeroPontas: _parseInt(_numeroPontas.text),
         pressaoBar: _parseNullable(_pressao.text),
-        nLinhas:
-            _tipo == TipoOperacao.plantadeira ? _parseInt(_linhas.text) : null,
-        espacamentoLinhasM: _tipo == TipoOperacao.plantadeira
-            ? _parse(_espacamentoLinhas.text)
-            : null,
-        eficiencia:
-            _tipo == TipoOperacao.plantadeira ? _parse(_eficiencia.text) : null,
-        populacaoDesejada: _parseIntNullable(_populacao.text),
+        nLinhas: null,
+        espacamentoLinhasM: null,
+        eficiencia: null,
+        populacaoDesejada: null,
         litroMinIdeal: _litroMinIdeal,
-        medicoes: _tipo == TipoOperacao.pulverizador ? _medicoes : [],
-        larguraUtil: _tipo == TipoOperacao.plantadeira ? _larguraUtil : null,
-        rendimento: _tipo == TipoOperacao.plantadeira ? _rendimento : null,
+        medicoes: _medicoes,
+        larguraUtil: null,
+        rendimento: null,
         manejoRS: _manejo == 0 ? null : _manejo,
         precoBicoRS: _precoBico == 0 ? null : _precoBico,
         areaHa: _area == 0 ? null : _area,
@@ -250,16 +223,10 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   }
 
   bool get _etapa2Completa {
-    if (_tipo == TipoOperacao.pulverizador) {
-      return _parse(_vazao.text) > 0 &&
-          _parse(_velocidade.text) > 0 &&
-          _parse(_espacamento.text) > 0 &&
-          _parseInt(_numeroPontas.text) > 0;
-    }
-    return _parseInt(_linhas.text) > 0 &&
-        _parse(_espacamentoLinhas.text) > 0 &&
+    return _parse(_vazao.text) > 0 &&
         _parse(_velocidade.text) > 0 &&
-        _parse(_eficiencia.text) > 0;
+        _parse(_espacamento.text) > 0 &&
+        _parseInt(_numeroPontas.text) > 0;
   }
 
   double _parse(String text) {
@@ -273,11 +240,6 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
 
   int _parseInt(String text) {
     return int.tryParse(text) ?? 0;
-  }
-
-  int? _parseIntNullable(String text) {
-    if (text.trim().isEmpty) return null;
-    return int.tryParse(text);
   }
 
   String _value(double? value) {
@@ -326,14 +288,13 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               talhao: _talhao,
               maquina: _maquina,
               consultor: _consultor,
-              tipo: _tipo,
+              area: _areaCtrl,
+              manejo: _manejoCtrl,
+              precoBico: _precoBicoCtrl,
               data: _data,
               readonly: readonly,
               onChanged: _recalculate,
-              onTipoChanged: (value) {
-                _tipo = value;
-                _recalculate();
-              },
+              onEconomiaChanged: _updateEconomiaFromControllers,
               onPickDate: _pickDate,
             ),
           ),
@@ -343,16 +304,11 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             locked: !_etapa1Completa,
             complete: _etapa2Completa,
             child: _ParametrosStep(
-              tipo: _tipo,
               vazao: _vazao,
               velocidade: _velocidade,
               espacamento: _espacamento,
               numeroPontas: _numeroPontas,
               pressao: _pressao,
-              linhas: _linhas,
-              espacamentoLinhas: _espacamentoLinhas,
-              eficiencia: _eficiencia,
-              populacao: _populacao,
               readonly: readonly,
               onChanged: _recalculate,
             ),
@@ -361,37 +317,27 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             index: 3,
             title: 'Cálculos Automáticos',
             locked: !_etapa2Completa,
-            complete: _tipo == TipoOperacao.pulverizador
-                ? _litroMinIdeal > 0
-                : _rendimento > 0,
-            child: _ResultadosStep(
-              tipo: _tipo,
-              litroMinIdeal: _litroMinIdeal,
-              larguraUtil: _larguraUtil,
-              rendimento: _rendimento,
+            complete: _litroMinIdeal > 0,
+            child: _ReadonlyResult(
+              label: 'Lt/min Ideal',
+              value: '${_litroMinIdeal.toStringAsFixed(3)} L/min',
             ),
           ),
           ProgressiveCard(
             index: 4,
             title: 'Medições das Pontas',
-            locked: _tipo == TipoOperacao.pulverizador
-                ? _litroMinIdeal <= 0
-                : _rendimento <= 0,
+            locked: _litroMinIdeal <= 0,
             complete: _medicoes.any((item) => item.valorMedido != null),
-            child: _tipo == TipoOperacao.pulverizador
-                ? PontasTable(
-                    medicoes: _medicoes,
-                    ideal: _litroMinIdeal,
-                    configuracoes: config,
-                    manejo: _manejo,
-                    precoBico: _precoBico,
-                    area: _area,
-                    readonly: readonly,
-                    onMedicaoChanged: _updateMedicao,
-                    onEconomiaChanged: _updateEconomia,
-                  )
-                : const Text(
-                    'Plantadeira salva com largura útil e rendimento operacional.'),
+            child: PontasTable(
+              medicoes: _medicoes,
+              ideal: _litroMinIdeal,
+              configuracoes: config,
+              manejo: _manejo,
+              precoBico: _precoBico,
+              area: _area,
+              readonly: readonly,
+              onMedicaoChanged: _updateMedicao,
+            ),
           ),
         ],
       ),
@@ -406,11 +352,13 @@ class _ContextStep extends StatelessWidget {
     required this.talhao,
     required this.maquina,
     required this.consultor,
-    required this.tipo,
+    required this.area,
+    required this.manejo,
+    required this.precoBico,
     required this.data,
     required this.readonly,
     required this.onChanged,
-    required this.onTipoChanged,
+    required this.onEconomiaChanged,
     required this.onPickDate,
   });
 
@@ -419,62 +367,86 @@ class _ContextStep extends StatelessWidget {
   final TextEditingController talhao;
   final TextEditingController maquina;
   final TextEditingController consultor;
-  final TipoOperacao tipo;
+  final TextEditingController area;
+  final TextEditingController manejo;
+  final TextEditingController precoBico;
   final DateTime data;
   final bool readonly;
   final VoidCallback onChanged;
-  final ValueChanged<TipoOperacao> onTipoChanged;
+  final VoidCallback onEconomiaChanged;
   final VoidCallback onPickDate;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _FormField(
+        _FieldRow(
+          left: _LabeledField(
             controller: produtor,
             label: 'Produtor',
             readonly: readonly,
-            onChanged: onChanged),
-        _FormField(
+            onChanged: onChanged,
+          ),
+          right: _LabeledField(
             controller: fazenda,
             label: 'Fazenda',
             readonly: readonly,
-            onChanged: onChanged),
-        _FormField(
+            onChanged: onChanged,
+          ),
+        ),
+        _FieldRow(
+          left: _LabeledField(
             controller: talhao,
             label: 'Talhão',
             readonly: readonly,
-            onChanged: onChanged),
-        _FormField(
+            onChanged: onChanged,
+          ),
+          right: _LabeledField(
             controller: maquina,
             label: 'Máquina',
             readonly: readonly,
-            onChanged: onChanged),
-        DropdownButtonFormField<TipoOperacao>(
-          initialValue: tipo,
-          decoration: const InputDecoration(labelText: 'Tipo de Operação'),
-          items: const [
-            DropdownMenuItem(
-                value: TipoOperacao.pulverizador, child: Text('Pulverizador')),
-            DropdownMenuItem(
-                value: TipoOperacao.plantadeira, child: Text('Plantadeira')),
-          ],
-          onChanged: readonly
-              ? null
-              : (value) => onTipoChanged(value ?? TipoOperacao.pulverizador),
+            onChanged: onChanged,
+          ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        _FormField(
+        _FieldRow(
+          left: _LabeledField(
             controller: consultor,
             label: 'Consultor',
             readonly: readonly,
-            onChanged: onChanged),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Data da Regulagem'),
-          subtitle: Text('${data.day}/${data.month}/${data.year}'),
-          trailing: const Icon(Icons.calendar_today),
-          onTap: readonly ? null : onPickDate,
+            onChanged: onChanged,
+          ),
+          right: _DateField(
+            data: data,
+            readonly: readonly,
+            onPickDate: onPickDate,
+          ),
+        ),
+        _FieldRow(
+          left: _LabeledField(
+            controller: area,
+            label: 'Área (ha)',
+            readonly: readonly,
+            onChanged: onEconomiaChanged,
+            decimal: true,
+          ),
+          right: _LabeledField(
+            controller: manejo,
+            label: 'Manejo (R\$)',
+            readonly: readonly,
+            onChanged: onEconomiaChanged,
+            decimal: true,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: _LabeledField(
+            controller: precoBico,
+            label: 'Preço do bico (R\$/un)',
+            helper: 'Valor de um bico. Troca completa = preço × nº de pontas.',
+            readonly: readonly,
+            onChanged: onEconomiaChanged,
+            decimal: true,
+          ),
         ),
       ],
     );
@@ -483,137 +455,218 @@ class _ContextStep extends StatelessWidget {
 
 class _ParametrosStep extends StatelessWidget {
   const _ParametrosStep({
-    required this.tipo,
     required this.vazao,
     required this.velocidade,
     required this.espacamento,
     required this.numeroPontas,
     required this.pressao,
-    required this.linhas,
-    required this.espacamentoLinhas,
-    required this.eficiencia,
-    required this.populacao,
     required this.readonly,
     required this.onChanged,
   });
 
-  final TipoOperacao tipo;
   final TextEditingController vazao;
   final TextEditingController velocidade;
   final TextEditingController espacamento;
   final TextEditingController numeroPontas;
   final TextEditingController pressao;
-  final TextEditingController linhas;
-  final TextEditingController espacamentoLinhas;
-  final TextEditingController eficiencia;
-  final TextEditingController populacao;
   final bool readonly;
   final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
-    if (tipo == TipoOperacao.pulverizador) {
-      return Column(
-        children: [
-          _FormField(
-              controller: vazao,
-              label: 'Vazão (L/ha)',
-              readonly: readonly,
-              onChanged: onChanged,
-              number: true),
-          _FormField(
-              controller: velocidade,
-              label: 'Velocidade (km/h)',
-              readonly: readonly,
-              onChanged: onChanged,
-              number: true),
-          _FormField(
-              controller: espacamento,
-              label: 'Espaçamento entre bicos (cm)',
-              readonly: readonly,
-              onChanged: onChanged,
-              number: true),
-          _FormField(
-              controller: numeroPontas,
-              label: 'Número de pontas',
-              readonly: readonly,
-              onChanged: onChanged,
-              number: true),
-          _FormField(
-              controller: pressao,
-              label: 'Pressão de trabalho (bar)',
-              readonly: readonly,
-              onChanged: onChanged,
-              number: true),
-        ],
-      );
-    }
     return Column(
       children: [
-        _FormField(
-            controller: linhas,
-            label: 'Número de linhas',
+        _FieldRow(
+          left: _LabeledField(
+            controller: vazao,
+            label: 'Vazão (L/ha)',
             readonly: readonly,
             onChanged: onChanged,
-            number: true),
-        _FormField(
-            controller: espacamentoLinhas,
-            label: 'Espaçamento entre linhas (m)',
-            readonly: readonly,
-            onChanged: onChanged,
-            number: true),
-        _FormField(
+            decimal: true,
+          ),
+          right: _LabeledField(
             controller: velocidade,
             label: 'Velocidade (km/h)',
             readonly: readonly,
             onChanged: onChanged,
-            number: true),
-        _FormField(
-            controller: eficiencia,
-            label: 'Eficiência de campo (%)',
+            decimal: true,
+          ),
+        ),
+        _FieldRow(
+          left: _LabeledField(
+            controller: espacamento,
+            label: 'Espaçamento entre bicos (cm)',
             readonly: readonly,
             onChanged: onChanged,
-            number: true),
-        _FormField(
-            controller: populacao,
-            label: 'População desejada (plantas/ha)',
+            decimal: true,
+          ),
+          right: _LabeledField(
+            controller: numeroPontas,
+            label: 'Número de pontas',
             readonly: readonly,
             onChanged: onChanged,
-            number: true),
+            integer: true,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: _LabeledField(
+            controller: pressao,
+            label: 'Pressão de trabalho (bar)',
+            readonly: readonly,
+            onChanged: onChanged,
+            decimal: true,
+          ),
+        ),
       ],
     );
   }
 }
 
-class _ResultadosStep extends StatelessWidget {
-  const _ResultadosStep({
-    required this.tipo,
-    required this.litroMinIdeal,
-    required this.larguraUtil,
-    required this.rendimento,
-  });
+class _FieldRow extends StatelessWidget {
+  const _FieldRow({required this.left, required this.right});
 
-  final TipoOperacao tipo;
-  final double litroMinIdeal;
-  final double larguraUtil;
-  final double rendimento;
+  final Widget left;
+  final Widget right;
 
   @override
   Widget build(BuildContext context) {
-    if (tipo == TipoOperacao.pulverizador) {
-      return _ReadonlyResult(
-          label: 'Lt/min Ideal',
-          value: '${litroMinIdeal.toStringAsFixed(3)} L/min');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: left),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: right),
+        ],
+      ),
+    );
+  }
+}
+
+class _LabeledField extends StatelessWidget {
+  const _LabeledField({
+    required this.controller,
+    required this.label,
+    required this.readonly,
+    required this.onChanged,
+    this.helper,
+    this.decimal = false,
+    this.integer = false,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String? helper;
+  final bool readonly;
+  final VoidCallback onChanged;
+  final bool decimal;
+  final bool integer;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextInputType keyboardType;
+    final List<TextInputFormatter> formatters;
+    if (decimal) {
+      keyboardType = const TextInputType.numberWithOptions(decimal: true);
+      formatters = [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+      ];
+    } else if (integer) {
+      keyboardType = TextInputType.number;
+      formatters = [FilteringTextInputFormatter.digitsOnly];
+    } else {
+      keyboardType = TextInputType.text;
+      formatters = const [];
     }
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _ReadonlyResult(
-            label: 'Largura Útil',
-            value: '${larguraUtil.toStringAsFixed(2)} m'),
-        const SizedBox(height: AppSpacing.md),
-        _ReadonlyResult(
-            label: 'Rendimento',
-            value: '${rendimento.toStringAsFixed(2)} ha/h'),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: AppSpacing.xs),
+        TextField(
+          controller: controller,
+          enabled: !readonly,
+          keyboardType: keyboardType,
+          inputFormatters: formatters,
+          style: Theme.of(context).textTheme.bodyLarge,
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
+            ),
+          ),
+          onChanged: (_) => onChanged(),
+        ),
+        if (helper != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(helper!, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ],
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  const _DateField({
+    required this.data,
+    required this.readonly,
+    required this.onPickDate,
+  });
+
+  final DateTime data;
+  final bool readonly;
+  final VoidCallback onPickDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final formatted = DateFormat('dd/MM/yyyy', 'pt_BR').format(data);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Data da regulagem',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Material(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: InkWell(
+            onTap: readonly ? null : onPickDate,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      formatted,
+                      maxLines: 2,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -641,36 +694,6 @@ class _ReadonlyResult extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(value, style: Theme.of(context).textTheme.headlineMedium),
         ],
-      ),
-    );
-  }
-}
-
-class _FormField extends StatelessWidget {
-  const _FormField({
-    required this.controller,
-    required this.label,
-    required this.readonly,
-    required this.onChanged,
-    this.number = false,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final bool readonly;
-  final VoidCallback onChanged;
-  final bool number;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: TextField(
-        controller: controller,
-        enabled: !readonly,
-        keyboardType: number ? TextInputType.number : TextInputType.text,
-        decoration: InputDecoration(labelText: label),
-        onChanged: (_) => onChanged(),
       ),
     );
   }
