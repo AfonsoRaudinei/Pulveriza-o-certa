@@ -1,0 +1,47 @@
+import 'package:flutter/foundation.dart';
+
+import '../models/regulagem.dart';
+import '../services/storage_service.dart';
+
+class RegulagensProvider extends ChangeNotifier {
+  final StorageService _storage = StorageService();
+
+  List<Regulagem> _regulagens = [];
+  bool _loading = false;
+
+  List<Regulagem> get regulagens => List.unmodifiable(_regulagens);
+  bool get loading => _loading;
+
+  Future<void> load() async {
+    try {
+      _loading = true;
+      notifyListeners();
+      _regulagens = await _storage.getRegulagens();
+    } catch (error) {
+      debugPrint('Erro no provider de regulagens: $error');
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> save(Regulagem regulagem) async {
+    try {
+      await _storage.saveRegulagem(regulagem);
+      await load();
+    } catch (error) {
+      debugPrint('Erro ao salvar provider de regulagens: $error');
+      rethrow;
+    }
+  }
+
+  Future<void> delete(String id) async {
+    try {
+      await _storage.deleteRegulagem(id);
+      await load();
+    } catch (error) {
+      debugPrint('Erro ao excluir provider de regulagens: $error');
+      rethrow;
+    }
+  }
+}
