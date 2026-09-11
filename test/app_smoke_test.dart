@@ -17,7 +17,7 @@ void main() {
     // Marca do produto unificada.
     expect(find.text('Ponta Verde'), findsWidgets);
     // Ação principal do dashboard.
-    expect(find.text('+ Nova Regulagem'), findsOneWidget);
+    expect(find.text('Nova Regulagem'), findsOneWidget);
     // A rota de login foi removida.
     expect(Routes.home, '/home');
     expect(AppRoutes.map.containsKey('/login'), isFalse);

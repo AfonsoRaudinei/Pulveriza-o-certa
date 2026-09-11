@@ -103,7 +103,7 @@ class _DashboardTabState extends State<DashboardTab> {
             _WelcomeCard(nome: nome),
             const SizedBox(height: AppSpacing.xl),
             AppButton(
-              label: '+ Nova Regulagem',
+              label: 'Nova Regulagem',
               icon: Icons.add,
               onPressed: () => Navigator.pushNamed(context, Routes.regulagem),
             ),
@@ -138,7 +138,7 @@ class _WelcomeCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Regule pulverizadores e plantadeiras direto no campo.',
+              'Regule pulverizadores direto no campo.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],

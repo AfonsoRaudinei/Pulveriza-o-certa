@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/extensions/double_extension.dart';
 import '../../../core/utils/calculo_utils.dart';
@@ -6,6 +7,10 @@ import '../../../models/configuracoes.dart';
 import '../../../models/regulagem.dart';
 import '../../../theme.dart';
 import '../../../widgets/status_badge.dart';
+
+const _kIdWidth = 28.0;
+const _kMedidoWidth = 128.0;
+const _kPercentWidth = 48.0;
 
 class PontasTable extends StatelessWidget {
   PontasTable({
@@ -18,7 +23,6 @@ class PontasTable extends StatelessWidget {
     required this.area,
     required this.readonly,
     required this.onMedicaoChanged,
-    required this.onEconomiaChanged,
   })  : _hasMedicoes = medicoes.any((item) => item.valorMedido != null),
         _resumoPontas = _ResumoPontasData.from(
           medicoes: medicoes,
@@ -43,7 +47,6 @@ class PontasTable extends StatelessWidget {
   final double area;
   final bool readonly;
   final ValueChanged<PontaInput> onMedicaoChanged;
-  final ValueChanged<EconomiaInput> onEconomiaChanged;
   final bool _hasMedicoes;
   final _ResumoPontasData _resumoPontas;
   final Map<int, double> _percentuais;
@@ -57,6 +60,7 @@ class PontasTable extends StatelessWidget {
       children: [
         _ResumoPontas(resumo: _resumoPontas),
         const SizedBox(height: AppSpacing.lg),
+        const _PontasHeader(),
         SizedBox(
           height: 360,
           child: ListView.builder(
@@ -76,14 +80,7 @@ class PontasTable extends StatelessWidget {
         ),
         if (_hasMedicoes) ...[
           const SizedBox(height: AppSpacing.xl),
-          _EconomiaSection(
-            resumo: _economiaResumo,
-            manejo: manejo,
-            precoBico: precoBico,
-            area: area,
-            readonly: readonly,
-            onChanged: onEconomiaChanged,
-          ),
+          _EconomiaSection(resumo: _economiaResumo),
           const SizedBox(height: AppSpacing.xl),
           _Orientacoes(resumo: _orientacoesResumo),
         ],
@@ -111,17 +108,6 @@ class PontaInput {
   const PontaInput(this.id, this.value);
   final int id;
   final String value;
-}
-
-class EconomiaInput {
-  const EconomiaInput({
-    required this.manejo,
-    required this.precoBico,
-    required this.area,
-  });
-  final String manejo;
-  final String precoBico;
-  final String area;
 }
 
 class _ResumoPontasData {
@@ -335,6 +321,37 @@ class _ResumoCard extends StatelessWidget {
   }
 }
 
+class _PontasHeader extends StatelessWidget {
+  const _PontasHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+        );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        children: [
+          SizedBox(width: _kIdWidth, child: Text('#', style: style)),
+          SizedBox(width: _kMedidoWidth, child: Text('Medido', style: style)),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: Text('Ideal', style: style)),
+          SizedBox(
+            width: _kPercentWidth,
+            child: Text('%', style: style, textAlign: TextAlign.end),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Text('Status', style: style, textAlign: TextAlign.end),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PontaRow extends StatefulWidget {
   const _PontaRow({
     required this.ponta,
@@ -381,6 +398,9 @@ class _PontaRowState extends State<_PontaRow> {
 
   @override
   Widget build(BuildContext context) {
+    final numberStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: AppColors.textPrimary,
+        );
     return Container(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       decoration: const BoxDecoration(
@@ -388,79 +408,124 @@ class _PontaRowState extends State<_PontaRow> {
       ),
       child: Row(
         children: [
-          SizedBox(width: 34, child: Text('${widget.ponta.id}')),
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              enabled: !widget.readonly,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Medida'),
-              onChanged: widget.onChanged,
+          SizedBox(
+            width: _kIdWidth,
+            child: Text('${widget.ponta.id}', textAlign: TextAlign.center),
+          ),
+          SizedBox(
+            width: _kMedidoWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'L/min',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                _MedidoField(
+                  controller: _controller,
+                  readonly: widget.readonly,
+                  onChanged: widget.onChanged,
+                ),
+              ],
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          SizedBox(width: 84, child: Text(widget.ideal.toStringAsFixed(3))),
+          Expanded(
+            child: Text(
+              widget.ideal.toStringAsFixed(3),
+              maxLines: 1,
+              style: numberStyle,
+            ),
+          ),
           SizedBox(
-            width: 62,
+            width: _kPercentWidth,
             child: Text(
               widget.percentual == 0
                   ? '-'
                   : widget.percentual.toStringAsFixed(1),
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              style: numberStyle,
             ),
           ),
-          StatusBadge(status: widget.ponta.status),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: StatusBadge(status: widget.ponta.status),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _EconomiaSection extends StatefulWidget {
-  const _EconomiaSection({
-    required this.resumo,
-    required this.manejo,
-    required this.precoBico,
-    required this.area,
+class _MedidoField extends StatelessWidget {
+  const _MedidoField({
+    required this.controller,
     required this.readonly,
     required this.onChanged,
   });
-  final _EconomiaResumo resumo;
-  final double manejo;
-  final double precoBico;
-  final double area;
+
+  final TextEditingController controller;
   final bool readonly;
-  final ValueChanged<EconomiaInput> onChanged;
+  final ValueChanged<String> onChanged;
 
   @override
-  State<_EconomiaSection> createState() => _EconomiaSectionState();
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      enabled: !readonly,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+      ],
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+      ),
+      decoration: InputDecoration(
+        hintText: '0,000',
+        isDense: true,
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.borderFocus),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+      ),
+      onChanged: onChanged,
+    );
+  }
 }
 
-class _EconomiaSectionState extends State<_EconomiaSection> {
-  late final TextEditingController _manejo;
-  late final TextEditingController _preco;
-  late final TextEditingController _area;
+class _EconomiaSection extends StatelessWidget {
+  const _EconomiaSection({required this.resumo});
 
-  @override
-  void initState() {
-    super.initState();
-    _manejo = TextEditingController(
-      text: widget.manejo == 0 ? '' : widget.manejo.toStringAsFixed(2),
-    );
-    _preco = TextEditingController(
-      text: widget.precoBico == 0 ? '' : widget.precoBico.toStringAsFixed(2),
-    );
-    _area = TextEditingController(
-      text: widget.area == 0 ? '' : widget.area.toStringAsFixed(2),
-    );
-  }
-
-  @override
-  void dispose() {
-    _manejo.dispose();
-    _preco.dispose();
-    _area.dispose();
-    super.dispose();
-  }
+  final _EconomiaResumo resumo;
 
   @override
   Widget build(BuildContext context) {
@@ -472,90 +537,23 @@ class _EconomiaSectionState extends State<_EconomiaSection> {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: AppSpacing.md),
-        Text('Ponta R\$: ${widget.resumo.pontaRS.toMoeda()}'),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _EconomiaField(
-                controller: _manejo,
-                label: 'Manejo R\$',
-                readonly: widget.readonly,
-                notify: _notify,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _EconomiaField(
-                controller: _preco,
-                label: 'Bico R\$',
-                readonly: widget.readonly,
-                notify: _notify,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _EconomiaField(
-                controller: _area,
-                label: 'Área ha',
-                readonly: widget.readonly,
-                notify: _notify,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        if (widget.resumo.exibirResultado) ...[
-          Text('Perda estimada total: ${widget.resumo.perdaTotal.toMoeda()}'),
-          Text('Custo de troca total: ${widget.resumo.custo.toMoeda()}'),
+        Text('Ponta R\$: ${resumo.pontaRS.toMoeda()}'),
+        if (resumo.exibirResultado) ...[
+          const SizedBox(height: AppSpacing.md),
+          Text('Perda estimada total: ${resumo.perdaTotal.toMoeda()}'),
+          Text('Custo de troca total: ${resumo.custo.toMoeda()}'),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            widget.resumo.trocarTudo
+            resumo.trocarTudo
                 ? 'TROCA COMPLETA recomendada'
                 : 'Troca seletiva das pontas problemáticas',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: widget.resumo.trocarTudo
-                      ? AppColors.danger
-                      : AppColors.success,
+                  color:
+                      resumo.trocarTudo ? AppColors.danger : AppColors.success,
                 ),
           ),
         ],
       ],
-    );
-  }
-
-  void _notify() {
-    widget.onChanged(
-      EconomiaInput(
-        manejo: _manejo.text,
-        precoBico: _preco.text,
-        area: _area.text,
-      ),
-    );
-  }
-}
-
-class _EconomiaField extends StatelessWidget {
-  const _EconomiaField({
-    required this.controller,
-    required this.label,
-    required this.readonly,
-    required this.notify,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final bool readonly;
-  final VoidCallback notify;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      enabled: !readonly,
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(labelText: label),
-      onChanged: (_) => notify(),
     );
   }
 }
