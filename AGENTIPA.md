@@ -373,3 +373,34 @@ App Review. Antes do envio final para revisão, ainda faltam os artefatos de
 loja listados em `STORE.md` (URLs de privacidade/suporte públicas,
 screenshots de iPhone 6.9", texto da ficha, resposta ao questionário de App
 Privacy) e a decisão sobre a diretriz 4.3.
+
+## Build 11 — 2026-09-11 08:10 -03
+
+- Versão solicitada: `1.0.0+11` (também em `pubspec.yaml`)
+- Motivo: IPA após histórico com editar/excluir confirmado + card único de medições (`flutter_slidable` 4.0.3).
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 11 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (4 pods: Flutter, file_picker, share_plus, shared_preferences_foundation)
+- Validação de pré-build: `./tool/validar.sh` — passou
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (164.7 MB / 164730521 bytes)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (22.50 MB / 22497685 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `11`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `objective_c`, `share_plus`, `shared_preferences_foundation` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`
+- Upload TestFlight: não enviado
+
+### Status
+
+Disco apenas — IPA 11 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight.
+
