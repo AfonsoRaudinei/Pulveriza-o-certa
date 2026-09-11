@@ -85,8 +85,8 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
     _syncField(_empresa, _empresaFocus, config.empresaNome);
     _syncField(
         _desgaste, _desgasteFocus, config.limiteDesgaste.toStringAsFixed(2));
-    _syncField(_irregular, _irregularFocus,
-        config.limiteIrregular.toStringAsFixed(2));
+    _syncField(
+        _irregular, _irregularFocus, config.limiteIrregular.toStringAsFixed(2));
     _syncField(_tolMin, _tolMinFocus, config.toleranciaMin.toStringAsFixed(2));
     _syncField(_tolMax, _tolMaxFocus, config.toleranciaMax.toStringAsFixed(2));
   }

@@ -137,7 +137,8 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
   );
 
   static AppThemeColors of(BuildContext context) {
-    return Theme.of(context).extension<AppThemeColors>() ?? AppThemeColors.light;
+    return Theme.of(context).extension<AppThemeColors>() ??
+        AppThemeColors.light;
   }
 
   @override
