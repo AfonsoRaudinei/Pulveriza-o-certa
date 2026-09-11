@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ponta Verde</title>
+<meta name="description" content="Ponta Verde — calculadora offline de regulagem para pulverizadores e plantadeiras.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root{
+    --bg:#F5F7FA; --surface:#FFFFFF; --surface-alt:#F0F3F8;
+    --text:#171A26; --text-2:#5B6472; --text-3:#8891A0;
+    --border:#E3E8EF; --accent:#0057FF; --accent-2:#0E9F6E; --accent-2-bg:#E6F7EF;
+    --ring: 0 0 0 3px rgba(0,87,255,.16);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0E1116; --surface:#161A22; --surface-alt:#1C212B;
+      --text:#EDEFF3; --text-2:#A2ACBC; --text-3:#6E7787;
+      --border:#2A303C; --accent:#5B8DFF; --accent-2:#3ECF8E; --accent-2-bg:#12271F;
+      --ring: 0 0 0 3px rgba(91,141,255,.22);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0E1116; --surface:#161A22; --surface-alt:#1C212B;
+    --text:#EDEFF3; --text-2:#A2ACBC; --text-3:#6E7787;
+    --border:#2A303C; --accent:#5B8DFF; --accent-2:#3ECF8E; --accent-2-bg:#12271F;
+    --ring: 0 0 0 3px rgba(91,141,255,.22);
+  }
+  *{box-sizing:border-box}
+  html{background:var(--bg)}
+  body{
+    margin:0; background:var(--bg); color:var(--text); min-height:100vh;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex; align-items:center;
+  }
+  .wrap{max-width:640px; margin:0 auto; padding:56px 24px; width:100%}
+
+  .eyebrow{
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--text-3); margin-bottom:18px;
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent-2)}
+
+  h1{font-size:2.2rem; line-height:1.12; letter-spacing:-.01em; margin:0 0 12px; text-wrap:balance}
+  .lede{color:var(--text-2); font-size:1.08rem; line-height:1.65; margin:0 0 40px; max-width:52ch}
+
+  .links{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:40px}
+  .links a{
+    display:block; background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:20px 20px; text-decoration:none; color:var(--text);
+  }
+  .links a:hover{border-color:var(--accent)}
+  .links a:focus-visible{outline:none; box-shadow:var(--ring)}
+  .links .k{font-size:.78rem; color:var(--text-3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px}
+  .links .t{font-weight:600; font-size:1.02rem}
+  .links .arrow{color:var(--accent); font-size:.85rem; margin-top:8px; font-weight:500}
+
+  .about{color:var(--text-2); font-size:.92rem; line-height:1.7; max-width:56ch}
+  .about strong{color:var(--text)}
+  a.inline{color:var(--accent)}
+
+  footer{margin-top:44px; padding-top:20px; border-top:1px solid var(--border); color:var(--text-3); font-size:.82rem; font-family:'JetBrains Mono',monospace}
+
+  @media (max-width:520px){ .links{grid-template-columns:1fr} h1{font-size:1.7rem} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><span class="dot"></span>App iOS</div>
+  <h1>Ponta Verde</h1>
+  <p class="lede">Calculadora offline de regulagem para pulverizadores e plantadeiras. Medição por ponta, classificação automática e análise econômica de troca de bicos — sem precisar de internet.</p>
+
+  <div class="links">
+    <a href="privacidade.html">
+      <div class="k">Legal</div>
+      <div class="t">Política de Privacidade</div>
+      <div class="arrow">Ler →</div>
+    </a>
+    <a href="suporte.html">
+      <div class="k">Ajuda</div>
+      <div class="t">Suporte</div>
+      <div class="arrow">Ler →</div>
+    </a>
+  </div>
+
+  <p class="about">
+    <strong>100% offline</strong> — nenhum dado sai do seu iPhone. Sem contas, sem anúncios,
+    sem compras dentro do app. Dúvidas: <a class="inline" href="mailto:raudyneyb@gmail.com">raudyneyb@gmail.com</a>
+  </p>
+
+  <footer>Ponta Verde · v1.0.0</footer>
+</div>
+</body>
+</html>

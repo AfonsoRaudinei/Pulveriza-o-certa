@@ -4,41 +4,151 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Suporte — Ponta Verde</title>
+<meta name="description" content="Central de suporte do Ponta Verde: contato, perguntas frequentes sobre backup, importação e uso offline.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-       max-width:720px;margin:40px auto;padding:0 20px;line-height:1.6;color:#1a1a2e}
-  h1{font-size:1.6rem} h2{font-size:1.15rem;margin-top:2rem}
-  footer{margin-top:3rem;color:#6b7280;font-size:.9rem}
+  :root{
+    --bg:#F5F7FA; --surface:#FFFFFF; --surface-alt:#F0F3F8;
+    --text:#171A26; --text-2:#5B6472; --text-3:#8891A0;
+    --border:#E3E8EF; --accent:#0057FF; --accent-2:#0E9F6E; --accent-2-bg:#E6F7EF;
+    --ring: 0 0 0 3px rgba(0,87,255,.16);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0E1116; --surface:#161A22; --surface-alt:#1C212B;
+      --text:#EDEFF3; --text-2:#A2ACBC; --text-3:#6E7787;
+      --border:#2A303C; --accent:#5B8DFF; --accent-2:#3ECF8E; --accent-2-bg:#12271F;
+      --ring: 0 0 0 3px rgba(91,141,255,.22);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0E1116; --surface:#161A22; --surface-alt:#1C212B;
+    --text:#EDEFF3; --text-2:#A2ACBC; --text-3:#6E7787;
+    --border:#2A303C; --accent:#5B8DFF; --accent-2:#3ECF8E; --accent-2-bg:#12271F;
+    --ring: 0 0 0 3px rgba(91,141,255,.22);
+  }
+  *{box-sizing:border-box}
+  html{background:var(--bg)}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:680px; margin:0 auto; padding:56px 24px 96px}
+
+  nav.top{display:flex; justify-content:space-between; align-items:center; margin-bottom:40px}
+  nav.top a{color:var(--text-2); text-decoration:none; font-size:.9rem; font-weight:500}
+  nav.top a:hover{color:var(--accent)}
+  nav.top .home{font-weight:700; color:var(--text)}
+
+  .eyebrow{
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--text-3); margin-bottom:18px;
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent-2)}
+
+  h1{font-size:2rem; line-height:1.15; letter-spacing:-.01em; margin:0 0 8px; text-wrap:balance}
+  .lede{color:var(--text-2); font-size:1.05rem; line-height:1.6; margin:0 0 40px; max-width:58ch}
+
+  .contact{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:20px 22px; margin-bottom:44px;
+  }
+  .contact .label{font-size:.78rem; color:var(--text-3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px}
+  .contact .value{font-size:1.05rem; font-weight:600}
+  .contact a.btn{background:var(--accent); color:#fff; padding:10px 18px; border-radius:10px; font-weight:600; font-size:.92rem; border-bottom:none; text-decoration:none}
+  .contact a.btn:hover{opacity:.92}
+  .contact .sub{color:var(--text-2); font-size:.85rem; margin-top:2px}
+
+  h2{font-size:1.15rem; font-weight:600; margin:0 0 18px}
+
+  .faq{display:flex; flex-direction:column; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:44px}
+  .faq details{background:var(--surface)}
+  .faq summary{list-style:none; cursor:pointer; padding:16px 20px; font-weight:600; font-size:.95rem; display:flex; justify-content:space-between; align-items:center; gap:12px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+"; color:var(--text-3); font-weight:400; font-size:1.2rem; flex:none}
+  .faq details[open] summary::after{content:"–"}
+  .faq summary:focus-visible{outline:none; box-shadow:var(--ring); border-radius:8px}
+  .faq p{margin:0; padding:0 20px 18px; color:var(--text-2); font-size:.92rem; line-height:1.65; max-width:60ch}
+
+  .path{display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:.84em; color:var(--text); padding:2px 0}
+  .path span{background:var(--surface-alt); padding:2px 7px; border-radius:5px; border:1px solid var(--border)}
+  .path i{color:var(--text-3); font-style:normal}
+
+  .about{color:var(--text-2); font-size:.92rem; line-height:1.7; max-width:60ch}
+  .about strong{color:var(--text)}
+
+  footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:baseline; gap:16px; flex-wrap:wrap}
+  footer .brand{font-weight:600; font-size:.9rem}
+  footer .meta{color:var(--text-3); font-size:.82rem; font-family:'JetBrains Mono',monospace}
+  a{color:var(--accent)}
+
+  @media (max-width:520px){ h1{font-size:1.6rem} }
 </style>
 </head>
 <body>
-<h1>Suporte — Ponta Verde</h1>
+<div class="wrap">
+  <nav class="top">
+    <a class="home" href="index.html">Ponta Verde</a>
+    <a href="privacidade.html">Privacidade →</a>
+  </nav>
 
-<p>
-O <strong>Ponta Verde</strong> ajuda consultores, RTVs e técnicos a regular
-pulverizadores e plantadeiras no campo, com medição por ponta, classificação
-automática e análise econômica de troca de bicos. O aplicativo funciona
-totalmente offline.
-</p>
+  <div class="eyebrow"><span class="dot"></span>Ponta Verde &middot; App iOS</div>
+  <h1>Central de Suporte</h1>
+  <p class="lede">Regulagem de pulverizador e plantadeira no bolso — medição por ponta, classificação automática e análise econômica de troca de bicos, tudo offline.</p>
 
-<h2>Contato</h2>
-<p>
-E-mail: <a href="mailto:raudyneyb@gmail.com">raudyneyb@gmail.com</a><br>
-Resposta em até 2 dias úteis.
-</p>
+  <div class="contact">
+    <div>
+      <div class="label">Fale com o desenvolvedor</div>
+      <div class="value">raudyneyb@gmail.com</div>
+      <div class="sub">Resposta em até 2 dias úteis</div>
+    </div>
+    <a class="btn" href="mailto:raudyneyb@gmail.com?subject=Suporte%20Ponta%20Verde">Enviar e-mail</a>
+  </div>
 
-<h2>Perguntas frequentes</h2>
-<p><strong>Meus dados ficam salvos onde?</strong><br>
-Somente no seu iPhone. Faça backups em <em>Configurações &rarr; Exportar
-Dados</em> e guarde o arquivo <code>.json</code> num local seguro.</p>
+  <h2>Perguntas frequentes</h2>
+  <div class="faq">
+    <details open>
+      <summary>Meus dados ficam salvos onde?</summary>
+      <p>Somente no seu iPhone, na área privada do aplicativo — nada é enviado para nenhum servidor. Faça backups regulares em
+        <span class="path"><span>Config</span><i>→</i><span>Exportar Dados</span></span>
+        e guarde o arquivo <code>.json</code> gerado num local seguro.</p>
+    </details>
+    <details>
+      <summary>Troquei de aparelho. Como levo minhas regulagens?</summary>
+      <p>No aparelho antigo, gere o backup em <span class="path"><span>Config</span><i>→</i><span>Exportar Dados</span></span>. No novo aparelho, abra o Ponta Verde e use <span class="path"><span>Config</span><i>→</i><span>Importar Backup</span></span>, escolhendo o arquivo exportado.</p>
+    </details>
+    <details>
+      <summary>Preciso de internet para usar o app?</summary>
+      <p>Não. Todo o cálculo — L/min ideal, percentual por ponta, classificação Ideal/Irregular/Desgaste e a análise econômica — roda no próprio dispositivo, mesmo em modo avião.</p>
+    </details>
+    <details>
+      <summary>Apaguei uma regulagem sem querer. Dá para recuperar?</summary>
+      <p>Sim, logo após excluir aparece um aviso com a opção <strong>Desfazer</strong> por alguns segundos, no Histórico. Depois disso, só restaurando de um backup anterior.</p>
+    </details>
+    <details>
+      <summary>O app tem plano pago ou assinatura?</summary>
+      <p>Não. O Ponta Verde é gratuito e não possui compras dentro do aplicativo.</p>
+    </details>
+  </div>
 
-<p><strong>Troquei de aparelho. Como levo minhas regulagens?</strong><br>
-Exporte o backup no aparelho antigo e use <em>Configurações &rarr; Importar
-Backup</em> no novo.</p>
+  <h2>Sobre o aplicativo</h2>
+  <p class="about">
+    <strong>Ponta Verde</strong> é uma calculadora de regulagem para grandes culturas, pensada para quem trabalha em campo:
+    dashboard com o resumo das regulagens, formulário progressivo de 4 etapas para pulverizador e plantadeira,
+    medição individual por ponta com classificação automática (Ideal, Irregular, Desgaste) e recomendação de troca
+    de bicos com base no custo real da operação.
+  </p>
 
-<p><strong>O aplicativo precisa de internet?</strong><br>
-Não. Todos os cálculos são feitos no dispositivo.</p>
-
-<footer>Ponta Verde — versão 1.0.0</footer>
+  <footer>
+    <span class="brand">Ponta Verde</span>
+    <span class="meta">v1.0.0 &middot; <a href="mailto:raudyneyb@gmail.com">raudyneyb@gmail.com</a></span>
+  </footer>
+</div>
 </body>
 </html>
