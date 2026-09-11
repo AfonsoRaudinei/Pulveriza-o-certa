@@ -18,25 +18,29 @@ void main() {
     expect(find.text('Ponta Verde'), findsWidgets);
     // Ação principal do dashboard.
     expect(find.text('Nova Regulagem'), findsOneWidget);
-    // A rota de login foi removida.
+    expect(find.text('Nova Ordem de Aplicação'), findsOneWidget);
     expect(Routes.home, '/home');
     expect(AppRoutes.map.containsKey('/login'), isFalse);
+    expect(AppRoutes.map.containsKey(Routes.ordemAplicacao), isTrue);
   });
 
-  testWidgets('histórico corrompido não quebra o app nem apaga no próximo save',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'agro_regulagens': '{isto não é json válido',
-    });
+  testWidgets(
+    'histórico corrompido não quebra o app nem apaga no próximo save',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'agro_regulagens': '{isto não é json válido',
+      });
 
-    await tester.pumpWidget(const PontaVerdeApp());
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(const PontaVerdeApp());
+      await tester.pumpAndSettle();
 
-    final prefs = await SharedPreferences.getInstance();
-    // O blob inválido foi preservado numa chave de quarentena.
-    final quarentena =
-        prefs.getKeys().where((k) => k.startsWith('agro_regulagens_corrompido_'));
-    expect(quarentena, isNotEmpty);
-    expect(prefs.getString('agro_regulagens'), isNull);
-  });
+      final prefs = await SharedPreferences.getInstance();
+      // O blob inválido foi preservado numa chave de quarentena.
+      final quarentena = prefs.getKeys().where(
+            (k) => k.startsWith('agro_regulagens_corrompido_'),
+          );
+      expect(quarentena, isNotEmpty);
+      expect(prefs.getString('agro_regulagens'), isNull);
+    },
+  );
 }
