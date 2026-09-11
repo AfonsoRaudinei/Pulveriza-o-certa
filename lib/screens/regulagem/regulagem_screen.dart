@@ -330,7 +330,13 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(readonly ? 'Visualizar Regulagem' : 'Nova Regulagem'),
+        title: Text(
+          readonly
+              ? 'Visualizar Regulagem'
+              : widget.regulagem != null
+                  ? 'Editar Regulagem'
+                  : 'Nova Regulagem',
+        ),
         actions: [
           if (!readonly)
             TextButton(
