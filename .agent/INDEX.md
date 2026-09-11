@@ -8,6 +8,7 @@ Leia **só** a linha da tarefa. Não abra PRD, AGENTIPA ou CALCULOS inteiro sem 
 |---|---|---|
 | Fórmula / % / status / tolerância / R$ | `CALCULOS/calculos_barra_pontas_INDEX.md` → o `CALCULOS/calc_*.md` certo → `lib/domain/calculos/` → `test/domain/calculos/` | PRD, AGENTIPA, `docs/` |
 | Tela de regulagem / tabela de pontas | `lib/screens/regulagem/` + `.agent/CONTRATO_REGULAGEM.md` + `lib/core/utils/calculo_utils.dart` | `ios/`, AGENTIPA |
+| Ordem de aplicação / ProgressiveStepCard | `docs/ordem_aplicacao/INDEX.md` → spec da tela → `lib/domain/ordem_aplicacao/` → `lib/screens/ordem_aplicacao/` → `lib/widgets/progressive_step_card.dart` | `CALCULOS/` (barra), AGENTIPA |
 | Plantadeira (largura / rendimento) | `lib/core/utils/calculo_utils.dart` (`calcularLarguraUtil`, `calcularRendimentoOperacional`) + `regulagem_screen.dart` | `CALCULOS/` (é só pulverizador) |
 | Limites / backup JSON | `lib/models/configuracoes.dart` + `lib/screens/configuracoes/` + `lib/screens/regulagem/regulagem_screen.dart` (campos inline) + `lib/services/storage_service.dart` | |
 | Histórico | `lib/screens/historico/historico_screen.dart` + `lib/providers/regulagens_provider.dart` | |
@@ -17,23 +18,24 @@ Leia **só** a linha da tarefa. Não abra PRD, AGENTIPA ou CALCULOS inteiro sem 
 | Produto / escopo v1 | `PONTA VERDE PRD.md` (seções 1–3) | resto do PRD até precisar |
 | Teste | `test/domain/calculos/` + `test/calculo_utils_test.dart` + `test/app_smoke_test.dart` | |
 
-## Mapa do código (26 Dart em `lib/`)
+## Mapa do código
 
 ```
 lib/
   main.dart, app.dart, routes.dart, theme.dart
-  domain/calculos/     ← fórmulas puras (única fonte de cálculo)
-  core/utils/calculo_utils.dart  ← fachada usada pela UI
+  domain/calculos/     ← fórmulas da barra
+  domain/ordem_aplicacao/  ← ordem (dose×área, totais, validação)
+  core/utils/calculo_utils.dart  ← fachada usada pela UI de regulagem
   core/extensions/double_extension.dart  ← toMoeda / toPercent / toLitroMin
   core/constants/app_constants.dart  ← nome "Ponta Verde"
-  models/regulagem.dart, models/configuracoes.dart
+  models/regulagem.dart, models/configuracoes.dart, models/cadastro_local.dart
   providers/           ← estado (Provider)
   services/storage_service.dart  ← SharedPreferences + backup JSON
-  screens/home, regulagem, historico, configuracoes
-  widgets/status_badge.dart, app_button.dart
+  screens/home, regulagem, historico, configuracoes, ordem_aplicacao
+  widgets/status_badge.dart, app_button.dart, progressive_step_card.dart
 ```
 
-Rotas: só `/home` e `/regulagem`. **Não existe login.**
+Rotas: `/home`, `/regulagem`, `/ordens`, `/ordem-aplicacao`. **Não existe login.**
 
 ## Specs de cálculo
 
@@ -53,7 +55,7 @@ Pipeline: vazão/velocidade/espaçamento → L/min ideal → % por ponta → sta
 
 - App: Ponta Verde · package: `agrocalc` · versão em `pubspec.yaml` (`1.0.0+10` na data deste índice)
 - iOS: `com.pontaverde.app` · Team `BA2BU25B78` · mínimo iOS **15.0**
-- Persistência: `agro_regulagens` / `agro_configuracoes` (ver `AppConstants`)
+- Persistência: `agro_regulagens` / `agro_configuracoes` / `agro_ordens_aplicacao` / `agro_cadastros`
 - Limiares padrão: desgaste 105, irregular 100, tolMin 100,5, tolMax 104,99
 
 ## Agentes
