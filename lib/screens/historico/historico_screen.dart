@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -17,9 +19,17 @@ class HistoricoScreen extends StatefulWidget {
 class _HistoricoScreenState extends State<HistoricoScreen> {
   bool _searching = false;
   final _query = TextEditingController();
+  ScaffoldMessengerState? _messenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.of(context);
+  }
 
   @override
   void dispose() {
+    _messenger?.clearSnackBars();
     _query.dispose();
     super.dispose();
   }
@@ -33,47 +43,84 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     }).toList();
   }
 
+  void _abrirEdicao(Regulagem regulagem) {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => RegulagemScreen(regulagem: regulagem),
+      ),
+    );
+  }
+
+  Future<bool> _confirmarExclusao() async {
+    final confirmed = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Excluir regulagem?'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
   Future<void> _delete(Regulagem regulagem) async {
+    final confirmed = await _confirmarExclusao();
+    if (!confirmed || !mounted) return;
+
     final provider = context.read<RegulagensProvider>();
     final messenger = ScaffoldMessenger.of(context);
     try {
       await provider.delete(regulagem.id);
       if (!mounted) return;
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          content: const Text('Regulagem excluída'),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'Desfazer',
-            onPressed: () async {
-              try {
-                await provider.save(regulagem);
-              } catch (error) {
-                debugPrint('Erro ao desfazer exclusão: $error');
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Não foi possível restaurar a regulagem.'),
-                    backgroundColor: AppColors.danger,
-                  ),
-                );
-              }
-            },
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: const Text('Regulagem excluída'),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Desfazer',
+              onPressed: () async {
+                try {
+                  await provider.save(regulagem);
+                } catch (error) {
+                  debugPrint('Erro ao desfazer exclusão: $error');
+                  messenger
+                    ..clearSnackBars()
+                    ..showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text('Não foi possível restaurar a regulagem.'),
+                        backgroundColor: AppColors.danger,
+                      ),
+                    );
+                }
+              },
+            ),
           ),
-        ),
-      );
+        );
     } catch (error) {
       debugPrint('Erro ao deletar no histórico: $error');
-      // Recarrega para o item excluído visualmente reaparecer na lista.
       await provider.load();
       if (!mounted) return;
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível excluir a regulagem.'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível excluir a regulagem.'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
     }
   }
 
@@ -107,8 +154,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                 itemCount: regulagens.length,
                 itemBuilder: (context, index) {
                   final regulagem = regulagens[index];
-                  return _DismissibleRegulagemCard(
+                  return _SlidableRegulagemCard(
                     regulagem: regulagem,
+                    onEdit: () => _abrirEdicao(regulagem),
                     onDelete: () => _delete(regulagem),
                   );
                 },
@@ -118,36 +166,57 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   }
 }
 
-class _DismissibleRegulagemCard extends StatelessWidget {
-  const _DismissibleRegulagemCard({
+class _SlidableRegulagemCard extends StatelessWidget {
+  const _SlidableRegulagemCard({
     required this.regulagem,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final Regulagem regulagem;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return Dismissible(
+    return Slidable(
       key: ValueKey(regulagem.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: AppSpacing.xl),
-        color: AppColors.danger,
-        child: const Icon(Icons.delete, color: Colors.white),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.5,
+        children: [
+          SlidableAction(
+            onPressed: (_) => onEdit(),
+            backgroundColor: AppColors.info,
+            foregroundColor: AppColors.surface,
+            icon: Icons.edit,
+            label: 'Editar',
+          ),
+          SlidableAction(
+            onPressed: (_) => onDelete(),
+            backgroundColor: AppColors.danger,
+            foregroundColor: AppColors.surface,
+            icon: Icons.delete,
+            label: 'Excluir',
+          ),
+        ],
       ),
-      onDismissed: (_) => onDelete(),
-      child: _RegulagemCard(regulagem: regulagem),
+      child: _RegulagemCard(
+        regulagem: regulagem,
+        onTap: onEdit,
+      ),
     );
   }
 }
 
 class _RegulagemCard extends StatelessWidget {
-  const _RegulagemCard({required this.regulagem});
+  const _RegulagemCard({
+    required this.regulagem,
+    required this.onTap,
+  });
 
   final Regulagem regulagem;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -158,15 +227,7 @@ class _RegulagemCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute<void>(
-              builder: (_) =>
-                  RegulagemScreen(regulagem: regulagem, readonly: true),
-            ),
-          );
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
