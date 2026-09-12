@@ -1,3 +1,4 @@
+import 'package:agrocalc/screens/regulagem/widgets/etapa_resumo.dart';
 import 'package:agrocalc/screens/regulagem/widgets/progressive_card.dart';
 import 'package:agrocalc/theme.dart';
 import 'package:flutter/material.dart';
@@ -68,6 +69,63 @@ void main() {
     await tester.tap(find.text('Contexto da Operação'));
     await tester.pumpAndSettle();
     expect(find.text('corpo-contexto'), findsNothing);
+  });
+
+  testWidgets('recolher mostra ficha só com preenchidos', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ProgressiveCard(
+            index: 1,
+            title: 'Contexto da Operação',
+            locked: false,
+            complete: true,
+            summary: EtapaResumo.ouNulo(const [
+              EtapaResumoLinha('Fazenda', 'Boa Vista'),
+              EtapaResumoLinha('Talhão', ''),
+            ]),
+            child: const Text('corpo-contexto'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('corpo-contexto'), findsOneWidget);
+    expect(find.text('Boa Vista'), findsNothing);
+
+    await tester.tap(find.text('Contexto da Operação'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('corpo-contexto'), findsNothing);
+    expect(find.text('Fazenda'), findsOneWidget);
+    expect(find.text('Boa Vista'), findsOneWidget);
+    expect(find.text('Talhão'), findsNothing);
+  });
+
+  testWidgets('etapa bloqueada não mostra a ficha', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ProgressiveCard(
+            index: 2,
+            title: 'Parâmetros da Máquina',
+            locked: true,
+            complete: false,
+            summary: EtapaResumo.ouNulo(const [
+              EtapaResumoLinha('Fazenda', 'Boa Vista'),
+            ]),
+            child: const Text('corpo-parametros'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Boa Vista'), findsNothing);
+    expect(find.text('corpo-parametros'), findsNothing);
   });
 }
 

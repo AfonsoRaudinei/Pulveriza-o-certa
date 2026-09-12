@@ -57,7 +57,7 @@ void main() {
     expect(find.text('Ponta 1'), findsOneWidget);
     expect(find.text('Ponta 2'), findsOneWidget);
     expect(find.text('Ponta 3'), findsOneWidget);
-    expect(find.text('0.825 L/min'), findsWidgets);
+    expect(find.textContaining('0.825 L/min'), findsWidgets);
     // 'Sem medição' também aparece na legenda do gráfico.
     expect(
       find.descendant(
@@ -133,5 +133,61 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Perda por desgaste'), findsOneWidget);
+  });
+
+  testWidgets('ponta com 0 L/min não vira Sem medição', (tester) async {
+    tester.view.physicalSize = const Size(400, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PontasTable(
+              medicoes: const [
+                PontaMedicao(
+                  id: 1,
+                  valorMedido: 0,
+                  status: StatusPonta.irregular,
+                ),
+              ],
+              ideal: 0.825,
+              configuracoes: const Configuracoes(),
+              manejo: 0,
+              precoBico: 0,
+              area: 0,
+              readonly: true,
+              onMedicaoChanged: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(ExpansionPanelList),
+        matching: find.textContaining('0.000 L/min'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(ExpansionPanelList),
+        matching: find.textContaining('%'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(ExpansionPanelList),
+        matching: find.text('Sem medição'),
+      ),
+      findsNothing,
+    );
   });
 }

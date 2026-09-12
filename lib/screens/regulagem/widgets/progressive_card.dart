@@ -10,6 +10,7 @@ class ProgressiveCard extends StatefulWidget {
     required this.locked,
     required this.complete,
     required this.child,
+    this.summary,
   });
 
   final int index;
@@ -17,6 +18,7 @@ class ProgressiveCard extends StatefulWidget {
   final bool locked;
   final bool complete;
   final Widget child;
+  final Widget? summary;
 
   @override
   State<ProgressiveCard> createState() => _ProgressiveCardState();
@@ -29,6 +31,10 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
   void initState() {
     super.initState();
     _controller = ExpansibleController();
+    if (!widget.locked) {
+      _controller.expand();
+    }
+    _controller.addListener(_onExpansion);
   }
 
   @override
@@ -51,8 +57,13 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
 
   @override
   void dispose() {
+    _controller.removeListener(_onExpansion);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onExpansion() {
+    setState(() {});
   }
 
   @override
@@ -62,6 +73,8 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
         : widget.complete
             ? StepStatus.completed
             : StepStatus.active;
+    final mostrarResumo =
+        !widget.locked && !_controller.isExpanded && widget.summary != null;
     return ProgressiveStepCard(
       stepNumber: widget.index,
       title: widget.title,
@@ -69,6 +82,7 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
       expandable: true,
       initiallyExpanded: !widget.locked,
       expansionController: _controller,
+      summary: mostrarResumo ? widget.summary : null,
       child: widget.child,
     );
   }

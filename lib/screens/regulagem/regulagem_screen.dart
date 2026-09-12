@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/charts/vazao_chart_data.dart';
 import '../../core/utils/calculo_utils.dart';
 import '../../models/configuracoes.dart';
 import '../../models/regulagem.dart';
@@ -13,6 +14,7 @@ import '../../providers/configuracoes_provider.dart';
 import '../../providers/regulagens_provider.dart';
 import '../../theme.dart';
 import '../../services/regulagem_pdf_service.dart';
+import 'widgets/etapa_resumo.dart';
 import 'widgets/exportar_pdf_button.dart';
 import 'widgets/pontas_table.dart';
 import 'widgets/progressive_card.dart';
@@ -320,6 +322,59 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
 
   bool get _temMedicao => _medicoes.any((item) => item.valorMedido != null);
 
+  Widget? _resumoContexto() {
+    return EtapaResumo.ouNulo([
+      EtapaResumoLinha('Produtor', _produtor.text),
+      EtapaResumoLinha('Fazenda', _fazenda.text),
+      EtapaResumoLinha('Talhão', _talhao.text),
+      EtapaResumoLinha('Máquina', _maquina.text),
+      EtapaResumoLinha('Consultor', _consultor.text),
+      EtapaResumoLinha(
+        'Data da regulagem',
+        DateFormat('dd/MM/yyyy', 'pt_BR').format(_data),
+      ),
+      EtapaResumoLinha('Área (ha)', _areaCtrl.text),
+      EtapaResumoLinha('Manejo (R\$)', _manejoCtrl.text),
+      EtapaResumoLinha('Preço do bico (R\$/un)', _precoBicoCtrl.text),
+    ]);
+  }
+
+  Widget? _resumoParametros() {
+    return EtapaResumo.ouNulo([
+      EtapaResumoLinha('Vazão (L/ha)', _vazao.text),
+      EtapaResumoLinha('Velocidade (km/h)', _velocidade.text),
+      EtapaResumoLinha('Espaçamento entre bicos (cm)', _espacamento.text),
+      EtapaResumoLinha('Número de pontas', _numeroPontas.text),
+      EtapaResumoLinha('Pressão de trabalho (bar)', _pressao.text),
+    ]);
+  }
+
+  Widget? _resumoCalculos() {
+    if (_litroMinIdeal <= 0) return null;
+    return EtapaResumo.ouNulo([
+      EtapaResumoLinha(
+        'Lt/min Ideal',
+        '${_litroMinIdeal.toStringAsFixed(3)} L/min',
+      ),
+    ]);
+  }
+
+  Widget? _resumoPontas() {
+    return EtapaResumo.ouNulo([
+      for (final ponta in _medicoes)
+        if (ponta.valorMedido != null)
+          EtapaResumoLinha(
+            'Ponta ${ponta.id}',
+            '${ponta.valorMedido!.toStringAsFixed(3)} L/min · '
+                '${CalcUtils.calcularPercentualPonta(
+              valorMedido: ponta.valorMedido!,
+              litroMinIdeal: _litroMinIdeal,
+            ).toStringAsFixed(1)}% · '
+                '${rotuloStatusPonta(ponta.status)}',
+          ),
+    ]);
+  }
+
   RegulagemPdfData _pdfData() {
     return RegulagemPdfData(
       produtor: _produtor.text.trim(),
@@ -406,6 +461,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Contexto da Operação',
             locked: false,
             complete: _etapa1Completa,
+            summary: _resumoContexto(),
             child: _ContextStep(
               produtor: _produtor,
               fazenda: _fazenda,
@@ -427,6 +483,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Parâmetros da Máquina',
             locked: !_etapa1Completa,
             complete: _etapa2Completa,
+            summary: _resumoParametros(),
             child: _ParametrosStep(
               vazao: _vazao,
               velocidade: _velocidade,
@@ -442,6 +499,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Cálculos Automáticos',
             locked: !_etapa2Completa,
             complete: _litroMinIdeal > 0,
+            summary: _resumoCalculos(),
             child: Column(
               children: [
                 _ReadonlyResult(
@@ -476,6 +534,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Medições das Pontas',
             locked: _litroMinIdeal <= 0,
             complete: _medicoes.any((item) => item.valorMedido != null),
+            summary: _resumoPontas(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

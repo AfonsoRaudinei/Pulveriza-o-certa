@@ -10,6 +10,7 @@ class ProgressiveStepCard extends StatelessWidget {
     required this.stepNumber,
     required this.title,
     this.description,
+    this.summary,
     required this.status,
     required this.child,
     this.expandable = false,
@@ -20,6 +21,7 @@ class ProgressiveStepCard extends StatelessWidget {
   final int stepNumber;
   final String title;
   final String? description;
+  final Widget? summary;
   final StepStatus status;
   final Widget child;
   final bool expandable;
@@ -53,6 +55,7 @@ class ProgressiveStepCard extends StatelessWidget {
                   stepNumber: stepNumber,
                   title: title,
                   description: description,
+                  summary: summary,
                   status: status,
                   initiallyExpanded: initiallyExpanded,
                   expansionController: expansionController,
@@ -109,6 +112,7 @@ class _ExpandableBody extends StatelessWidget {
     required this.stepNumber,
     required this.title,
     required this.description,
+    required this.summary,
     required this.status,
     required this.initiallyExpanded,
     required this.expansionController,
@@ -118,6 +122,7 @@ class _ExpandableBody extends StatelessWidget {
   final int stepNumber;
   final String title;
   final String? description;
+  final Widget? summary;
   final StepStatus status;
   final bool initiallyExpanded;
   final ExpansibleController? expansionController;
@@ -147,12 +152,13 @@ class _ExpandableBody extends StatelessWidget {
           title,
           style: Theme.of(context).textTheme.headlineSmall,
         ),
-        subtitle: description == null
-            ? null
-            : Text(
-                description!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+        subtitle: summary ??
+            (description == null
+                ? null
+                : Text(
+                    description!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  )),
         children: [child],
       ),
     );
