@@ -108,6 +108,41 @@ void main() {
     expect(bytes.length, greaterThan(1000));
   });
 
+  test('gráfico com limites colados e ponta quase seca não quebra', () async {
+    final data = _sampleData(
+      medicoes: const [
+        PontaMedicao(id: 1, valorMedido: 0.05, status: StatusPonta.irregular),
+        PontaMedicao(id: 2, valorMedido: 1.01, status: StatusPonta.ideal),
+        PontaMedicao(id: 3, valorMedido: null, status: StatusPonta.pendente),
+      ],
+    );
+    final bytes = await RegulagemPdfService.generate(
+      RegulagemPdfData(
+        produtor: data.produtor,
+        fazenda: data.fazenda,
+        maquina: data.maquina,
+        dataRegulagem: data.dataRegulagem,
+        vazaoLha: data.vazaoLha,
+        velocidade: data.velocidade,
+        espacamentoCm: data.espacamentoCm,
+        numeroPontas: data.numeroPontas,
+        litroMinIdeal: data.litroMinIdeal,
+        medicoes: data.medicoes,
+        // Limites colados: só o rótulo de 100% deve ser escrito no eixo.
+        configuracoes: const Configuracoes(
+          limiteIrregular: 100,
+          limiteDesgaste: 100.5,
+        ),
+        manejo: data.manejo,
+        precoBico: data.precoBico,
+        area: data.area,
+      ),
+    );
+
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+    expect(bytes.length, greaterThan(1000));
+  });
+
   test('generate with zona de atenção pontas does not throw', () async {
     final bytes = await RegulagemPdfService.generate(
       _sampleData(

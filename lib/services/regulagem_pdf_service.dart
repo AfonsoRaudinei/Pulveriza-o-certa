@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../core/charts/vazao_chart_data.dart';
 import '../core/constants/app_constants.dart';
 import '../core/extensions/double_extension.dart';
 import '../core/utils/calculo_utils.dart';
@@ -650,118 +651,212 @@ class RegulagemPdfService {
   }
 
   static pw.Widget _buildChart(RegulagemPdfData data, PdfFont chartFont) {
-    if (data.litroMinIdeal <= 0 || data.medicoes.isEmpty) {
-      return pw.SizedBox();
-    }
+    final chart = VazaoChartData.from(
+      medicoes: data.medicoes,
+      litroMinIdeal: data.litroMinIdeal,
+      limiteIrregular: data.configuracoes.limiteIrregular,
+      limiteDesgaste: data.configuracoes.limiteDesgaste,
+    );
+    if (chart.vazio) return pw.SizedBox();
 
-    final maxChartWidth = PdfPageFormat.a4.width - 72;
-    final idealWidth = data.medicoes.length * 36.0 + 52;
-    final chartWidth = min(maxChartWidth, max(480.0, idealWidth));
-    final subtitle =
-        'Faixa verde = ideal (${data.configuracoes.limiteIrregular.toStringAsFixed(0)}–${data.configuracoes.limiteDesgaste.toStringAsFixed(0)}%)';
+    // Ocupa toda a largura útil da página, descontando a borda do cartão.
+    final chartWidth = PdfPageFormat.a4.width - 72 - 16;
+    const chartHeight = 172.0;
+    final subtitle = 'Ideal ${data.litroMinIdeal.toLitroMin()} = 100%. '
+        'Faixa verde ${chart.limiteIrregular.toStringAsFixed(0)}–${chart.limiteDesgaste.toStringAsFixed(0)}% é aceitável.';
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          'Vazão por ponta',
-          style: pw.TextStyle(font: _semiBold, fontSize: 13),
-        ),
-        pw.SizedBox(height: 4),
-        pw.Text(
-          subtitle,
-          style: pw.TextStyle(
-            font: _regular,
-            fontSize: 9,
-            color: _pdfColor(AppColors.textSecondary),
+    // Mantém título, gráfico e legenda na mesma página do laudo.
+    return pw.Inseparable(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Vazão por ponta',
+            style: pw.TextStyle(font: _semiBold, fontSize: 13),
           ),
-        ),
-        pw.SizedBox(height: 8),
-        pw.Container(
-          padding: const pw.EdgeInsets.all(8),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: _pdfColor(AppColors.border)),
-            borderRadius: pw.BorderRadius.circular(8),
-          ),
-          child: pw.SizedBox(
-            width: chartWidth,
-            height: 180,
-            child: pw.CustomPaint(
-              size: PdfPoint(chartWidth, 180),
-              painter: (canvas, size) {
-                _paintChart(
-                  canvas: canvas,
-                  size: size,
-                  medicoes: data.medicoes,
-                  ideal: data.litroMinIdeal,
-                  limiteIrregular: data.configuracoes.limiteIrregular,
-                  limiteDesgaste: data.configuracoes.limiteDesgaste,
-                  font: chartFont,
-                );
-              },
+          pw.SizedBox(height: 4),
+          pw.Text(
+            subtitle,
+            style: pw.TextStyle(
+              font: _regular,
+              fontSize: 9,
+              color: _pdfColor(AppColors.textSecondary),
             ),
           ),
+          pw.SizedBox(height: 8),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: _pdfColor(AppColors.border)),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.SizedBox(
+                  width: chartWidth,
+                  height: chartHeight,
+                  child: pw.CustomPaint(
+                    size: PdfPoint(chartWidth, chartHeight),
+                    painter: (canvas, size) {
+                      _paintChart(
+                        canvas: canvas,
+                        size: size,
+                        chart: chart,
+                        font: chartFont,
+                      );
+                    },
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                _buildChartLegenda(chart),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildChartLegenda(VazaoChartData chart) {
+    final itens = <({PdfColor cor, String rotulo, bool vazado})>[
+      for (final status in chart.statusMedidos)
+        (
+          cor: _statusBarColor(status),
+          rotulo: rotuloStatusPonta(status),
+          vazado: false,
         ),
+      if (chart.temPendente)
+        (
+          cor: _pdfColor(AppColors.textTertiary),
+          rotulo: rotuloStatusPonta(StatusPonta.pendente),
+          vazado: true,
+        ),
+    ];
+
+    return pw.Row(
+      children: [
+        for (final item in itens)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(right: 12),
+            child: pw.Row(
+              children: [
+                pw.Container(
+                  width: 6,
+                  height: 6,
+                  decoration: pw.BoxDecoration(
+                    color: item.vazado ? null : item.cor,
+                    borderRadius: pw.BorderRadius.circular(3),
+                    border: item.vazado ? pw.Border.all(color: item.cor) : null,
+                  ),
+                ),
+                pw.SizedBox(width: 4),
+                pw.Text(
+                  item.rotulo,
+                  style: pw.TextStyle(
+                    font: _regular,
+                    fontSize: 8,
+                    color: _pdfColor(AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
 
+  /// Desenha o mesmo gráfico da tela de regulagem.
+  ///
+  /// Atenção: no PDF o eixo Y cresce de baixo para cima, ao contrário do
+  /// `Canvas` do Flutter — todas as coordenadas aqui são medidas a partir da
+  /// base do gráfico.
   static void _paintChart({
     required PdfGraphics canvas,
     required PdfPoint size,
-    required List<PontaMedicao> medicoes,
-    required double ideal,
-    required double limiteIrregular,
-    required double limiteDesgaste,
+    required VazaoChartData chart,
     required PdfFont font,
   }) {
     const leftPad = 40.0;
-    const rightPad = 12.0;
-    const topPad = 12.0;
-    const bottomPad = 28.0;
+    const rightPad = 10.0;
+    const topPad = 20.0;
+    const bottomPad = 26.0;
+    const fontSize = 8.0;
 
     final chartW = size.x - leftPad - rightPad;
     final chartH = size.y - topPad - bottomPad;
-    if (chartW <= 0 || chartH <= 0) return;
+    if (chart.vazio || chartW <= 0 || chartH <= 0) return;
 
-    final idealMin = ideal * (limiteIrregular / 100);
-    final idealMax = ideal * (limiteDesgaste / 100);
+    double yDe(double percentual) =>
+        bottomPad +
+        ((percentual - chart.minPercent) / chart.amplitude) * chartH;
 
-    final measured = medicoes
-        .where((item) => item.valorMedido != null)
-        .map((item) => item.valorMedido!)
-        .toList();
-    if (measured.isEmpty) return;
+    final yIdeal = yDe(100);
+    final yEntupido = yDe(chart.limiteIrregular);
+    final yDesgaste = yDe(chart.limiteDesgaste);
 
-    final yMax = max(measured.reduce(max), idealMax) * 1.12;
-    const yMin = 0.0;
-
-    double yToPx(double value) =>
-        topPad + chartH - ((value - yMin) / (yMax - yMin)) * chartH;
-
+    // No PDF `setFillColor` ignora o alfa: as cores translúcidas precisam ser
+    // achatadas sobre o branco.
     canvas
-      ..setFillColor(_pdfColorWithAlpha(AppColors.success, 0.14))
-      ..drawRect(
-        leftPad,
-        yToPx(idealMax),
-        chartW,
-        yToPx(idealMin) - yToPx(idealMax),
-      )
+      ..setFillColor(_pdfColorWithAlpha(AppColors.success, 0.10).flatten())
+      ..drawRect(leftPad, yEntupido, chartW, yDesgaste - yEntupido)
       ..fillPath();
 
-    final idealY = yToPx(ideal);
+    _paintLinhaTracejada(
+      canvas,
+      leftPad,
+      chartW,
+      yDesgaste,
+      _pdfColorWithAlpha(AppColors.danger, 0.45).flatten(),
+    );
+    _paintLinhaTracejada(
+      canvas,
+      leftPad,
+      chartW,
+      yEntupido,
+      _pdfColorWithAlpha(AppColors.warning, 0.45).flatten(),
+    );
+
     canvas
       ..setStrokeColor(_pdfColor(AppColors.success))
-      ..setLineWidth(1.5)
-      ..moveTo(leftPad, idealY)
-      ..lineTo(leftPad + chartW, idealY)
+      ..setLineWidth(1.2)
+      ..moveTo(leftPad, yIdeal)
+      ..lineTo(leftPad + chartW, yIdeal)
+      ..strokePath()
+      ..setStrokeColor(_pdfColor(AppColors.border))
+      ..setLineWidth(0.8)
+      ..moveTo(leftPad, bottomPad)
+      ..lineTo(leftPad + chartW, bottomPad)
       ..strokePath();
 
-    final slotWidth = chartW / medicoes.length;
-    final barWidth = min(24.0, slotWidth * 0.62);
+    // Um limite colado no ideal teria o rótulo sobreposto: nesse caso só o
+    // ideal é escrito.
+    const folga = 11.0;
+    _paintChartYLabel(canvas, font, '100%', yIdeal, AppColors.success);
+    if ((yDesgaste - yIdeal).abs() >= folga) {
+      _paintChartYLabel(
+        canvas,
+        font,
+        '${chart.limiteDesgaste.toStringAsFixed(0)}%',
+        yDesgaste,
+        AppColors.textTertiary,
+      );
+    }
+    if ((yEntupido - yIdeal).abs() >= folga) {
+      _paintChartYLabel(
+        canvas,
+        font,
+        '${chart.limiteIrregular.toStringAsFixed(0)}%',
+        yEntupido,
+        AppColors.textTertiary,
+      );
+    }
 
-    for (var index = 0; index < medicoes.length; index++) {
-      final ponta = medicoes[index];
+    final slotWidth = chartW / chart.pontas.length;
+    final barWidth = min(20.0, slotWidth * 0.52);
+
+    for (var index = 0; index < chart.pontas.length; index++) {
+      final ponta = chart.pontas[index];
       final centerX = leftPad + slotWidth * index + slotWidth / 2;
 
       _paintChartLabel(
@@ -769,41 +864,72 @@ class RegulagemPdfService {
         font,
         '${ponta.id}',
         centerX,
-        topPad + chartH + 8,
+        bottomPad - 12,
+        ponta.medida ? AppColors.textSecondary : AppColors.textTertiary,
       );
 
-      final valor = ponta.valorMedido;
-      if (valor == null) continue;
+      final percentual = ponta.percentual;
+      if (percentual == null) {
+        canvas
+          ..setStrokeColor(_pdfColor(AppColors.textTertiary))
+          ..setLineWidth(1)
+          ..drawEllipse(centerX, yIdeal, 3.5, 3.5)
+          ..strokePath();
+        continue;
+      }
 
-      final top = yToPx(valor);
-      final barHeight = topPad + chartH - top;
+      final yValor = yDe(chart.percentualNoEixo(percentual));
+      final subiu = yValor >= yIdeal;
+      final base = min(yValor, yIdeal);
+      final altura = max(2.0, (yValor - yIdeal).abs());
+
       canvas
         ..setFillColor(_statusBarColor(ponta.status))
-        ..drawRRect(
-          centerX - barWidth / 2,
-          top,
-          barWidth,
-          barHeight,
-          4,
-          4,
-        )
+        ..drawRRect(centerX - barWidth / 2, base, barWidth, altura, 3, 3)
         ..fillPath();
-    }
 
-    _paintChartYLabel(canvas, font, idealMax, yToPx(idealMax));
-    _paintChartYLabel(canvas, font, ideal, idealY);
+      _paintChartLabel(
+        canvas,
+        font,
+        '${percentual.toStringAsFixed(0)}%',
+        centerX,
+        subiu
+            ? base + altura + 3
+            : max(base - fontSize - 2, bottomPad + fontSize / 2),
+        _statusLabelColor(ponta.status),
+      );
+    }
+  }
+
+  static void _paintLinhaTracejada(
+    PdfGraphics canvas,
+    double xInicial,
+    double largura,
+    double y,
+    PdfColor cor,
+  ) {
+    canvas
+      ..setStrokeColor(cor)
+      ..setLineWidth(0.8)
+      ..setLineDashPattern([3, 3])
+      ..moveTo(xInicial, y)
+      ..lineTo(xInicial + largura, y)
+      ..strokePath()
+      ..setLineDashPattern();
   }
 
   static void _paintChartYLabel(
     PdfGraphics canvas,
     PdfFont font,
-    double value,
+    String text,
     double y,
+    Color color,
   ) {
     const fontSize = 8.0;
+    final metrics = font.stringMetrics(text) * fontSize;
     canvas
-      ..setFillColor(_pdfColor(AppColors.textSecondary))
-      ..drawString(font, fontSize, value.toStringAsFixed(2), 2, y - 4);
+      ..setFillColor(_pdfColor(color))
+      ..drawString(font, fontSize, text, 32 - metrics.width, y - 3);
   }
 
   static void _paintChartLabel(
@@ -812,11 +938,12 @@ class RegulagemPdfService {
     String text,
     double centerX,
     double y,
+    Color color,
   ) {
     const fontSize = 8.0;
     final metrics = font.stringMetrics(text) * fontSize;
     canvas
-      ..setFillColor(_pdfColor(AppColors.textSecondary))
+      ..setFillColor(_pdfColor(color))
       ..drawString(font, fontSize, text, centerX - metrics.width / 2, y);
   }
 
@@ -931,11 +1058,15 @@ class RegulagemPdfService {
   }
 
   static PdfColor _statusBarColor(StatusPonta status) {
+    return _pdfColor(_statusLabelColor(status));
+  }
+
+  static Color _statusLabelColor(StatusPonta status) {
     return switch (status) {
-      StatusPonta.ideal => _pdfColor(AppColors.success),
-      StatusPonta.irregular => _pdfColor(AppColors.warning),
-      StatusPonta.desgaste => _pdfColor(AppColors.danger),
-      StatusPonta.pendente => _pdfColor(AppColors.textTertiary),
+      StatusPonta.ideal => AppColors.success,
+      StatusPonta.irregular => AppColors.warning,
+      StatusPonta.desgaste => AppColors.danger,
+      StatusPonta.pendente => AppColors.textTertiary,
     };
   }
 

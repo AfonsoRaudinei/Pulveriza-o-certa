@@ -54,6 +54,20 @@ Não “corrigir” casas decimais, símbolo `%` ou cores do card no mesmo PR de
 - Resultados (Ponta R$, perda, custo de troca, recomendação) continuam depois das medições.
 - Campo L/min medido: teclado decimal (`numberWithOptions(decimal: true)`), aceita vírgula e ponto, dígitos visíveis (sem label flutuante "Medida").
 
+## Gráfico "Vazão por ponta"
+
+Mesma geometria na tela (`lib/screens/regulagem/widgets/grafico_vazao_pontas.dart`) e no laudo (`_paintChart` em `lib/services/regulagem_pdf_service.dart`), a partir de `VazaoChartData` (`lib/core/charts/vazao_chart_data.dart`).
+
+| Regra | Detalhe |
+|---|---|
+| Escala | percentual do ideal; barra sai da linha de 100% para cima (excesso) ou para baixo (falta) |
+| Janela do eixo | sempre contém a faixa `limiteIrregular…limiteDesgaste`; margem mínima de 3 pp; amplitude máxima 60 pp (barra fora disso é cortada, rótulo mantém o valor real) |
+| Rótulos do eixo | `100%` sempre; limite só se estiver a ≥ 11 px (PDF) / 13 px (tela) do ideal — **nunca** dois números sobrepostos |
+| Rótulo da barra | percentual sem casas, na cor do status |
+| Ponta pendente | círculo vazado sobre a linha do ideal + item "Sem medição" na legenda; nunca barra zero |
+| Legenda | só os status presentes, texto de `rotuloStatusPonta` |
+| PDF | eixo Y cresce de baixo para cima e `setFillColor` ignora alfa (usar `.flatten()`); seção envolvida em `pw.Inseparable` |
+
 ## Análise econômica
 
 ```

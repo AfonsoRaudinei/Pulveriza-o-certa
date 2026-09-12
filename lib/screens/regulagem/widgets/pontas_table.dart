@@ -1,8 +1,7 @@
-import 'dart:math' show max, min;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/charts/vazao_chart_data.dart';
 import '../../../core/extensions/double_extension.dart';
 import '../../../core/utils/calculo_utils.dart';
 import '../../../domain/calculos/calc_perda_zona_atencao.dart';
@@ -11,6 +10,7 @@ import '../../../models/regulagem.dart';
 import '../../../theme.dart';
 import '../../../widgets/card_zona_atencao.dart';
 import '../../../widgets/status_badge.dart';
+import 'grafico_vazao_pontas.dart';
 import 'medicoes_resumo_card.dart';
 
 class PontasTable extends StatelessWidget {
@@ -94,10 +94,13 @@ class PontasTable extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           _EconomiaSection(resumo: _economiaResumo),
           const SizedBox(height: AppSpacing.xl),
-          _GraficoPontasVazao(
-            medicoes: medicoes,
-            ideal: ideal,
-            configuracoes: configuracoes,
+          GraficoVazaoPontas(
+            data: VazaoChartData.from(
+              medicoes: medicoes,
+              litroMinIdeal: ideal,
+              limiteIrregular: configuracoes.limiteIrregular,
+              limiteDesgaste: configuracoes.limiteDesgaste,
+            ),
           ),
           const SizedBox(height: AppSpacing.xl),
           _Orientacoes(resumo: _orientacoesResumo),
@@ -706,213 +709,6 @@ class _RecomendacaoBanner extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _GraficoPontasVazao extends StatelessWidget {
-  const _GraficoPontasVazao({
-    required this.medicoes,
-    required this.ideal,
-    required this.configuracoes,
-  });
-
-  final List<PontaMedicao> medicoes;
-  final double ideal;
-  final Configuracoes configuracoes;
-
-  @override
-  Widget build(BuildContext context) {
-    if (ideal <= 0) return const SizedBox.shrink();
-
-    const slotWidth = 36.0;
-    final viewport = MediaQuery.sizeOf(context).width - AppSpacing.lg * 2;
-    final chartWidth = max(viewport, medicoes.length * slotWidth + 52);
-
-    final colors = AppThemeColors.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Vazão por ponta',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          'Faixa verde = ideal (${configuracoes.limiteIrregular.toStringAsFixed(0)}–${configuracoes.limiteDesgaste.toStringAsFixed(0)}%)',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(color: colors.border),
-          ),
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: chartWidth,
-              height: 200,
-              child: CustomPaint(
-                painter: _GraficoPontasPainter(
-                  medicoes: medicoes,
-                  ideal: ideal,
-                  limiteIrregular: configuracoes.limiteIrregular,
-                  limiteDesgaste: configuracoes.limiteDesgaste,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _GraficoPontasPainter extends CustomPainter {
-  _GraficoPontasPainter({
-    required this.medicoes,
-    required this.ideal,
-    required this.limiteIrregular,
-    required this.limiteDesgaste,
-  });
-
-  final List<PontaMedicao> medicoes;
-  final double ideal;
-  final double limiteIrregular;
-  final double limiteDesgaste;
-
-  static const _leftPad = 40.0;
-  static const _rightPad = 12.0;
-  static const _topPad = 12.0;
-  static const _bottomPad = 28.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (ideal <= 0 || medicoes.isEmpty) return;
-
-    final chartW = size.width - _leftPad - _rightPad;
-    final chartH = size.height - _topPad - _bottomPad;
-    if (chartW <= 0 || chartH <= 0) return;
-
-    final idealMin = ideal * (limiteIrregular / 100);
-    final idealMax = ideal * (limiteDesgaste / 100);
-
-    final measured = medicoes
-        .where((item) => item.valorMedido != null)
-        .map((item) => item.valorMedido!)
-        .toList();
-    if (measured.isEmpty) return;
-
-    final yMax = max(measured.reduce(max), idealMax) * 1.12;
-    const yMin = 0.0;
-
-    double yToPx(double value) =>
-        _topPad + chartH - ((value - yMin) / (yMax - yMin)) * chartH;
-
-    final bandRect = Rect.fromLTRB(
-      _leftPad,
-      yToPx(idealMax),
-      _leftPad + chartW,
-      yToPx(idealMin),
-    );
-    canvas.drawRect(
-      bandRect,
-      Paint()..color = AppColors.success.withValues(alpha: 0.14),
-    );
-
-    final idealLine = Paint()
-      ..color = AppColors.success
-      ..strokeWidth = 1.5;
-    final idealY = yToPx(ideal);
-    canvas.drawLine(
-      Offset(_leftPad, idealY),
-      Offset(_leftPad + chartW, idealY),
-      idealLine,
-    );
-
-    final slotWidth = chartW / medicoes.length;
-    final barWidth = min(24.0, slotWidth * 0.62);
-
-    for (var index = 0; index < medicoes.length; index++) {
-      final ponta = medicoes[index];
-      final centerX = _leftPad + slotWidth * index + slotWidth / 2;
-
-      _paintLabel(
-        canvas,
-        '${ponta.id}',
-        Offset(centerX, _topPad + chartH + 8),
-      );
-
-      final valor = ponta.valorMedido;
-      if (valor == null) continue;
-
-      final top = yToPx(valor);
-      final barRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          centerX - barWidth / 2,
-          top,
-          barWidth,
-          _topPad + chartH - top,
-        ),
-        const Radius.circular(4),
-      );
-      canvas.drawRRect(
-        barRect,
-        Paint()..color = _colorForStatus(ponta.status),
-      );
-    }
-
-    _paintYLabel(canvas, idealMax, yToPx(idealMax));
-    _paintYLabel(canvas, ideal, idealY);
-  }
-
-  void _paintYLabel(Canvas canvas, double value, double y) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: value.toStringAsFixed(2),
-        style: const TextStyle(
-          fontSize: 10,
-          color: AppColors.textSecondary,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    painter.layout();
-    painter.paint(canvas, Offset(2, y - painter.height / 2));
-  }
-
-  void _paintLabel(Canvas canvas, String text, Offset offset) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(
-          fontSize: 10,
-          color: AppColors.textSecondary,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    painter.layout();
-    painter.paint(canvas, Offset(offset.dx - painter.width / 2, offset.dy));
-  }
-
-  Color _colorForStatus(StatusPonta status) {
-    return switch (status) {
-      StatusPonta.ideal => AppColors.success,
-      StatusPonta.irregular => AppColors.warning,
-      StatusPonta.desgaste => AppColors.danger,
-      StatusPonta.pendente => AppColors.textTertiary,
-    };
-  }
-
-  @override
-  bool shouldRepaint(covariant _GraficoPontasPainter oldDelegate) {
-    return oldDelegate.medicoes != medicoes ||
-        oldDelegate.ideal != ideal ||
-        oldDelegate.limiteIrregular != limiteIrregular ||
-        oldDelegate.limiteDesgaste != limiteDesgaste;
   }
 }
 
