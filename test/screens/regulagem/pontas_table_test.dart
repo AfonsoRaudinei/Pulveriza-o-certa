@@ -1,5 +1,6 @@
 import 'package:agrocalc/models/configuracoes.dart';
 import 'package:agrocalc/models/regulagem.dart';
+import 'package:agrocalc/screens/regulagem/widgets/grafico_vazao_pontas.dart';
 import 'package:agrocalc/screens/regulagem/widgets/medicoes_resumo_card.dart';
 import 'package:agrocalc/screens/regulagem/widgets/pontas_table.dart';
 import 'package:agrocalc/theme.dart';
@@ -133,6 +134,24 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Perda por desgaste'), findsOneWidget);
+  });
+
+  testWidgets('gráfico aparece uma vez, fora dos painéis de ponta',
+      (tester) async {
+    await pumpTable(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GraficoVazaoPontas), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ExpansionPanelList),
+        matching: find.byType(GraficoVazaoPontas),
+      ),
+      findsNothing,
+    );
+    expect(find.text('Vazão por ponta'), findsOneWidget);
+    expect(find.text('Análise econômica'), findsOneWidget);
+    expect(find.text('Orientações'), findsOneWidget);
   });
 
   testWidgets('ponta com 0 L/min não vira Sem medição', (tester) async {

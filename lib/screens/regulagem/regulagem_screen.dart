@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/charts/vazao_chart_data.dart';
+import '../../core/charts/vazao_chart_data.dart' show rotuloStatusPonta;
 import '../../core/utils/calculo_utils.dart';
 import '../../models/configuracoes.dart';
 import '../../models/regulagem.dart';
