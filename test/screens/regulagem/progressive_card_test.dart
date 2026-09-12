@@ -104,6 +104,28 @@ void main() {
     expect(find.text('Talhão'), findsNothing);
   });
 
+  testWidgets('Contexto pode ocultar o check verde quando completa', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ProgressiveCard(
+            index: 1,
+            title: 'Contexto da Operação',
+            locked: false,
+            complete: true,
+            showCompletedMarker: false,
+            child: const Text('corpo-contexto'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.check), findsNothing);
+    expect(find.text('corpo-contexto'), findsOneWidget);
+  });
+
   testWidgets('pode ocultar o check verde quando a etapa está completa',
       (tester) async {
     await tester.pumpWidget(
