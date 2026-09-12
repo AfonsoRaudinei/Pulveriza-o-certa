@@ -62,10 +62,11 @@ Mesma geometria na tela (`lib/screens/regulagem/widgets/grafico_vazao_pontas.dar
 |---|---|
 | Escala | percentual do ideal; barra sai da linha de 100% para cima (excesso) ou para baixo (falta) |
 | Janela do eixo | sempre contém a faixa `limiteIrregular…limiteDesgaste`; margem mínima de 3 pp; amplitude máxima 60 pp (barra fora disso é cortada, rótulo mantém o valor real) |
-| Rótulos do eixo | `100%` sempre; limite só se estiver a ≥ 11 px (PDF) / 13 px (tela) do ideal — **nunca** dois números sobrepostos |
-| Rótulo da barra | percentual sem casas, na cor do status |
+| Largura | `VazaoChartLayout`: com poucas pontas o gráfico fica compacto (slot máx. 44 px) — a linha do ideal **não** atravessa espaço vazio até a borda |
+| Rótulos do eixo | só `100%` à esquerda da linha do ideal — **nunca** dois números sobrepostos |
+| Rótulo da barra | percentual sem casas, na cor do status; some se o vão da ponta for < 28 px |
 | Ponta pendente | círculo vazado sobre a linha do ideal + item "Sem medição" na legenda; nunca barra zero |
-| Legenda | só os status presentes, texto de `rotuloStatusPonta` |
+| Legenda | só os status presentes, texto de `rotuloStatusPonta`; pílulas com fundo do status |
 | PDF | eixo Y cresce de baixo para cima e `setFillColor` ignora alfa (usar `.flatten()`); seção envolvida em `pw.Inseparable` |
 
 ## Análise econômica

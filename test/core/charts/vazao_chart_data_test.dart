@@ -99,4 +99,34 @@ void main() {
     expect(rotuloStatusPonta(StatusPonta.desgaste), 'Desgaste');
     expect(rotuloStatusPonta(StatusPonta.pendente), 'Sem medição');
   });
+
+  test('subtituloGraficoVazao descreve ideal e faixa', () {
+    final chart = _chart(const [
+      PontaMedicao(id: 1, valorMedido: 1.0, status: StatusPonta.ideal),
+    ]);
+    expect(
+      subtituloGraficoVazao(chart),
+      'Cada barra parte do ideal (1.000 L/min). '
+      'A faixa verde é o aceitável (92–105%).',
+    );
+  });
+
+  test('canvas compacto com poucas pontas e cabe na página quando são muitas',
+      () {
+    expect(
+      VazaoChartLayout.canvasWidthFor(4, maxAvailable: 500),
+      VazaoChartLayout.leftPad +
+          4 * VazaoChartLayout.maxSlot +
+          VazaoChartLayout.rightPad,
+    );
+    expect(
+      VazaoChartLayout.canvasWidthFor(32,
+          maxAvailable: 400, podeEstourar: false),
+      400,
+    );
+    expect(
+      VazaoChartLayout.canvasWidthFor(32, maxAvailable: 400),
+      greaterThan(400),
+    );
+  });
 }

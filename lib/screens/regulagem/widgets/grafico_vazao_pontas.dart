@@ -3,7 +3,6 @@ import 'dart:math' show max, min;
 import 'package:flutter/material.dart';
 
 import '../../../core/charts/vazao_chart_data.dart';
-import '../../../core/extensions/double_extension.dart';
 import '../../../models/regulagem.dart';
 import '../../../theme.dart';
 
@@ -17,10 +16,7 @@ class GraficoVazaoPontas extends StatelessWidget {
 
   final VazaoChartData data;
 
-  static const _alturaCanvas = 196.0;
-
-  /// Largura mínima de cada ponta: abaixo disso o gráfico rola na horizontal.
-  static const _larguraSlot = 34.0;
+  static const _alturaCanvas = 200.0;
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +25,9 @@ class GraficoVazaoPontas extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final viewport = MediaQuery.sizeOf(context).width - AppSpacing.lg * 2;
-    final larguraGrafico = max(
-      viewport - AppSpacing.md * 2,
-      data.pontas.length * _larguraSlot + _GraficoVazaoPainter.leftPad,
+    final larguraGrafico = VazaoChartLayout.canvasWidthFor(
+      data.pontas.length,
+      maxAvailable: max(viewport - AppSpacing.lg * 2, 0),
     );
 
     return Column(
@@ -40,8 +36,7 @@ class GraficoVazaoPontas extends StatelessWidget {
         Text('Vazão por ponta', style: theme.textTheme.headlineSmall),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Ideal ${data.litroMinIdeal.toLitroMin()} = 100%. '
-          'Faixa verde ${data.limiteIrregular.toStringAsFixed(0)}–${data.limiteDesgaste.toStringAsFixed(0)}% é aceitável.',
+          subtituloGraficoVazao(data),
           style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: AppSpacing.md),
@@ -51,7 +46,12 @@ class GraficoVazaoPontas extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: colors.border),
           ),
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.md,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -64,7 +64,6 @@ class GraficoVazaoPontas extends StatelessWidget {
                     painter: _GraficoVazaoPainter(
                       data: data,
                       colors: colors,
-                      // Os rótulos desenhados no canvas não herdam o tema.
                       estiloBase: theme.textTheme.labelSmall ??
                           const TextStyle(fontFamily: 'Inter'),
                     ),
@@ -90,17 +89,19 @@ class _Legenda extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     return Wrap(
-      spacing: AppSpacing.md,
+      spacing: AppSpacing.sm,
       runSpacing: AppSpacing.xs,
       children: [
         for (final status in data.statusMedidos)
           _LegendaItem(
             color: corDoStatus(status, colors),
+            fundo: _fundoDaLegenda(status, colors),
             label: rotuloStatusPonta(status),
           ),
         if (data.temPendente)
           _LegendaItem(
             color: colors.textTertiary,
+            fundo: colors.surfaceAlt,
             label: rotuloStatusPonta(StatusPonta.pendente),
             vazado: true,
           ),
@@ -109,40 +110,61 @@ class _Legenda extends StatelessWidget {
   }
 }
 
+Color _fundoDaLegenda(StatusPonta status, AppThemeColors colors) {
+  return switch (status) {
+    StatusPonta.ideal => colors.successLight,
+    StatusPonta.irregular => colors.warningLight,
+    StatusPonta.desgaste => colors.dangerLight,
+    StatusPonta.pendente => colors.surfaceAlt,
+  };
+}
+
 class _LegendaItem extends StatelessWidget {
   const _LegendaItem({
     required this.color,
+    required this.fundo,
     required this.label,
     this.vazado = false,
   });
 
   final Color color;
+  final Color fundo;
   final String label;
   final bool vazado;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: vazado ? null : color,
-            shape: BoxShape.circle,
-            border: vazado ? Border.all(color: color, width: 1.5) : null,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: fundo,
+        borderRadius: BorderRadius.circular(AppRadius.full),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: vazado ? null : color,
+              borderRadius: BorderRadius.circular(2),
+              border: vazado ? Border.all(color: color, width: 1.5) : null,
+            ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Text(
-          label,
-          style: Theme.of(context)
-              .textTheme
-              .labelSmall
-              ?.copyWith(color: AppThemeColors.of(context).textSecondary),
-        ),
-      ],
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppThemeColors.of(context).textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -168,80 +190,51 @@ class _GraficoVazaoPainter extends CustomPainter {
   final AppThemeColors colors;
   final TextStyle estiloBase;
 
-  static const leftPad = 44.0;
-  static const _rightPad = 12.0;
-  static const _topPad = 22.0;
-  static const _bottomPad = 26.0;
   static const _fontSize = 10.0;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final chartW = size.width - leftPad - _rightPad;
-    final chartH = size.height - _topPad - _bottomPad;
-    if (data.vazio || chartW <= 0 || chartH <= 0) return;
-
-    final base = _topPad + chartH;
-    double yDe(double percentual) =>
-        base - ((percentual - data.minPercent) / data.amplitude) * chartH;
-
-    final yIdeal = yDe(100);
-    final yEntupido = yDe(data.limiteIrregular);
-    final yDesgaste = yDe(data.limiteDesgaste);
-
-    canvas.drawRect(
-      Rect.fromLTRB(leftPad, yDesgaste, leftPad + chartW, yEntupido),
-      Paint()..color = colors.success.withValues(alpha: 0.10),
+    final layout = VazaoChartLayout.from(
+      n: data.pontas.length,
+      canvasWidth: size.width,
+      canvasHeight: size.height,
     );
+    if (data.vazio || layout.plotWidth <= 0 || layout.plotHeight <= 0) return;
 
-    final tracejado = Paint()
-      ..strokeWidth = 1
-      ..strokeCap = StrokeCap.round;
-    _linhaTracejada(
-      canvas,
-      yDesgaste,
-      leftPad,
-      chartW,
-      tracejado..color = colors.danger.withValues(alpha: 0.45),
-    );
-    _linhaTracejada(
-      canvas,
-      yEntupido,
-      leftPad,
-      chartW,
-      tracejado..color = colors.warning.withValues(alpha: 0.45),
+    final yIdeal = layout.yFlutter(100, data);
+    final yEntupido = layout.yFlutter(data.limiteIrregular, data);
+    final yDesgaste = layout.yFlutter(data.limiteDesgaste, data);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(layout.left, yDesgaste, layout.right, yEntupido),
+        const Radius.circular(4),
+      ),
+      Paint()..color = colors.success.withValues(alpha: 0.12),
     );
 
     canvas.drawLine(
-      Offset(leftPad, yIdeal),
-      Offset(leftPad + chartW, yIdeal),
+      Offset(layout.left, yIdeal),
+      Offset(layout.right, yIdeal),
       Paint()
         ..color = colors.success
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 1.5
+        ..strokeCap = StrokeCap.round,
     );
 
-    canvas.drawLine(
-      Offset(leftPad, base),
-      Offset(leftPad + chartW, base),
-      Paint()
-        ..color = colors.border
-        ..strokeWidth = 1,
-    );
-
-    _rotulosDoEixo(canvas, yIdeal, yEntupido, yDesgaste);
-
-    final slotWidth = chartW / data.pontas.length;
-    final barWidth = min(22.0, slotWidth * 0.52);
+    _rotuloEixo(
+        canvas, layout, '100%', yIdeal, colors.success, FontWeight.w600);
 
     for (var index = 0; index < data.pontas.length; index++) {
       final ponta = data.pontas[index];
-      final centerX = leftPad + slotWidth * index + slotWidth / 2;
+      final centerX = layout.centerX(index);
       final medida = ponta.medida;
 
       _texto(
         canvas,
         '${ponta.id}',
         centro: centerX,
-        top: base + 10,
+        top: layout.plotBottomFlutter + 10,
         color: medida ? colors.textSecondary : colors.textTertiary,
       );
 
@@ -259,70 +252,45 @@ class _GraficoVazaoPainter extends CustomPainter {
       }
 
       final cor = corDoStatus(ponta.status, colors);
-      final yValor = yDe(data.percentualNoEixo(percentual));
+      final yValor = layout.yFlutter(data.percentualNoEixo(percentual), data);
+      final noIdeal = (percentual - 100).abs() < 0.5;
       final subiu = yValor <= yIdeal;
-      final topo = min(yValor, yIdeal);
-      final altura = max(2.5, (yValor - yIdeal).abs());
-      const raio = Radius.circular(4);
+      final topo = noIdeal ? yIdeal - 3 : min(yValor, yIdeal);
+      final altura = noIdeal ? 6.0 : max(3.0, (yValor - yIdeal).abs());
+      final raio = Radius.circular(
+        min(VazaoChartLayout.barRadius, altura / 2),
+      );
 
       canvas.drawRRect(
         RRect.fromRectAndCorners(
-          Rect.fromLTWH(centerX - barWidth / 2, topo, barWidth, altura),
-          topLeft: subiu ? raio : Radius.zero,
-          topRight: subiu ? raio : Radius.zero,
-          bottomLeft: subiu ? Radius.zero : raio,
-          bottomRight: subiu ? Radius.zero : raio,
+          Rect.fromLTWH(
+              centerX - layout.barWidth / 2, topo, layout.barWidth, altura),
+          topLeft: subiu || noIdeal ? raio : Radius.zero,
+          topRight: subiu || noIdeal ? raio : Radius.zero,
+          bottomLeft: !subiu || noIdeal ? raio : Radius.zero,
+          bottomRight: !subiu || noIdeal ? raio : Radius.zero,
         ),
         Paint()..color = cor,
       );
+
+      if (!layout.mostraRotulosNasBarras) continue;
 
       _texto(
         canvas,
         '${percentual.toStringAsFixed(0)}%',
         centro: centerX,
-        // Barra cortada no piso do eixo: mantém o rótulo dentro da área do
-        // gráfico para não colidir com o número da ponta.
         top: subiu
-            ? topo - _fontSize - 6
-            : min(topo + altura + 4, base - _fontSize - 4),
+            ? topo - _fontSize - 5
+            : min(topo + altura + 3, layout.plotBottomFlutter - _fontSize - 3),
         color: cor,
         peso: FontWeight.w600,
       );
     }
   }
 
-  /// Só desenha o rótulo de um limite quando ele não encosta no rótulo do
-  /// ideal — era isso que fazia dois números se sobreporem no eixo.
-  void _rotulosDoEixo(
-    Canvas canvas,
-    double yIdeal,
-    double yEntupido,
-    double yDesgaste,
-  ) {
-    const folga = 13.0;
-    _rotuloEixo(canvas, '100%', yIdeal, colors.success, FontWeight.w600);
-    if ((yDesgaste - yIdeal).abs() >= folga) {
-      _rotuloEixo(
-        canvas,
-        '${data.limiteDesgaste.toStringAsFixed(0)}%',
-        yDesgaste,
-        colors.textTertiary,
-        FontWeight.w400,
-      );
-    }
-    if ((yEntupido - yIdeal).abs() >= folga) {
-      _rotuloEixo(
-        canvas,
-        '${data.limiteIrregular.toStringAsFixed(0)}%',
-        yEntupido,
-        colors.textTertiary,
-        FontWeight.w400,
-      );
-    }
-  }
-
   void _rotuloEixo(
     Canvas canvas,
+    VazaoChartLayout layout,
     String texto,
     double y,
     Color color,
@@ -331,7 +299,7 @@ class _GraficoVazaoPainter extends CustomPainter {
     final painter = _painterDe(texto, color, peso);
     painter.paint(
       canvas,
-      Offset(leftPad - 8 - painter.width, y - painter.height / 2),
+      Offset(layout.left - 8 - painter.width, y - painter.height / 2),
     );
   }
 
@@ -359,24 +327,6 @@ class _GraficoVazaoPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-  }
-
-  void _linhaTracejada(
-    Canvas canvas,
-    double y,
-    double xInicial,
-    double largura,
-    Paint paint,
-  ) {
-    const traco = 4.0;
-    const vao = 4.0;
-    var x = xInicial;
-    final fim = xInicial + largura;
-    while (x < fim) {
-      final proximo = min(x + traco, fim);
-      canvas.drawLine(Offset(x, y), Offset(proximo, y), paint);
-      x = proximo + vao;
-    }
   }
 
   @override
