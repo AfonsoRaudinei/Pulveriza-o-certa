@@ -55,17 +55,13 @@ classificação automática e análise de troca de bicos.
 
 ## URLs obrigatórias
 
-- **Política de Privacidade:** (publicar o Artifact e colar o link aqui, ou usar
-  `docs/privacidade.html` hospedado em GitHub Pages — veja nota abaixo)
-- **URL de Suporte:** (idem, com `docs/suporte.html`)
+- **Política de Privacidade:** https://afonsoraudinei.github.io/Pulveriza-o-certa/docs/privacidade.html
+- **URL de Suporte:** https://afonsoraudinei.github.io/Pulveriza-o-certa/docs/suporte.html
+- **Página inicial (opcional):** https://afonsoraudinei.github.io/Pulveriza-o-certa/docs/
 - **URL de marketing:** opcional — deixe em branco se não houver site.
 
-> As duas páginas já foram redigidas e publicadas como Artifacts nesta sessão. Um Artifact é
-> **privado por padrão** — antes de colar o link no App Store Connect, abra a página, use o
-> menu de compartilhamento e marque como pública/qualquer pessoa com o link, senão o revisor
-> da Apple não consegue abrir. Alternativa mais durável: publicar `docs/privacidade.html` e
-> `docs/suporte.html` (já estão no repositório) no GitHub Pages do projeto, o que dá uma URL
-> estável e sob seu controle.
+> Fonte: pasta `docs/` publicada via GitHub Pages (branch `main`, pasta `/docs`).
+> Instruções em `docs/README.md`. Confirmar que as URLs abrem em navegador anônimo antes de colar no App Store Connect.
 
 ## Questionário de privacidade (App Privacy)
 
