@@ -494,3 +494,34 @@ Disco apenas — IPA 114 em `build/ios/ipa/pontaverde.ipa`, payload validado, **
 
 Disco apenas — IPA 115 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
 
+## Build 116 — 2026-09-12 18:00 -03
+
+- Versão solicitada: `1.0.0+116` (também em `pubspec.yaml`)
+- Motivo: novo build solicitado na branch `cursor/plano-100` (plano 100%), com bump de versão a partir do Build 115 mergeado na `main`.
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 116 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (5 pods: Flutter, file_picker, printing, share_plus, shared_preferences_foundation)
+- Validação de pré-build: `./tool/validar.sh` — passou (98 testes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (169.1 MB / 161 MB no disco)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (22.6 MB / 23657281 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `116`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`, `Signed Time=12 Sep 2026 at 17:59:26`
+- Upload TestFlight: não enviado
+- Smoke iPhone físico: **não executado** (2026-09-12) — `flutter devices` sem device USB; wireless "iPhone de Raudinei" code -27. Ver `.agent/SMOKE_DEVICE.md`.
+
+### Status
+
+Disco apenas — IPA 116 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `TESTFLIGHT_DEPLOY.md` + `scripts/upload_testflight.sh <ISSUER_ID>`.
+
