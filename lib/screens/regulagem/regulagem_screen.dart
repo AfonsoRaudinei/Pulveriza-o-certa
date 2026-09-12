@@ -483,6 +483,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Parâmetros da Máquina',
             locked: !_etapa1Completa,
             complete: _etapa2Completa,
+            showCompletedMarker: false,
             summary: _resumoParametros(),
             child: _ParametrosStep(
               vazao: _vazao,
@@ -499,6 +500,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Cálculos Automáticos',
             locked: !_etapa2Completa,
             complete: _litroMinIdeal > 0,
+            showCompletedMarker: false,
             summary: _resumoCalculos(),
             child: Column(
               children: [

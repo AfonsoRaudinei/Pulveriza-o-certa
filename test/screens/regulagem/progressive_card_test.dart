@@ -104,6 +104,29 @@ void main() {
     expect(find.text('Talhão'), findsNothing);
   });
 
+  testWidgets('pode ocultar o check verde quando a etapa está completa',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ProgressiveCard(
+            index: 2,
+            title: 'Parâmetros da Máquina',
+            locked: false,
+            complete: true,
+            showCompletedMarker: false,
+            child: const Text('corpo-parametros'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.check), findsNothing);
+    expect(find.text('corpo-parametros'), findsOneWidget);
+  });
+
   testWidgets('etapa bloqueada não mostra a ficha', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
