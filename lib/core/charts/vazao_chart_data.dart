@@ -137,3 +137,91 @@ String rotuloStatusPonta(StatusPonta status) {
     StatusPonta.pendente => 'Sem medição',
   };
 }
+
+/// Texto de apoio abaixo do título — o mesmo na tela e no laudo.
+String subtituloGraficoVazao(VazaoChartData data) {
+  final faixa =
+      '${data.limiteIrregular.toStringAsFixed(0)}–${data.limiteDesgaste.toStringAsFixed(0)}%';
+  return 'Cada barra parte do ideal (${data.litroMinIdeal.toStringAsFixed(3)} L/min). '
+      'A faixa verde é o aceitável ($faixa).';
+}
+
+/// Geometria compartilhada pela tela e pelo PDF.
+///
+/// Com poucas pontas o gráfico fica compacto (não estica a linha do ideal
+/// até a borda da página). Com muitas, a tela rola e o PDF encolhe o vão.
+class VazaoChartLayout {
+  const VazaoChartLayout({
+    required this.left,
+    required this.plotWidth,
+    required this.plotHeight,
+    required this.slotWidth,
+    required this.barWidth,
+  });
+
+  static const leftPad = 48.0;
+  static const rightPad = 14.0;
+  static const topPad = 28.0;
+  static const bottomPad = 28.0;
+  static const maxSlot = 44.0;
+  static const minSlot = 32.0;
+  static const maxBarWidth = 16.0;
+  static const barRatio = 0.40;
+  static const barRadius = 5.0;
+  static const slotMinimoComRotulo = 28.0;
+
+  final double left;
+  final double plotWidth;
+  final double plotHeight;
+  final double slotWidth;
+  final double barWidth;
+
+  double get right => left + plotWidth;
+
+  double get plotTopFlutter => topPad;
+
+  double get plotBottomFlutter => topPad + plotHeight;
+
+  bool get mostraRotulosNasBarras => slotWidth >= slotMinimoComRotulo;
+
+  static double canvasWidthFor(
+    int n, {
+    required double maxAvailable,
+    bool podeEstourar = true,
+  }) {
+    if (n <= 0) return 0;
+    final compacto = leftPad + n * maxSlot + rightPad;
+    if (compacto <= maxAvailable) return compacto;
+    if (!podeEstourar) return maxAvailable;
+    return max(maxAvailable, leftPad + n * minSlot + rightPad);
+  }
+
+  factory VazaoChartLayout.from({
+    required int n,
+    required double canvasWidth,
+    required double canvasHeight,
+  }) {
+    final plotW = max(0.0, canvasWidth - leftPad - rightPad);
+    final plotH = max(0.0, canvasHeight - topPad - bottomPad);
+    final slot = n == 0 ? 0.0 : plotW / n;
+    return VazaoChartLayout(
+      left: leftPad,
+      plotWidth: plotW,
+      plotHeight: plotH,
+      slotWidth: slot,
+      barWidth: min(maxBarWidth, slot * barRatio),
+    );
+  }
+
+  double centerX(int index) => left + slotWidth * index + slotWidth / 2;
+
+  /// Flutter: Y cresce para baixo.
+  double yFlutter(double percentual, VazaoChartData data) =>
+      plotBottomFlutter -
+      ((percentual - data.minPercent) / data.amplitude) * plotHeight;
+
+  /// PDF: Y cresce para cima a partir da base do canvas.
+  double yPdf(double percentual, VazaoChartData data) =>
+      bottomPad +
+      ((percentual - data.minPercent) / data.amplitude) * plotHeight;
+}

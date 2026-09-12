@@ -41,7 +41,10 @@ void main() {
 
     expect(find.text('Vazão por ponta'), findsOneWidget);
     expect(
-      find.text('Ideal 0.825 L/min = 100%. Faixa verde 92–105% é aceitável.'),
+      find.text(
+        'Cada barra parte do ideal (0.825 L/min). '
+        'A faixa verde é o aceitável (92–105%).',
+      ),
       findsOneWidget,
     );
     expect(find.text('Ideal'), findsOneWidget);
