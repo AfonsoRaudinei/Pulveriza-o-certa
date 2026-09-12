@@ -31,7 +31,7 @@ Não estão travados. O técnico informa o % na regulagem (etapa Cálculos Autom
 | Dado | Como o app mostra hoje |
 |---|---|
 | L/min ideal | 3 casas (`toStringAsFixed(3)`) no resultado e na coluna |
-| Percentual | 1 casa, **sem** `%`; vazio → `-` |
+| Percentual | cabeçalho e ficha: 1 casa **com** `%`; `null` → Sem medição; `0` medido → `0.0%` |
 | R$ | `toMoeda()` (pt_BR, 2 casas) |
 | Status | `StatusBadge` (não pinta o fundo da linha) |
 | Card econômico | só se `perdaTotal > 0 && custo > 0` |
