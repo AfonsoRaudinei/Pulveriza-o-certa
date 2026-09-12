@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
-import 'providers/cadastros_provider.dart';
 import 'providers/configuracoes_provider.dart';
-import 'providers/ordens_aplicacao_provider.dart';
 import 'providers/regulagens_provider.dart';
 import 'routes.dart';
 import 'theme.dart';
@@ -18,10 +16,6 @@ class PontaVerdeApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ConfiguracoesProvider()..load()),
         ChangeNotifierProvider(create: (_) => RegulagensProvider()..load()),
-        ChangeNotifierProvider(
-          create: (_) => OrdensAplicacaoProvider()..load(),
-        ),
-        ChangeNotifierProvider(create: (_) => CadastrosProvider()..load()),
       ],
       child: Consumer<ConfiguracoesProvider>(
         builder: (context, configuracoes, _) {

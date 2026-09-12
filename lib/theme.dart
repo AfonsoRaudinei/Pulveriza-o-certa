@@ -6,6 +6,7 @@ class AppColors {
   static const primaryLight = Color(0xFFEBF2FF);
   static const background = Color(0xFFF5F7FA);
   static const surface = Color(0xFFFFFFFF);
+  static const cardSurface = Color(0xF2FFFFFF);
   static const surfaceAlt = Color(0xFFF9FAFB);
   static const textPrimary = Color(0xFF1A1A2E);
   static const textSecondary = Color(0xFF6B7280);
@@ -30,6 +31,7 @@ class AppColors {
 
   static const darkBackground = Color(0xFF0F1218);
   static const darkSurface = Color(0xFF1A1F27);
+  static const darkCardSurface = Color(0xF21A1F27);
   static const darkSurfaceAlt = Color(0xFF222830);
   static const darkTextPrimary = Color(0xFFF3F4F6);
   static const darkTextSecondary = Color(0xFF9CA3AF);
@@ -59,6 +61,30 @@ class AppSpacing {
   static const xxl = 24.0;
   static const xxxl = 32.0;
   static const huge = 48.0;
+}
+
+class AppShadows {
+  static const card = <BoxShadow>[
+    BoxShadow(
+      color: Color(0x14000000),
+      offset: Offset(0, 1),
+      blurRadius: 3,
+    ),
+    BoxShadow(
+      color: Color(0x0A000000),
+      offset: Offset(0, 2),
+      blurRadius: 8,
+    ),
+  ];
+
+  static BoxDecoration homeCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      color: isDark ? AppColors.darkCardSurface : AppColors.cardSurface,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      boxShadow: card,
+    );
+  }
 }
 
 class AppRadius {

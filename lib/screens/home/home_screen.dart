@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/regulagem.dart';
 import '../../providers/configuracoes_provider.dart';
-import '../../providers/ordens_aplicacao_provider.dart';
 import '../../providers/regulagens_provider.dart';
 import '../../routes.dart';
 import '../../theme.dart';
@@ -71,10 +70,8 @@ class _DashboardTabState extends State<DashboardTab> {
     try {
       final regulagensProvider = context.read<RegulagensProvider>();
       final configuracoesProvider = context.read<ConfiguracoesProvider>();
-      final ordensProvider = context.read<OrdensAplicacaoProvider>();
       await regulagensProvider.load();
       await configuracoesProvider.load();
-      await ordensProvider.load();
     } catch (error) {
       debugPrint('Erro ao atualizar dashboard: $error');
     }
@@ -88,7 +85,6 @@ class _DashboardTabState extends State<DashboardTab> {
     ).format(DateTime.now());
     final configuracoes = context.watch<ConfiguracoesProvider>().configuracoes;
     final regulagens = context.watch<RegulagensProvider>().regulagens;
-    final ordens = context.watch<OrdensAplicacaoProvider>().ordens;
     final nome = configuracoes.nomeConsultor.trim();
 
     return Scaffold(
@@ -113,28 +109,31 @@ class _DashboardTabState extends State<DashboardTab> {
               icon: Icons.add,
               onPressed: () => Navigator.pushNamed(context, Routes.regulagem),
             ),
-            const SizedBox(height: AppSpacing.md),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () =>
-                    Navigator.pushNamed(context, Routes.ordemAplicacao),
-                icon: const Icon(Icons.agriculture_outlined),
-                label: const Text('Nova Ordem de Aplicação'),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pushNamed(context, Routes.ordens),
-              child: const Text('Ver ordens'),
-            ),
             const SizedBox(height: AppSpacing.xl),
-            _SummaryCard(total: regulagens.length, ordens: ordens.length),
+            _SummaryCard(total: regulagens.length),
             const SizedBox(height: AppSpacing.xl),
             _LastRegulagemCard(
               regulagem: regulagens.isEmpty ? null : regulagens.first,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _HomeCard extends StatelessWidget {
+  const _HomeCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: AppShadows.homeCard(context),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xxl),
+        child: child,
       ),
     );
   }
@@ -147,64 +146,47 @@ class _WelcomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              nome.isEmpty
-                  ? 'Bem-vindo ao ${AppConstants.appName}'
-                  : 'Olá, $nome',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Regule pulverizadores direto no campo.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
+    return _HomeCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            nome.isEmpty
+                ? 'Bem-vindo ao ${AppConstants.appName}'
+                : 'Olá, $nome',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Regule pulverizadores direto no campo.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
       ),
     );
   }
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.total, required this.ordens});
+  const _SummaryCard({required this.total});
 
   final int total;
-  final int ordens;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.assignment_turned_in_outlined,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Text(
-                  '$total regulagens realizadas',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              '$ordens ordens de aplicação',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
+    return _HomeCard(
+      child: Row(
+        children: [
+          const Icon(
+            Icons.assignment_turned_in_outlined,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Text(
+            '$total regulagens realizadas',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+        ],
       ),
     );
   }
@@ -218,33 +200,30 @@ class _LastRegulagemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final item = regulagem;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: item == null
-            ? Text(
-                'Nenhuma regulagem salva ainda.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Última regulagem',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text('${item.produtor} • ${item.fazenda}'),
-                  Text(
-                    DateFormat(
-                      "dd MMM yyyy 'às' HH:mm",
-                      'pt_BR',
-                    ).format(item.dataRegulagem),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-      ),
+    return _HomeCard(
+      child: item == null
+          ? Text(
+              'Nenhuma regulagem salva ainda.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Última regulagem',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text('${item.produtor} • ${item.fazenda}'),
+                Text(
+                  DateFormat(
+                    "dd MMM yyyy 'às' HH:mm",
+                    'pt_BR',
+                  ).format(item.dataRegulagem),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
     );
   }
 }

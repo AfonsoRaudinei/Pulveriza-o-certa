@@ -3,6 +3,4 @@ class AppConstants {
   static const appVersion = '1.0.0';
   static const regulagensKey = 'agro_regulagens';
   static const configuracoesKey = 'agro_configuracoes';
-  static const ordensAplicacaoKey = 'agro_ordens_aplicacao';
-  static const cadastrosKey = 'agro_cadastros';
 }
