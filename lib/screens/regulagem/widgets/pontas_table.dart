@@ -92,8 +92,6 @@ class PontasTable extends StatelessWidget {
           ),
         if (_hasMedicoes) ...[
           const SizedBox(height: AppSpacing.xl),
-          _EconomiaSection(resumo: _economiaResumo),
-          const SizedBox(height: AppSpacing.xl),
           GraficoVazaoPontas(
             data: VazaoChartData.from(
               medicoes: medicoes,
@@ -102,6 +100,8 @@ class PontasTable extends StatelessWidget {
               limiteDesgaste: configuracoes.limiteDesgaste,
             ),
           ),
+          const SizedBox(height: AppSpacing.xl),
+          _EconomiaSection(resumo: _economiaResumo),
           const SizedBox(height: AppSpacing.xl),
           _Orientacoes(resumo: _orientacoesResumo),
         ],
@@ -336,7 +336,7 @@ class _PontasExpansionList extends StatelessWidget {
       elevation: 0,
       expandedHeaderPadding:
           const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      materialGapSize: AppSpacing.sm,
+      materialGapSize: 0,
       dividerColor: colors.border,
       expandIconColor: colors.textSecondary,
       expansionCallback: (index, isExpanded) {
