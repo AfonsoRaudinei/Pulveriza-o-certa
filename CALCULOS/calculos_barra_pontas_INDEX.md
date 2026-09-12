@@ -41,6 +41,14 @@ ENTRADAS DO FORMULÁRIO
           │  Perda estimada vs Custo de troca        │
           │  → Recomendação: troca seletiva / total  │
           └──────────────────────────────────────────┘
+                     │
+                     │  percentuais + manejoRS + n + areaHa + limiteDesgaste
+                     ▼
+          ┌──────────────────────────────────────────┐
+          │  Cálculo 06 — Zona de Atenção            │
+          │  100 < % ≤ limiteDesgaste                │
+          │  → perda R$ da faixa (sem Desgaste)      │
+          └──────────────────────────────────────────┘
 ```
 
 ---
@@ -54,6 +62,7 @@ ENTRADAS DO FORMULÁRIO
 | 03 | `calc_classificacao_status.md`   | percentual, limiares    | Ideal / Irregular / Desgaste | Badge, cor da linha, contadores       |
 | 04 | `calc_tolerancia_ponta.md`       | percentual, tolMin/Max  | entreTolerancias, acimaMIN   | Cards azul e roxo do painel           |
 | 05 | `calc_analise_economica.md`      | percentuais, R$, ha     | perdaTotal, recomendarTroca  | Card laranja/cinza + recomendação     |
+| 06 | `calc_perda_zona_atencao.md`     | percentuais, R$, ha, 105| perda zona, qtd na faixa     | Card Zona de Atenção + linha do PDF   |
 
 ---
 
@@ -96,6 +105,7 @@ lib/
         ├── calc_classificacao_status.dart   ← Cálculo 03
         ├── calc_tolerancia_ponta.dart       ← Cálculo 04
         ├── calc_analise_economica.dart      ← Cálculo 05
+        ├── calc_perda_zona_atencao.dart     ← Cálculo 06
         └── calculos_barra.dart             ← barrel export
 ```
 
@@ -107,6 +117,7 @@ export 'calc_percentual_ponta.dart';
 export 'calc_classificacao_status.dart';
 export 'calc_tolerancia_ponta.dart';
 export 'calc_analise_economica.dart';
+export 'calc_perda_zona_atencao.dart';
 ```
 
 ---
@@ -121,7 +132,8 @@ test/
         ├── calc_percentual_ponta_test.dart
         ├── calc_classificacao_status_test.dart
         ├── calc_tolerancia_ponta_test.dart
-        └── calc_analise_economica_test.dart
+        ├── calc_analise_economica_test.dart
+        └── calc_perda_zona_atencao_test.dart
 ```
 
 Rodar com:

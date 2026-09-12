@@ -251,6 +251,19 @@ void main() {
     });
   });
 
+  group('calcularPerdaZonaAtencao', () {
+    test('103% e 105% na faixa; 108% fica no Desgaste', () {
+      final result = CalcUtils.calcularPerdaZonaAtencao(
+        percentuais: [103, 105, 108],
+        manejoRS: 2400,
+        numeroPontas: 24,
+        areaHa: 500,
+      );
+      expect(result.qtdPontasNaZona, 2);
+      expect(result.perdaEstimada, closeTo(4000, 0.01));
+    });
+  });
+
   group('plantadeira', () {
     test('calcula largura útil', () {
       final result = CalcUtils.calcularLarguraUtil(

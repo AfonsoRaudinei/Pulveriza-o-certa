@@ -32,7 +32,8 @@ lib/
   providers/           ← estado (Provider)
   services/storage_service.dart  ← SharedPreferences + backup JSON
   screens/home, regulagem, historico, configuracoes, ordem_aplicacao
-  widgets/status_badge.dart, app_button.dart, progressive_step_card.dart
+  widgets/status_badge.dart, app_button.dart, progressive_step_card.dart,
+  widgets/card_zona_atencao.dart
 ```
 
 Rotas: `/home`, `/regulagem`, `/ordens`, `/ordem-aplicacao`. **Não existe login.**
@@ -46,6 +47,7 @@ Rotas: `/home`, `/regulagem`, `/ordens`, `/ordem-aplicacao`. **Não existe login
 | 03 | `CALCULOS/calc_classificacao_status.md` | `calc_classificacao_status.dart` | `calc_classificacao_status_test.dart` |
 | 04 | `CALCULOS/calc_tolerancia_ponta.md` | `calc_tolerancia_ponta.dart` | `calc_tolerancia_ponta_test.dart` |
 | 05 | `CALCULOS/calc_analise_economica.md` | `calc_analise_economica.dart` | `calc_analise_economica_test.dart` |
+| 06 | `CALCULOS/calc_perda_zona_atencao.md` | `calc_perda_zona_atencao.dart` | `calc_perda_zona_atencao_test.dart` |
 
 Barrel: `lib/domain/calculos/calculos_barra.dart`.
 
