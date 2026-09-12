@@ -538,6 +538,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Medições das Pontas',
             locked: _litroMinIdeal <= 0,
             complete: _medicoes.any((item) => item.valorMedido != null),
+            showCompletedMarker: false,
             summary: _resumoPontas(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -367,9 +367,7 @@ class _PontasListaState extends State<_PontasLista> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 InkWell(
-                  onTap: widget.readonly
-                      ? null
-                      : () => _selecionar(widget.medicoes[index].id),
+                  onTap: () => _selecionar(widget.medicoes[index].id),
                   child: _PontaPanelHeader(
                     key: ValueKey('ponta-header-${widget.medicoes[index].id}'),
                     ponta: widget.medicoes[index],
