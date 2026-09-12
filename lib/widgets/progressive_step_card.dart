@@ -16,6 +16,7 @@ class ProgressiveStepCard extends StatelessWidget {
     this.expandable = false,
     this.initiallyExpanded = true,
     this.expansionController,
+    this.showCompletedMarker = true,
   });
 
   final int stepNumber;
@@ -27,6 +28,7 @@ class ProgressiveStepCard extends StatelessWidget {
   final bool expandable;
   final bool initiallyExpanded;
   final ExpansibleController? expansionController;
+  final bool showCompletedMarker;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +61,7 @@ class ProgressiveStepCard extends StatelessWidget {
                   status: status,
                   initiallyExpanded: initiallyExpanded,
                   expansionController: expansionController,
+                  showCompletedMarker: showCompletedMarker,
                   child: child,
                 )
               : _StaticBody(
@@ -116,6 +119,7 @@ class _ExpandableBody extends StatelessWidget {
     required this.status,
     required this.initiallyExpanded,
     required this.expansionController,
+    required this.showCompletedMarker,
     required this.child,
   });
 
@@ -126,12 +130,16 @@ class _ExpandableBody extends StatelessWidget {
   final StepStatus status;
   final bool initiallyExpanded;
   final ExpansibleController? expansionController;
+  final bool showCompletedMarker;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final locked = status == StepStatus.locked;
+    final complete = status == StepStatus.completed;
+    final mostrarMarcador =
+        locked || !complete || showCompletedMarker;
 
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -147,7 +155,9 @@ class _ExpandableBody extends StatelessWidget {
         collapsedShape: const Border(),
         iconColor: AppColors.primary,
         collapsedIconColor: colors.textTertiary,
-        leading: _StepMarker(stepNumber: stepNumber, status: status),
+        leading: mostrarMarcador
+            ? _StepMarker(stepNumber: stepNumber, status: status)
+            : null,
         title: Text(
           title,
           style: Theme.of(context).textTheme.headlineSmall,

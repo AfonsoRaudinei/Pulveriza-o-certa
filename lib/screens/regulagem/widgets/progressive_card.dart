@@ -11,6 +11,7 @@ class ProgressiveCard extends StatefulWidget {
     required this.complete,
     required this.child,
     this.summary,
+    this.showCompletedMarker = true,
   });
 
   final int index;
@@ -19,6 +20,7 @@ class ProgressiveCard extends StatefulWidget {
   final bool complete;
   final Widget child;
   final Widget? summary;
+  final bool showCompletedMarker;
 
   @override
   State<ProgressiveCard> createState() => _ProgressiveCardState();
@@ -83,6 +85,7 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
       initiallyExpanded: !widget.locked,
       expansionController: _controller,
       summary: mostrarResumo ? widget.summary : null,
+      showCompletedMarker: widget.showCompletedMarker,
       child: widget.child,
     );
   }
