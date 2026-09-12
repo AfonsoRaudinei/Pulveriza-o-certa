@@ -18,10 +18,9 @@ void main() {
     expect(find.text('Ponta Verde'), findsWidgets);
     // Ação principal do dashboard.
     expect(find.text('Nova Regulagem'), findsOneWidget);
-    expect(find.text('Nova Ordem de Aplicação'), findsOneWidget);
     expect(Routes.home, '/home');
     expect(AppRoutes.map.containsKey('/login'), isFalse);
-    expect(AppRoutes.map.containsKey(Routes.ordemAplicacao), isTrue);
+    expect(AppRoutes.map.containsKey(Routes.regulagem), isTrue);
   });
 
   testWidgets(

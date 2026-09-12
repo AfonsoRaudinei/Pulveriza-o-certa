@@ -10,8 +10,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_constants.dart';
-import '../domain/ordem_aplicacao/ordem_aplicacao.dart';
-import '../models/cadastro_local.dart';
 import '../models/configuracoes.dart';
 import '../models/regulagem.dart';
 
@@ -132,90 +130,14 @@ class StorageService {
     }
   }
 
-  Future<List<OrdemAplicacao>> getOrdensAplicacao() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(AppConstants.ordensAplicacaoKey);
-    if (raw == null || raw.isEmpty) return [];
-    try {
-      final data = jsonDecode(raw) as List<dynamic>;
-      final ordens = data
-          .map((item) => OrdemAplicacao.fromJson(item as Map<String, dynamic>))
-          .toList();
-      ordens.sort((a, b) => b.atualizadoEm.compareTo(a.atualizadoEm));
-      return ordens;
-    } catch (error) {
-      debugPrint('Ordens corrompidas, ignorando blob: $error');
-      return [];
-    }
-  }
-
-  Future<void> saveOrdemAplicacao(OrdemAplicacao ordem) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final ordens = await getOrdensAplicacao();
-      final index = ordens.indexWhere((item) => item.id == ordem.id);
-      if (index >= 0) {
-        ordens[index] = ordem;
-      } else {
-        ordens.add(ordem);
-      }
-      await prefs.setString(
-        AppConstants.ordensAplicacaoKey,
-        jsonEncode(ordens.map((item) => item.toJson()).toList()),
-      );
-    } catch (error) {
-      debugPrint('Erro ao salvar ordem: $error');
-      throw const StorageException('Não foi possível salvar a ordem.');
-    }
-  }
-
-  Future<void> deleteOrdemAplicacao(String id) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final ordens = await getOrdensAplicacao();
-      ordens.removeWhere((item) => item.id == id);
-      await prefs.setString(
-        AppConstants.ordensAplicacaoKey,
-        jsonEncode(ordens.map((item) => item.toJson()).toList()),
-      );
-    } catch (error) {
-      debugPrint('Erro ao excluir ordem: $error');
-      throw const StorageException('Não foi possível excluir a ordem.');
-    }
-  }
-
-  Future<CadastrosLocais> getCadastros() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(AppConstants.cadastrosKey);
-      if (raw == null || raw.isEmpty) return const CadastrosLocais();
-      return CadastrosLocais.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-    } catch (error) {
-      debugPrint('Erro ao carregar cadastros: $error');
-      return const CadastrosLocais();
-    }
-  }
-
-  Future<void> saveCadastros(CadastrosLocais cadastros) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        AppConstants.cadastrosKey,
-        jsonEncode(cadastros.toJson()),
-      );
-    } catch (error) {
-      debugPrint('Erro ao salvar cadastros: $error');
-      throw const StorageException('Não foi possível salvar os cadastros.');
-    }
-  }
-
   Future<void> clearAll() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(AppConstants.regulagensKey);
       await prefs.remove(AppConstants.configuracoesKey);
-      await prefs.remove(AppConstants.ordensAplicacaoKey);
-      await prefs.remove(AppConstants.cadastrosKey);
+      // Chaves legadas de protótipos removidos.
+      await prefs.remove('agro_ordens_aplicacao');
+      await prefs.remove('agro_cadastros');
     } catch (error) {
       debugPrint('Erro ao limpar dados: $error');
       throw const StorageException('Não foi possível apagar os dados.');
@@ -225,16 +147,12 @@ class StorageService {
   Future<Map<String, dynamic>> buildBackupJson() async {
     final regulagens = await getRegulagens();
     final configuracoes = await getConfiguracoes();
-    final ordens = await getOrdensAplicacao();
-    final cadastros = await getCadastros();
     return {
       'app': AppConstants.appName,
       'version': AppConstants.appVersion,
       'exportedAt': DateTime.now().toIso8601String(),
       'regulagens': regulagens.map((item) => item.toJson()).toList(),
       'configuracoes': configuracoes.toJson(),
-      'ordensAplicacao': ordens.map((item) => item.toJson()).toList(),
-      'cadastros': cadastros.toJson(),
     };
   }
 
@@ -320,28 +238,6 @@ class StorageService {
         AppConstants.configuracoesKey,
         jsonEncode(configuracoes.toJson()),
       );
-      final ordensRaw = data['ordensAplicacao'];
-      if (ordensRaw is List) {
-        final ordens = ordensRaw
-            .map(
-              (item) => OrdemAplicacao.fromJson(item as Map<String, dynamic>),
-            )
-            .toList();
-        await prefs.setString(
-          AppConstants.ordensAplicacaoKey,
-          jsonEncode(ordens.map((item) => item.toJson()).toList()),
-        );
-      }
-      final cadastrosRaw = data['cadastros'];
-      if (cadastrosRaw is Map) {
-        final cadastros = CadastrosLocais.fromJson(
-          Map<String, dynamic>.from(cadastrosRaw),
-        );
-        await prefs.setString(
-          AppConstants.cadastrosKey,
-          jsonEncode(cadastros.toJson()),
-        );
-      }
     } catch (error) {
       debugPrint('Erro ao gravar backup importado: $error');
       throw const StorageException(
