@@ -138,8 +138,7 @@ class _ExpandableBody extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final locked = status == StepStatus.locked;
     final complete = status == StepStatus.completed;
-    final mostrarMarcador =
-        locked || !complete || showCompletedMarker;
+    final mostrarMarcador = locked || !complete || showCompletedMarker;
 
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),

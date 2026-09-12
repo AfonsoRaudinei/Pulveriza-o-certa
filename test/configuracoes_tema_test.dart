@@ -53,8 +53,7 @@ void main() {
     );
   });
 
-  testWidgets(
-      'salvar na Config não reverte limites gravados pelo provider',
+  testWidgets('salvar na Config não reverte limites gravados pelo provider',
       (tester) async {
     tester.view.physicalSize = const Size(800, 2000);
     tester.view.devicePixelRatio = 1.0;

@@ -104,7 +104,8 @@ void main() {
     expect(find.text('Talhão'), findsNothing);
   });
 
-  testWidgets('Contexto pode ocultar o check verde quando completa', (tester) async {
+  testWidgets('Contexto pode ocultar o check verde quando completa',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
