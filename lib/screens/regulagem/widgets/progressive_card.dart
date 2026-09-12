@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../widgets/progressive_step_card.dart';
 
-class ProgressiveCard extends StatelessWidget {
+class ProgressiveCard extends StatefulWidget {
   const ProgressiveCard({
     super.key,
     required this.index,
@@ -19,17 +19,57 @@ class ProgressiveCard extends StatelessWidget {
   final Widget child;
 
   @override
+  State<ProgressiveCard> createState() => _ProgressiveCardState();
+}
+
+class _ProgressiveCardState extends State<ProgressiveCard> {
+  late final ExpansibleController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ExpansibleController();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProgressiveCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.locked && !widget.locked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_controller.isExpanded) {
+          _controller.expand();
+        }
+      });
+    } else if (!oldWidget.locked && widget.locked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.isExpanded) {
+          _controller.collapse();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final StepStatus status = locked
+    final StepStatus status = widget.locked
         ? StepStatus.locked
-        : complete
+        : widget.complete
             ? StepStatus.completed
             : StepStatus.active;
     return ProgressiveStepCard(
-      stepNumber: index,
-      title: title,
+      stepNumber: widget.index,
+      title: widget.title,
       status: status,
-      child: child,
+      expandable: true,
+      initiallyExpanded: !widget.locked,
+      expansionController: _controller,
+      child: widget.child,
     );
   }
 }

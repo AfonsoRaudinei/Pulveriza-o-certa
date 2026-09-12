@@ -11,10 +11,6 @@ import '../../../theme.dart';
 import '../../../widgets/status_badge.dart';
 import 'medicoes_resumo_card.dart';
 
-const _kIdWidth = 28.0;
-const _kMedidoWidth = 128.0;
-const _kPercentWidth = 48.0;
-
 class PontasTable extends StatelessWidget {
   PontasTable({
     super.key,
@@ -26,6 +22,7 @@ class PontasTable extends StatelessWidget {
     required this.area,
     required this.readonly,
     required this.onMedicaoChanged,
+    this.onMovedToNextPonta,
   })  : _hasMedicoes = medicoes.any((item) => item.valorMedido != null),
         _resumoPontas = _ResumoPontasData.from(
           medicoes: medicoes,
@@ -50,6 +47,7 @@ class PontasTable extends StatelessWidget {
   final double area;
   final bool readonly;
   final ValueChanged<PontaInput> onMedicaoChanged;
+  final VoidCallback? onMovedToNextPonta;
   final bool _hasMedicoes;
   final _ResumoPontasData _resumoPontas;
   final Map<int, double> _percentuais;
@@ -63,24 +61,16 @@ class PontasTable extends StatelessWidget {
       children: [
         _ResumoPontas(resumo: _resumoPontas),
         const SizedBox(height: AppSpacing.lg),
-        const _PontasHeader(),
-        SizedBox(
-          height: 360,
-          child: ListView.builder(
-            itemCount: medicoes.length,
-            itemBuilder: (context, index) {
-              final ponta = medicoes[index];
-              return _PontaRow(
-                ponta: ponta,
-                ideal: ideal,
-                percentual: _percentuais[ponta.id] ?? 0,
-                readonly: readonly,
-                onChanged: (value) =>
-                    onMedicaoChanged(PontaInput(ponta.id, value)),
-              );
-            },
+        if (medicoes.isNotEmpty)
+          _PontasExpansionList(
+            medicoes: medicoes,
+            ideal: ideal,
+            percentuais: _percentuais,
+            readonly: readonly,
+            initialOpenId: _primeiraPontaAberta(medicoes),
+            onMedicaoChanged: onMedicaoChanged,
+            onMovedToNextPonta: onMovedToNextPonta,
           ),
-        ),
         if (_hasMedicoes) ...[
           const SizedBox(height: AppSpacing.xl),
           _EconomiaSection(resumo: _economiaResumo),
@@ -95,6 +85,13 @@ class PontasTable extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  static int _primeiraPontaAberta(List<PontaMedicao> medicoes) {
+    for (final item in medicoes) {
+      if (item.valorMedido == null) return item.id;
+    }
+    return medicoes.first.id;
   }
 
   static Map<int, double> _percentuaisPorPonta(
@@ -257,30 +254,124 @@ class _ResumoPontas extends StatelessWidget {
   }
 }
 
-class _PontasHeader extends StatelessWidget {
-  const _PontasHeader();
+class _PontasExpansionList extends StatelessWidget {
+  const _PontasExpansionList({
+    required this.medicoes,
+    required this.ideal,
+    required this.percentuais,
+    required this.readonly,
+    required this.initialOpenId,
+    required this.onMedicaoChanged,
+    required this.onMovedToNextPonta,
+  });
+
+  final List<PontaMedicao> medicoes;
+  final double ideal;
+  final Map<int, double> percentuais;
+  final bool readonly;
+  final int initialOpenId;
+  final ValueChanged<PontaInput> onMedicaoChanged;
+  final VoidCallback? onMovedToNextPonta;
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: AppColors.textSecondary,
-          fontWeight: FontWeight.w600,
+    final colors = AppThemeColors.of(context);
+    return ExpansionPanelList.radio(
+      initialOpenPanelValue: initialOpenId,
+      elevation: 0,
+      expandedHeaderPadding:
+          const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      materialGapSize: AppSpacing.sm,
+      dividerColor: colors.border,
+      expandIconColor: colors.textSecondary,
+      expansionCallback: (index, isExpanded) {
+        if (!isExpanded) {
+          onMovedToNextPonta?.call();
+        }
+      },
+      children: [
+        for (final ponta in medicoes)
+          ExpansionPanelRadio(
+            value: ponta.id,
+            canTapOnHeader: true,
+            backgroundColor: colors.surface,
+            headerBuilder: (context, isExpanded) {
+              return _PontaPanelHeader(
+                key: ValueKey('ponta-header-${ponta.id}'),
+                ponta: ponta,
+                percentual: percentuais[ponta.id] ?? 0,
+              );
+            },
+            body: _PontaPanelBody(
+              key: ValueKey('ponta-body-${ponta.id}'),
+              ponta: ponta,
+              ideal: ideal,
+              readonly: readonly,
+              onChanged: (value) =>
+                  onMedicaoChanged(PontaInput(ponta.id, value)),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _PontaPanelHeader extends StatelessWidget {
+  const _PontaPanelHeader({
+    super.key,
+    required this.ponta,
+    required this.percentual,
+  });
+
+  final PontaMedicao ponta;
+  final double percentual;
+
+  @override
+  Widget build(BuildContext context) {
+    final numberStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: AppColors.textPrimary,
         );
+    final medido = ponta.valorMedido == null
+        ? 'Sem medição'
+        : '${ponta.valorMedido!.toStringAsFixed(3)} L/min';
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         children: [
-          SizedBox(width: _kIdWidth, child: Text('#', style: style)),
-          SizedBox(width: _kMedidoWidth, child: Text('Medido', style: style)),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text('Ideal', style: style)),
           SizedBox(
-            width: _kPercentWidth,
-            child: Text('%', style: style, textAlign: TextAlign.end),
+            width: 64,
+            child: Text(
+              'Ponta ${ponta.id}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              medido,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: numberStyle,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            percentual == 0 ? '-' : percentual.toStringAsFixed(1),
+            style: numberStyle,
           ),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
-            child: Text('Status', style: style, textAlign: TextAlign.end),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: StatusBadge(status: ponta.status),
+              ),
+            ),
           ),
         ],
       ),
@@ -288,25 +379,25 @@ class _PontasHeader extends StatelessWidget {
   }
 }
 
-class _PontaRow extends StatefulWidget {
-  const _PontaRow({
+class _PontaPanelBody extends StatefulWidget {
+  const _PontaPanelBody({
+    super.key,
     required this.ponta,
     required this.ideal,
-    required this.percentual,
     required this.readonly,
     required this.onChanged,
   });
+
   final PontaMedicao ponta;
   final double ideal;
-  final double percentual;
   final bool readonly;
   final ValueChanged<String> onChanged;
 
   @override
-  State<_PontaRow> createState() => _PontaRowState();
+  State<_PontaPanelBody> createState() => _PontaPanelBodyState();
 }
 
-class _PontaRowState extends State<_PontaRow> {
+class _PontaPanelBodyState extends State<_PontaPanelBody> {
   late final TextEditingController _controller;
 
   @override
@@ -318,7 +409,7 @@ class _PontaRowState extends State<_PontaRow> {
   }
 
   @override
-  void didUpdateWidget(covariant _PontaRow oldWidget) {
+  void didUpdateWidget(covariant _PontaPanelBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.ponta.valorMedido != widget.ponta.valorMedido &&
         widget.readonly) {
@@ -334,71 +425,30 @@ class _PontaRowState extends State<_PontaRow> {
 
   @override
   Widget build(BuildContext context) {
-    final numberStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: AppColors.textPrimary,
-        );
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppThemeColors.of(context).border),
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: _kIdWidth,
-            child: Text('${widget.ponta.id}', textAlign: TextAlign.center),
+          Text(
+            'L/min medido',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          SizedBox(
-            width: _kMedidoWidth,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'L/min',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                _MedidoField(
-                  controller: _controller,
-                  readonly: widget.readonly,
-                  onChanged: widget.onChanged,
-                ),
-              ],
-            ),
+          const SizedBox(height: AppSpacing.xs),
+          _MedidoField(
+            controller: _controller,
+            readonly: widget.readonly,
+            onChanged: widget.onChanged,
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              widget.ideal.toStringAsFixed(3),
-              maxLines: 1,
-              style: numberStyle,
-            ),
-          ),
-          SizedBox(
-            width: _kPercentWidth,
-            child: Text(
-              widget.percentual == 0
-                  ? '-'
-                  : widget.percentual.toStringAsFixed(1),
-              textAlign: TextAlign.end,
-              maxLines: 1,
-              style: numberStyle,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: StatusBadge(status: widget.ponta.status),
-              ),
-            ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Ideal: ${widget.ideal.toStringAsFixed(3)} L/min',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
