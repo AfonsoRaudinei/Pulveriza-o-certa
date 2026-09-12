@@ -494,3 +494,33 @@ Disco apenas — IPA 114 em `build/ios/ipa/pontaverde.ipa`, payload validado, **
 
 Disco apenas — IPA 115 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
 
+## Build 189 — 2026-09-12 15:36 -03
+
+- Versão solicitada: `1.0.0+189` (também em `pubspec.yaml`)
+- Motivo: build com fix de UI (sem check verde nas etapas 2 e 3 da regulagem — PR #18) + fixes anteriores na main
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 189 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (5 pods: Flutter, file_picker, printing, share_plus, shared_preferences_foundation)
+- Validação de pré-build: `./tool/validar.sh` — passou (104 testes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (170.2 MB / ~163 MB no disco)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (22.91 MB / 24012625 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `189`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution` via `codesign -dv`, `TeamIdentifier=BA2BU25B78`, `Signed Time=12 Sep 2026 at 15:36:05`
+- Upload TestFlight: não enviado
+
+### Status
+
+Disco apenas — IPA 189 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight.
+
