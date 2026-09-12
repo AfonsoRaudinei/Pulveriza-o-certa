@@ -454,6 +454,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
         ],
       ),
       body: ListView(
+        key: PageStorageKey<String>('regulagem-form-$_id'),
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           ProgressiveCard(
@@ -461,6 +462,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             title: 'Contexto da Operação',
             locked: false,
             complete: _etapa1Completa,
+            showCompletedMarker: false,
             summary: _resumoContexto(),
             child: _ContextStep(
               produtor: _produtor,

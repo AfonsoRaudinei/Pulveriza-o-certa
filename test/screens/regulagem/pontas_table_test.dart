@@ -51,22 +51,17 @@ void main() {
     );
   }
 
-  testWidgets('lista de pontas usa ExpansionPanelList.radio', (tester) async {
+  testWidgets('lista de pontas sem ExpansionPanelList nem chevron de painel',
+      (tester) async {
     await pumpTable(tester);
+    await tester.pumpAndSettle();
 
-    expect(find.byType(ExpansionPanelList), findsOneWidget);
+    expect(find.byType(ExpansionPanelList), findsNothing);
     expect(find.text('Ponta 1'), findsOneWidget);
     expect(find.text('Ponta 2'), findsOneWidget);
     expect(find.text('Ponta 3'), findsOneWidget);
     expect(find.textContaining('0.825 L/min'), findsWidgets);
-    // 'Sem medição' também aparece na legenda do gráfico.
-    expect(
-      find.descendant(
-        of: find.byType(ExpansionPanelList),
-        matching: find.text('Sem medição'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Sem medição'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('abre a primeira ponta pendente com o campo L/min',
@@ -74,8 +69,8 @@ void main() {
     await pumpTable(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('L/min medido'), findsWidgets);
-    expect(find.text('Ideal: 0.825 L/min'), findsWidgets);
+    expect(find.text('L/min medido'), findsOneWidget);
+    expect(find.text('Ideal: 0.825 L/min'), findsOneWidget);
   });
 
   testWidgets('passar para a ponta de baixo dispara auto-save', (tester) async {
@@ -125,7 +120,6 @@ void main() {
 
     expect(find.byType(CardZonaAtencao), findsOneWidget);
     expect(find.text('Zona de Atenção'), findsOneWidget);
-    // 'Desgaste' também aparece na legenda do gráfico.
     expect(
       find.descendant(
         of: find.byType(MedicoesResumoCard),
@@ -136,19 +130,12 @@ void main() {
     expect(find.text('Perda por desgaste'), findsOneWidget);
   });
 
-  testWidgets('gráfico aparece uma vez, fora dos painéis de ponta',
+  testWidgets('gráfico aparece uma vez, fora da lista de pontas',
       (tester) async {
     await pumpTable(tester);
     await tester.pumpAndSettle();
 
     expect(find.byType(GraficoVazaoPontas), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(ExpansionPanelList),
-        matching: find.byType(GraficoVazaoPontas),
-      ),
-      findsNothing,
-    );
     expect(find.text('Vazão por ponta'), findsOneWidget);
     expect(find.text('Análise econômica'), findsOneWidget);
     expect(find.text('Orientações'), findsOneWidget);
@@ -187,26 +174,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.descendant(
-        of: find.byType(ExpansionPanelList),
-        matching: find.textContaining('0.000 L/min'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byType(ExpansionPanelList),
-        matching: find.textContaining('%'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byType(ExpansionPanelList),
-        matching: find.text('Sem medição'),
-      ),
-      findsNothing,
-    );
+    expect(find.textContaining('0.000 L/min'), findsOneWidget);
+    expect(find.textContaining('0.0%'), findsOneWidget);
+    expect(find.text('Sem medição'), findsNothing);
   });
 }

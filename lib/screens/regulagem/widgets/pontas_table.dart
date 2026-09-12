@@ -81,7 +81,7 @@ class PontasTable extends StatelessWidget {
         ],
         const SizedBox(height: AppSpacing.lg),
         if (medicoes.isNotEmpty)
-          _PontasExpansionList(
+          _PontasLista(
             medicoes: medicoes,
             ideal: ideal,
             percentuais: _percentuais,
@@ -309,8 +309,8 @@ class _ResumoPontas extends StatelessWidget {
   }
 }
 
-class _PontasExpansionList extends StatelessWidget {
-  const _PontasExpansionList({
+class _PontasLista extends StatefulWidget {
+  const _PontasLista({
     required this.medicoes,
     required this.ideal,
     required this.percentuais,
@@ -329,44 +329,71 @@ class _PontasExpansionList extends StatelessWidget {
   final VoidCallback? onMovedToNextPonta;
 
   @override
+  State<_PontasLista> createState() => _PontasListaState();
+}
+
+class _PontasListaState extends State<_PontasLista> {
+  late int _ativaId;
+
+  @override
+  void initState() {
+    super.initState();
+    _ativaId = widget.initialOpenId;
+  }
+
+  @override
+  void didUpdateWidget(covariant _PontasLista oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.medicoes.any((ponta) => ponta.id == _ativaId)) {
+      _ativaId = PontasTable._primeiraPontaAberta(widget.medicoes);
+    }
+  }
+
+  void _selecionar(int id) {
+    if (id == _ativaId) return;
+    setState(() => _ativaId = id);
+    widget.onMovedToNextPonta?.call();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    return ExpansionPanelList.radio(
-      initialOpenPanelValue: initialOpenId,
-      elevation: 0,
-      expandedHeaderPadding:
-          const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      materialGapSize: 0,
-      dividerColor: colors.border,
-      expandIconColor: colors.textSecondary,
-      expansionCallback: (index, isExpanded) {
-        if (!isExpanded) {
-          onMovedToNextPonta?.call();
-        }
-      },
+    return Column(
       children: [
-        for (final ponta in medicoes)
-          ExpansionPanelRadio(
-            value: ponta.id,
-            canTapOnHeader: true,
-            backgroundColor: colors.surface,
-            headerBuilder: (context, isExpanded) {
-              return _PontaPanelHeader(
-                key: ValueKey('ponta-header-${ponta.id}'),
-                ponta: ponta,
-                percentual:
-                    ponta.valorMedido == null ? null : percentuais[ponta.id],
-              );
-            },
-            body: _PontaPanelBody(
-              key: ValueKey('ponta-body-${ponta.id}'),
-              ponta: ponta,
-              ideal: ideal,
-              readonly: readonly,
-              onChanged: (value) =>
-                  onMedicaoChanged(PontaInput(ponta.id, value)),
+        for (var index = 0; index < widget.medicoes.length; index++) ...[
+          Material(
+            color: colors.surface,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                InkWell(
+                  onTap: widget.readonly
+                      ? null
+                      : () => _selecionar(widget.medicoes[index].id),
+                  child: _PontaPanelHeader(
+                    key: ValueKey('ponta-header-${widget.medicoes[index].id}'),
+                    ponta: widget.medicoes[index],
+                    percentual: widget.medicoes[index].valorMedido == null
+                        ? null
+                        : widget.percentuais[widget.medicoes[index].id],
+                  ),
+                ),
+                if (widget.medicoes[index].id == _ativaId)
+                  _PontaPanelBody(
+                    key: ValueKey('ponta-body-${widget.medicoes[index].id}'),
+                    ponta: widget.medicoes[index],
+                    ideal: widget.ideal,
+                    readonly: widget.readonly,
+                    onChanged: (value) => widget.onMedicaoChanged(
+                      PontaInput(widget.medicoes[index].id, value),
+                    ),
+                  ),
+              ],
             ),
           ),
+          if (index < widget.medicoes.length - 1)
+            Divider(height: 1, color: colors.border),
+        ],
       ],
     );
   }
@@ -443,6 +470,7 @@ class _PontaPanelBody extends StatefulWidget {
 
 class _PontaPanelBodyState extends State<_PontaPanelBody> {
   late final TextEditingController _controller;
+  late final ScrollController _scrollController;
 
   @override
   void initState() {
@@ -450,6 +478,7 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
     _controller = TextEditingController(
       text: widget.ponta.valorMedido?.toStringAsFixed(3) ?? '',
     );
+    _scrollController = ScrollController(keepScrollOffset: false);
   }
 
   @override
@@ -464,6 +493,7 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -486,6 +516,7 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
           const SizedBox(height: AppSpacing.xs),
           _MedidoField(
             controller: _controller,
+            scrollController: _scrollController,
             readonly: widget.readonly,
             onChanged: widget.onChanged,
           ),
@@ -503,11 +534,13 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
 class _MedidoField extends StatelessWidget {
   const _MedidoField({
     required this.controller,
+    required this.scrollController,
     required this.readonly,
     required this.onChanged,
   });
 
   final TextEditingController controller;
+  final ScrollController scrollController;
   final bool readonly;
   final ValueChanged<String> onChanged;
 
@@ -515,6 +548,7 @@ class _MedidoField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      scrollController: scrollController,
       enabled: !readonly,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
