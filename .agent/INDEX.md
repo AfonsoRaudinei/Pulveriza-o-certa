@@ -8,6 +8,7 @@ Leia **só** a linha da tarefa. Não abra PRD, AGENTIPA ou CALCULOS inteiro sem 
 |---|---|---|
 | Fórmula / % / status / tolerância / R$ | `CALCULOS/calculos_barra_pontas_INDEX.md` → o `CALCULOS/calc_*.md` certo → `lib/domain/calculos/` → `test/domain/calculos/` | PRD, AGENTIPA, `docs/` |
 | Tela de regulagem / tabela de pontas | `lib/screens/regulagem/` + `.agent/CONTRATO_REGULAGEM.md` + `lib/core/utils/calculo_utils.dart` | `ios/`, AGENTIPA |
+| Gráfico "Vazão por ponta" (tela + laudo) | `lib/core/charts/vazao_chart_data.dart` → `lib/screens/regulagem/widgets/grafico_vazao_pontas.dart` + `_paintChart` em `lib/services/regulagem_pdf_service.dart` + `.agent/CONTRATO_REGULAGEM.md` | `CALCULOS/` |
 | Ordem de aplicação / ProgressiveStepCard | `docs/ordem_aplicacao/INDEX.md` → spec da tela → `lib/domain/ordem_aplicacao/` → `lib/screens/ordem_aplicacao/` → `lib/widgets/progressive_step_card.dart` | `CALCULOS/` (barra), AGENTIPA |
 | Plantadeira (largura / rendimento) | `lib/core/utils/calculo_utils.dart` (`calcularLarguraUtil`, `calcularRendimentoOperacional`) + `regulagem_screen.dart` | `CALCULOS/` (é só pulverizador) |
 | Limites / backup JSON | `lib/models/configuracoes.dart` + `lib/screens/configuracoes/` + `lib/screens/regulagem/regulagem_screen.dart` (campos inline) + `lib/services/storage_service.dart` | |
@@ -26,6 +27,7 @@ lib/
   domain/calculos/     ← fórmulas da barra
   domain/ordem_aplicacao/  ← ordem (dose×área, totais, validação)
   core/utils/calculo_utils.dart  ← fachada usada pela UI de regulagem
+  core/charts/vazao_chart_data.dart  ← dados do gráfico (tela + PDF)
   core/extensions/double_extension.dart  ← toMoeda / toPercent / toLitroMin
   core/constants/app_constants.dart  ← nome "Ponta Verde"
   models/regulagem.dart, models/configuracoes.dart, models/cadastro_local.dart

@@ -1,5 +1,6 @@
 import 'package:agrocalc/models/configuracoes.dart';
 import 'package:agrocalc/models/regulagem.dart';
+import 'package:agrocalc/screens/regulagem/widgets/medicoes_resumo_card.dart';
 import 'package:agrocalc/screens/regulagem/widgets/pontas_table.dart';
 import 'package:agrocalc/theme.dart';
 import 'package:agrocalc/widgets/card_zona_atencao.dart';
@@ -57,7 +58,14 @@ void main() {
     expect(find.text('Ponta 2'), findsOneWidget);
     expect(find.text('Ponta 3'), findsOneWidget);
     expect(find.text('0.825 L/min'), findsWidgets);
-    expect(find.text('Sem medição'), findsOneWidget);
+    // 'Sem medição' também aparece na legenda do gráfico.
+    expect(
+      find.descendant(
+        of: find.byType(ExpansionPanelList),
+        matching: find.text('Sem medição'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('abre a primeira ponta pendente com o campo L/min',
@@ -116,7 +124,14 @@ void main() {
 
     expect(find.byType(CardZonaAtencao), findsOneWidget);
     expect(find.text('Zona de Atenção'), findsOneWidget);
-    expect(find.text('Desgaste'), findsOneWidget);
+    // 'Desgaste' também aparece na legenda do gráfico.
+    expect(
+      find.descendant(
+        of: find.byType(MedicoesResumoCard),
+        matching: find.text('Desgaste'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Perda por desgaste'), findsOneWidget);
   });
 }
