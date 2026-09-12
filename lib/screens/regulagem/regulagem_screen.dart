@@ -55,10 +55,15 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   double _precoBico = 0;
   double _area = 0;
   List<PontaMedicao> _medicoes = [];
+  late final String _id;
+  DateTime? _criadoEm;
+  Timer? _autoSaveDebounce;
 
   @override
   void initState() {
     super.initState();
+    _id = widget.regulagem?.id ?? const Uuid().v4();
+    _criadoEm = widget.regulagem?.criadoEm;
     WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
@@ -80,6 +85,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     _limiteEntupido.dispose();
     _limiteDesgaste.dispose();
     _limitesDebounce?.cancel();
+    _autoSaveDebounce?.cancel();
     super.dispose();
   }
 
@@ -229,44 +235,60 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     setState(() {});
   }
 
-  Future<void> _save() async {
+  Regulagem _montarRegulagem() {
+    final now = DateTime.now();
+    _criadoEm ??= now;
+    return Regulagem(
+      id: _id,
+      produtor: _produtor.text.trim(),
+      fazenda: _fazenda.text.trim(),
+      talhao: _talhao.text.trim().isEmpty ? null : _talhao.text.trim(),
+      maquina: _maquina.text.trim(),
+      tipoOperacao: TipoOperacao.pulverizador,
+      dataRegulagem: _data,
+      consultor: _consultor.text.trim().isEmpty ? null : _consultor.text.trim(),
+      vazaoLha: _parse(_vazao.text),
+      velocidade: _parse(_velocidade.text),
+      espacamentoCm: _parse(_espacamento.text),
+      numeroPontas: _parseInt(_numeroPontas.text),
+      pressaoBar: _parseNullable(_pressao.text),
+      nLinhas: null,
+      espacamentoLinhasM: null,
+      eficiencia: null,
+      populacaoDesejada: null,
+      litroMinIdeal: _litroMinIdeal,
+      medicoes: _medicoes,
+      larguraUtil: null,
+      rendimento: null,
+      manejoRS: _manejo == 0 ? null : _manejo,
+      precoBicoRS: _precoBico == 0 ? null : _precoBico,
+      areaHa: _area == 0 ? null : _area,
+      criadoEm: _criadoEm!,
+      atualizadoEm: now,
+    );
+  }
+
+  void _onMovedToNextPonta() {
+    if (widget.readonly) return;
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = Timer(const Duration(milliseconds: 400), () {
+      unawaited(_persist(closeAfter: false));
+    });
+  }
+
+  Future<void> _save() => _persist(closeAfter: true);
+
+  Future<void> _persist({required bool closeAfter}) async {
+    if (!_etapa1Completa) return;
     try {
-      final now = DateTime.now();
-      final regulagem = Regulagem(
-        id: widget.regulagem?.id ?? const Uuid().v4(),
-        produtor: _produtor.text.trim(),
-        fazenda: _fazenda.text.trim(),
-        talhao: _talhao.text.trim().isEmpty ? null : _talhao.text.trim(),
-        maquina: _maquina.text.trim(),
-        tipoOperacao: TipoOperacao.pulverizador,
-        dataRegulagem: _data,
-        consultor:
-            _consultor.text.trim().isEmpty ? null : _consultor.text.trim(),
-        vazaoLha: _parse(_vazao.text),
-        velocidade: _parse(_velocidade.text),
-        espacamentoCm: _parse(_espacamento.text),
-        numeroPontas: _parseInt(_numeroPontas.text),
-        pressaoBar: _parseNullable(_pressao.text),
-        nLinhas: null,
-        espacamentoLinhasM: null,
-        eficiencia: null,
-        populacaoDesejada: null,
-        litroMinIdeal: _litroMinIdeal,
-        medicoes: _medicoes,
-        larguraUtil: null,
-        rendimento: null,
-        manejoRS: _manejo == 0 ? null : _manejo,
-        precoBicoRS: _precoBico == 0 ? null : _precoBico,
-        areaHa: _area == 0 ? null : _area,
-        criadoEm: widget.regulagem?.criadoEm ?? now,
-        atualizadoEm: now,
-      );
-      await context.read<RegulagensProvider>().save(regulagem);
+      await context.read<RegulagensProvider>().save(_montarRegulagem());
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Regulagem salva com sucesso ✓')),
-      );
-      Navigator.pop(context);
+      if (closeAfter) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Regulagem salva com sucesso ✓')),
+        );
+        Navigator.pop(context);
+      }
     } catch (error) {
       debugPrint('Erro ao salvar regulagem: $error');
       if (!mounted) return;
@@ -428,6 +450,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _FieldRow(
+                  stacked: true,
                   left: _LabeledField(
                     controller: _limiteEntupido,
                     label: 'Limite entupido (%)',
@@ -465,6 +488,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
                   area: _area,
                   readonly: readonly,
                   onMedicaoChanged: _updateMedicao,
+                  onMovedToNextPonta: _onMovedToNextPonta,
                 ),
                 if (_temMedicao && !readonly) ...[
                   const SizedBox(height: AppSpacing.lg),
@@ -630,6 +654,7 @@ class _ParametrosStep extends StatelessWidget {
           ),
         ),
         _FieldRow(
+          stacked: true,
           left: _LabeledField(
             controller: espacamento,
             label: 'Espaçamento entre bicos (cm)',
@@ -661,13 +686,32 @@ class _ParametrosStep extends StatelessWidget {
 }
 
 class _FieldRow extends StatelessWidget {
-  const _FieldRow({required this.left, required this.right});
+  const _FieldRow({
+    required this.left,
+    required this.right,
+    this.stacked = false,
+  });
 
   final Widget left;
   final Widget right;
+  final bool stacked;
 
   @override
   Widget build(BuildContext context) {
+    if (stacked) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: left,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: right,
+          ),
+        ],
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(

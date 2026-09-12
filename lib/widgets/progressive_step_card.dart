@@ -12,6 +12,9 @@ class ProgressiveStepCard extends StatelessWidget {
     this.description,
     required this.status,
     required this.child,
+    this.expandable = false,
+    this.initiallyExpanded = true,
+    this.expansionController,
   });
 
   final int stepNumber;
@@ -19,6 +22,9 @@ class ProgressiveStepCard extends StatelessWidget {
   final String? description;
   final StepStatus status;
   final Widget child;
+  final bool expandable;
+  final bool initiallyExpanded;
+  final ExpansibleController? expansionController;
 
   @override
   Widget build(BuildContext context) {
@@ -42,39 +48,155 @@ class ProgressiveStepCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: borderColor),
           ),
+          child: expandable
+              ? _ExpandableBody(
+                  stepNumber: stepNumber,
+                  title: title,
+                  description: description,
+                  status: status,
+                  initiallyExpanded: initiallyExpanded,
+                  expansionController: expansionController,
+                  child: child,
+                )
+              : _StaticBody(
+                  stepNumber: stepNumber,
+                  title: title,
+                  description: description,
+                  status: status,
+                  child: child,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StaticBody extends StatelessWidget {
+  const _StaticBody({
+    required this.stepNumber,
+    required this.title,
+    required this.description,
+    required this.status,
+    required this.child,
+  });
+
+  final int stepNumber;
+  final String title;
+  final String? description;
+  final StepStatus status;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Header(
+          stepNumber: stepNumber,
+          title: title,
+          description: description,
+          status: status,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        child,
+      ],
+    );
+  }
+}
+
+class _ExpandableBody extends StatelessWidget {
+  const _ExpandableBody({
+    required this.stepNumber,
+    required this.title,
+    required this.description,
+    required this.status,
+    required this.initiallyExpanded,
+    required this.expansionController,
+    required this.child,
+  });
+
+  final int stepNumber;
+  final String title;
+  final String? description;
+  final StepStatus status;
+  final bool initiallyExpanded;
+  final ExpansibleController? expansionController;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final locked = status == StepStatus.locked;
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: PageStorageKey<String>('step-$stepNumber'),
+        controller: expansionController,
+        initiallyExpanded: initiallyExpanded,
+        maintainState: true,
+        enabled: !locked,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(top: AppSpacing.lg),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        iconColor: AppColors.primary,
+        collapsedIconColor: colors.textTertiary,
+        leading: _StepMarker(stepNumber: stepNumber, status: status),
+        title: Text(
+          title,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        subtitle: description == null
+            ? null
+            : Text(
+                description!,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+        children: [child],
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.stepNumber,
+    required this.title,
+    required this.description,
+    required this.status,
+  });
+
+  final int stepNumber;
+  final String title;
+  final String? description;
+  final StepStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _StepMarker(stepNumber: stepNumber, status: status),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  _StepMarker(stepNumber: stepNumber, status: status),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        if (description != null) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            description!,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
-              const SizedBox(height: AppSpacing.lg),
-              child,
+              if (description != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  description!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 }

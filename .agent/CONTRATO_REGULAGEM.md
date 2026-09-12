@@ -44,7 +44,9 @@ Não “corrigir” casas decimais, símbolo `%` ou cores do card no mesmo PR de
 - Sem dropdown de tipo de operação. Esta tela é só pulverização.
 - Save (novo ou edição nesta UI) grava `tipoOperacao: TipoOperacao.pulverizador`.
 - Enum `TipoOperacao.plantadeira` e `CalcUtils` de plantadeira ficam no model/JSON antigo; não aparecem nesta tela.
-- Formulário em duas colunas, label visível **acima** do campo (não só `labelText` flutuante).
+- Formulário em duas colunas, label visível **acima** do campo (não só `labelText` flutuante). Pares com rótulo longo empilham um abaixo do outro: Espaçamento + Nº de pontas; Limite entupido + desgaste.
+- Etapas da regulagem (nova e salva): `ExpansionTile` no `ProgressiveCard` — círculo 1 / ✓ / cadeado **e** chevron. Etapa bloqueada começa recolhida; ao desbloquear, abre sozinha. Ordem de aplicação permanece `ProgressiveStepCard` sem accordion.
+- Medições: `ExpansionPanelList.radio`, um painel por ponta. Cabeçalho com nº, L/min, % e status; corpo com o campo medido e o ideal. Ao abrir a ponta de baixo, auto-grava (sem fechar a tela) se a etapa 1 estiver completa.
 - Inputs econômicos no card **Contexto da Operação**: Área (ha), Manejo (R$), Preço do bico (R$/un).
 - `precoBico` = **R$ por um bico** (unitário). `custoTrocaTotal = precoBico × numeroPontas`.
 - Resultados (Ponta R$, perda, custo de troca, recomendação) continuam depois das medições.

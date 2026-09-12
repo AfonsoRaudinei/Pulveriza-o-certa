@@ -6,8 +6,11 @@
 
 ## Finalidade
 
-Card de etapa numerada com desbloqueio progressivo. Não é accordion: o corpo
-permanece visível (opacidade reduzida quando bloqueado).
+Card de etapa numerada com desbloqueio progressivo.
+
+Na **Ordem de Aplicação** não é accordion: o corpo permanece visível (opacidade
+reduzida quando bloqueado). Na **regulagem**, `ProgressiveCard` liga
+`expandable: true` e o corpo vai para um `ExpansionTile`.
 
 ## API
 
@@ -53,5 +56,4 @@ Nenhuma cor literal (`Color(0x…)`, `Colors.green`, etc.). Só `AppColors` / `A
 
 ## Adaptador
 
-`ProgressiveCard` existente deve delegar para `ProgressiveStepCard` para a regulagem
-continuar indistinguível e ganhar o `AnimatedSwitcher` sem duplicar layout.
+`ProgressiveCard` da regulagem delega para `ProgressiveStepCard` com `expandable: true` (círculo 1/✓/cadeado **e** chevron do `ExpansionTile`). Ordem de aplicação continua sem accordion (`expandable` omitido / `false`).
