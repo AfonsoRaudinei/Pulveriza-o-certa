@@ -354,7 +354,8 @@ class _PontasExpansionList extends StatelessWidget {
               return _PontaPanelHeader(
                 key: ValueKey('ponta-header-${ponta.id}'),
                 ponta: ponta,
-                percentual: percentuais[ponta.id] ?? 0,
+                percentual:
+                    ponta.valorMedido == null ? null : percentuais[ponta.id],
               );
             },
             body: _PontaPanelBody(
@@ -379,16 +380,16 @@ class _PontaPanelHeader extends StatelessWidget {
   });
 
   final PontaMedicao ponta;
-  final double percentual;
+  final double? percentual;
 
   @override
   Widget build(BuildContext context) {
-    final numberStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: AppColors.textPrimary,
-        );
-    final medido = ponta.valorMedido == null
+    final colors = AppThemeColors.of(context);
+    final medido = ponta.valorMedido;
+    final detalhe = medido == null
         ? 'Sem medição'
-        : '${ponta.valorMedido!.toStringAsFixed(3)} L/min';
+        : '${medido.toStringAsFixed(3)} L/min'
+            '${percentual == null ? '' : ' · ${percentual!.toStringAsFixed(1)}%'}';
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -396,38 +397,26 @@ class _PontaPanelHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 64,
-            child: Text(
-              'Ponta ${ponta.id}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-          ),
           Expanded(
-            child: Text(
-              medido,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: numberStyle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ponta ${ponta.id}',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  detalhe,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            percentual == 0 ? '-' : percentual.toStringAsFixed(1),
-            style: numberStyle,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: StatusBadge(status: ponta.status),
-              ),
-            ),
-          ),
+          StatusBadge(status: ponta.status),
         ],
       ),
     );
