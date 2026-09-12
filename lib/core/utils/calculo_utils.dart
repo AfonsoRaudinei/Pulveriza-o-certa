@@ -102,6 +102,22 @@ class CalcUtils {
     );
   }
 
+  static calculos.ResultadoZonaAtencao calcularPerdaZonaAtencao({
+    required List<double> percentuais,
+    required double manejoRS,
+    required int numeroPontas,
+    required double areaHa,
+    double limiteDesgaste = 105,
+  }) {
+    return calculos.calcularPerdaZonaAtencao(
+      percentuais: percentuais,
+      manejoRS: manejoRS,
+      numeroPontas: numeroPontas,
+      areaHa: areaHa,
+      limiteDesgaste: limiteDesgaste,
+    );
+  }
+
   static double calcularLarguraUtil({
     required int nLinhas,
     required double espacamentoLinhasM,

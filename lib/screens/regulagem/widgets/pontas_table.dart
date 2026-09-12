@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 
 import '../../../core/extensions/double_extension.dart';
 import '../../../core/utils/calculo_utils.dart';
+import '../../../domain/calculos/calc_perda_zona_atencao.dart';
 import '../../../models/configuracoes.dart';
 import '../../../models/regulagem.dart';
 import '../../../theme.dart';
+import '../../../widgets/card_zona_atencao.dart';
 import '../../../widgets/status_badge.dart';
 import 'medicoes_resumo_card.dart';
 
@@ -30,12 +32,20 @@ class PontasTable extends StatelessWidget {
           configuracoes: configuracoes,
         ),
         _percentuais = _percentuaisPorPonta(medicoes, ideal),
+        _zonaAtencao = _zonaFrom(
+          medicoes: medicoes,
+          ideal: ideal,
+          manejo: manejo,
+          area: area,
+          limiteDesgaste: configuracoes.limiteDesgaste,
+        ),
         _economiaResumo = _EconomiaResumo.from(
           medicoes: medicoes,
           ideal: ideal,
           manejo: manejo,
           precoBico: precoBico,
           area: area,
+          limiteDesgaste: configuracoes.limiteDesgaste,
         ),
         _orientacoesResumo = _OrientacoesResumo.from(medicoes);
 
@@ -51,6 +61,7 @@ class PontasTable extends StatelessWidget {
   final bool _hasMedicoes;
   final _ResumoPontasData _resumoPontas;
   final Map<int, double> _percentuais;
+  final ResultadoZonaAtencao _zonaAtencao;
   final _EconomiaResumo _economiaResumo;
   final _OrientacoesResumo _orientacoesResumo;
 
@@ -60,6 +71,14 @@ class PontasTable extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ResumoPontas(resumo: _resumoPontas),
+        if (_zonaAtencao.qtdPontasNaZona > 0) ...[
+          const SizedBox(height: AppSpacing.md),
+          CardZonaAtencao(
+            qtdPontas: _zonaAtencao.qtdPontasNaZona,
+            perdaEstimada: _zonaAtencao.perdaEstimada,
+            limiteDesgaste: configuracoes.limiteDesgaste,
+          ),
+        ],
         const SizedBox(height: AppSpacing.lg),
         if (medicoes.isNotEmpty)
           _PontasExpansionList(
@@ -92,6 +111,30 @@ class PontasTable extends StatelessWidget {
       if (item.valorMedido == null) return item.id;
     }
     return medicoes.first.id;
+  }
+
+  static ResultadoZonaAtencao _zonaFrom({
+    required List<PontaMedicao> medicoes,
+    required double ideal,
+    required double manejo,
+    required double area,
+    required double limiteDesgaste,
+  }) {
+    final percentuais = [
+      for (final item in medicoes)
+        if (item.valorMedido != null)
+          CalcUtils.calcularPercentualPonta(
+            valorMedido: item.valorMedido!,
+            litroMinIdeal: ideal,
+          ),
+    ];
+    return CalcUtils.calcularPerdaZonaAtencao(
+      percentuais: percentuais,
+      manejoRS: manejo,
+      numeroPontas: medicoes.length,
+      areaHa: area,
+      limiteDesgaste: limiteDesgaste,
+    );
   }
 
   static Map<int, double> _percentuaisPorPonta(
@@ -162,6 +205,7 @@ class _ResumoPontasData {
 class _EconomiaResumo {
   const _EconomiaResumo({
     required this.perdaTotal,
+    required this.perdaDesgaste,
     required this.custo,
     required this.pontaRS,
     required this.trocarTudo,
@@ -173,21 +217,27 @@ class _EconomiaResumo {
     required double manejo,
     required double precoBico,
     required double area,
+    required double limiteDesgaste,
   }) {
-    final perdaTotal = medicoes.fold<double>(0, (total, item) {
-      if (item.valorMedido == null) return total;
+    var perdaTotal = 0.0;
+    var perdaDesgaste = 0.0;
+    for (final item in medicoes) {
+      if (item.valorMedido == null) continue;
       final percentual = CalcUtils.calcularPercentualPonta(
         valorMedido: item.valorMedido!,
         litroMinIdeal: ideal,
       );
-      return total +
-          CalcUtils.calcularPerdaEstimada(
-            percentual: percentual,
-            manejoRS: manejo,
-            numeroPontas: medicoes.length,
-            areaHa: area,
-          );
-    });
+      final perda = CalcUtils.calcularPerdaEstimada(
+        percentual: percentual,
+        manejoRS: manejo,
+        numeroPontas: medicoes.length,
+        areaHa: area,
+      );
+      perdaTotal += perda;
+      if (percentual > limiteDesgaste) {
+        perdaDesgaste += perda;
+      }
+    }
     final custo = CalcUtils.calcularCustoTrocaTotal(
       precoBicoRS: precoBico,
       numeroPontas: medicoes.length,
@@ -199,6 +249,7 @@ class _EconomiaResumo {
 
     return _EconomiaResumo(
       perdaTotal: perdaTotal,
+      perdaDesgaste: perdaDesgaste,
       custo: custo,
       pontaRS: pontaRS,
       trocarTudo: CalcUtils.recomendarTrocaCompleta(
@@ -209,6 +260,7 @@ class _EconomiaResumo {
   }
 
   final double perdaTotal;
+  final double perdaDesgaste;
   final double custo;
   final double pontaRS;
   final bool trocarTudo;
@@ -538,16 +590,18 @@ class _EconomiaSection extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              Expanded(
-                child: _ResultadoMetricCard(
-                  icon: Icons.trending_down,
-                  iconColor: colors.danger,
-                  background: colors.dangerLight,
-                  label: 'Perda estimada',
-                  value: resumo.perdaTotal.toMoeda(),
+              if (resumo.perdaDesgaste > 0) ...[
+                Expanded(
+                  child: _ResultadoMetricCard(
+                    icon: Icons.trending_down,
+                    iconColor: colors.danger,
+                    background: colors.dangerLight,
+                    label: 'Perda por desgaste',
+                    value: resumo.perdaDesgaste.toMoeda(),
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: AppSpacing.sm),
+              ],
               Expanded(
                 child: _ResultadoMetricCard(
                   icon: Icons.build_outlined,

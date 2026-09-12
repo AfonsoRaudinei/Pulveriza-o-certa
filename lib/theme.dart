@@ -22,6 +22,11 @@ class AppColors {
   static const infoLight = Color(0xFFDBEAFE);
   static const purple = Color(0xFF8B5CF6);
   static const purpleLight = Color(0xFFEDE9FE);
+  static const orange = Color(0xFFEA580C);
+  static const orangeBackground = Color(0xFFFFF7ED);
+  static const orangeBorder = Color(0xFFFDBA74);
+  static const orangeIconBackground = Color(0xFFFFEDD5);
+  static const orangeText = Color(0xFFC2410C);
 
   static const darkBackground = Color(0xFF0F1218);
   static const darkSurface = Color(0xFF1A1F27);
@@ -38,6 +43,11 @@ class AppColors {
   static const darkWarning = Color(0xFFFBBF24);
   static const darkDanger = Color(0xFFF87171);
   static const darkInfo = Color(0xFF60A5FA);
+  static const darkOrange = Color(0xFFFB923C);
+  static const darkOrangeBackground = Color(0xFF2A1508);
+  static const darkOrangeBorder = Color(0xFF9A3412);
+  static const darkOrangeIconBackground = Color(0xFF3D1F0A);
+  static const darkOrangeText = Color(0xFFFDBA74);
 }
 
 class AppSpacing {

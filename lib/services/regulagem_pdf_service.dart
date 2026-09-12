@@ -10,6 +10,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../core/constants/app_constants.dart';
 import '../core/extensions/double_extension.dart';
 import '../core/utils/calculo_utils.dart';
+import '../domain/calculos/calc_perda_zona_atencao.dart';
 import '../models/configuracoes.dart';
 import '../models/regulagem.dart';
 import '../theme.dart';
@@ -95,7 +96,8 @@ class RegulagemPdfService {
             _buildStatusIndicators(resumo),
             pw.SizedBox(height: 16),
             _buildPontasTable(data, percentuais),
-            if (economia.exibirResultado) ...[
+            if (economia.exibirResultado ||
+                economia.zona.qtdPontasNaZona > 0) ...[
               pw.SizedBox(height: 20),
               _buildEconomiaSection(economia),
             ],
@@ -530,41 +532,85 @@ class RegulagemPdfService {
           ),
         ),
         pw.SizedBox(height: 6),
-        pw.Row(
-          children: [
-            pw.Expanded(
-              child: _metricBox(
-                'Perda estimada',
-                economia.perdaTotal.toMoeda(),
-                AppColors.dangerLight,
-                AppColors.danger,
+        if (economia.zona.qtdPontasNaZona > 0) ...[
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: _pdfColor(AppColors.orangeBackground),
+              borderRadius: pw.BorderRadius.circular(8),
+              border: pw.Border.all(
+                color: _pdfColor(AppColors.orangeBorder).flatten(),
               ),
             ),
-            pw.SizedBox(width: 8),
-            pw.Expanded(
-              child: _metricBox(
-                'Custo de troca',
-                economia.custo.toMoeda(),
-                AppColors.infoLight,
-                AppColors.info,
-              ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Zona de Atenção',
+                  style: pw.TextStyle(
+                    font: _semiBold,
+                    fontSize: 11,
+                    color: _pdfColor(AppColors.orangeText),
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  '${economia.zona.qtdPontasNaZona} ponta(s) entre 100% e o limite de desgaste',
+                  style: pw.TextStyle(font: _regular, fontSize: 9),
+                ),
+                pw.Text(
+                  'Prejuízo estimado: ${economia.zona.perdaEstimada.toMoeda()}',
+                  style: pw.TextStyle(
+                    font: _semiBold,
+                    fontSize: 11,
+                    color: _pdfColor(AppColors.orangeText),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        pw.SizedBox(height: 6),
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.all(10),
-          decoration: pw.BoxDecoration(
-            color: recBg,
-            borderRadius: pw.BorderRadius.circular(8),
-            border: pw.Border.all(color: recFg.flatten()),
           ),
-          child: pw.Text(
-            recomendacao,
-            style: pw.TextStyle(font: _semiBold, fontSize: 11, color: recFg),
+          pw.SizedBox(height: 6),
+        ],
+        if (economia.exibirResultado) ...[
+          pw.Row(
+            children: [
+              if (economia.perdaDesgaste > 0) ...[
+                pw.Expanded(
+                  child: _metricBox(
+                    'Perda por desgaste',
+                    economia.perdaDesgaste.toMoeda(),
+                    AppColors.dangerLight,
+                    AppColors.danger,
+                  ),
+                ),
+                pw.SizedBox(width: 8),
+              ],
+              pw.Expanded(
+                child: _metricBox(
+                  'Custo de troca',
+                  economia.custo.toMoeda(),
+                  AppColors.infoLight,
+                  AppColors.info,
+                ),
+              ),
+            ],
           ),
-        ),
+          pw.SizedBox(height: 6),
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: recBg,
+              borderRadius: pw.BorderRadius.circular(8),
+              border: pw.Border.all(color: recFg.flatten()),
+            ),
+            child: pw.Text(
+              recomendacao,
+              style: pw.TextStyle(font: _semiBold, fontSize: 11, color: recFg),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -931,26 +977,36 @@ class _ResumoPontasData {
 class _EconomiaResumo {
   const _EconomiaResumo({
     required this.perdaTotal,
+    required this.perdaDesgaste,
     required this.custo,
     required this.pontaRS,
     required this.trocarTudo,
+    required this.zona,
   });
 
   factory _EconomiaResumo.from(RegulagemPdfData data) {
-    final perdaTotal = data.medicoes.fold<double>(0, (total, item) {
-      if (item.valorMedido == null) return total;
+    final limite = data.configuracoes.limiteDesgaste;
+    var perdaTotal = 0.0;
+    var perdaDesgaste = 0.0;
+    final percentuais = <double>[];
+    for (final item in data.medicoes) {
+      if (item.valorMedido == null) continue;
       final percentual = CalcUtils.calcularPercentualPonta(
         valorMedido: item.valorMedido!,
         litroMinIdeal: data.litroMinIdeal,
       );
-      return total +
-          CalcUtils.calcularPerdaEstimada(
-            percentual: percentual,
-            manejoRS: data.manejo,
-            numeroPontas: data.medicoes.length,
-            areaHa: data.area,
-          );
-    });
+      percentuais.add(percentual);
+      final perda = CalcUtils.calcularPerdaEstimada(
+        percentual: percentual,
+        manejoRS: data.manejo,
+        numeroPontas: data.medicoes.length,
+        areaHa: data.area,
+      );
+      perdaTotal += perda;
+      if (percentual > limite) {
+        perdaDesgaste += perda;
+      }
+    }
     final custo = CalcUtils.calcularCustoTrocaTotal(
       precoBicoRS: data.precoBico,
       numeroPontas: data.medicoes.length,
@@ -959,22 +1015,33 @@ class _EconomiaResumo {
       manejoRS: data.manejo,
       numeroPontas: data.medicoes.length,
     );
+    final zona = CalcUtils.calcularPerdaZonaAtencao(
+      percentuais: percentuais,
+      manejoRS: data.manejo,
+      numeroPontas: data.medicoes.length,
+      areaHa: data.area,
+      limiteDesgaste: limite,
+    );
 
     return _EconomiaResumo(
       perdaTotal: perdaTotal,
+      perdaDesgaste: perdaDesgaste,
       custo: custo,
       pontaRS: pontaRS,
       trocarTudo: CalcUtils.recomendarTrocaCompleta(
         perdaEstimadaTotal: perdaTotal,
         custoTrocaTotal: custo,
       ),
+      zona: zona,
     );
   }
 
   final double perdaTotal;
+  final double perdaDesgaste;
   final double custo;
   final double pontaRS;
   final bool trocarTudo;
+  final ResultadoZonaAtencao zona;
 
   bool get exibirResultado => perdaTotal > 0 && custo > 0;
 }

@@ -107,4 +107,18 @@ void main() {
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
     expect(bytes.length, greaterThan(1000));
   });
+
+  test('generate with zona de atenção pontas does not throw', () async {
+    final bytes = await RegulagemPdfService.generate(
+      _sampleData(
+        medicoes: const [
+          PontaMedicao(id: 1, valorMedido: 1.03, status: StatusPonta.ideal),
+          PontaMedicao(id: 2, valorMedido: 1.12, status: StatusPonta.desgaste),
+        ],
+      ),
+    );
+
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+    expect(bytes.length, greaterThan(1000));
+  });
 }

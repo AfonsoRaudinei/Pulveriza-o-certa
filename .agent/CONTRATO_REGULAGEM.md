@@ -35,6 +35,8 @@ Não estão travados. O técnico informa o % na regulagem (etapa Cálculos Autom
 | R$ | `toMoeda()` (pt_BR, 2 casas) |
 | Status | `StatusBadge` (não pinta o fundo da linha) |
 | Card econômico | só se `perdaTotal > 0 && custo > 0` |
+| Zona de Atenção | `CardZonaAtencao` abaixo do resumo Desgaste; some se `qtd == 0` |
+| Perda por desgaste | só `percentual > limiteDesgaste` (não inclui a zona) |
 | Troca completa | texto danger; seletiva → success |
 
 Não “corrigir” casas decimais, símbolo `%` ou cores do card no mesmo PR de fórmula, a menos que o usuário peça o alinhamento visual.
@@ -62,6 +64,8 @@ troca total = perdaTotal >= custoTroca && custoTroca > 0
 ```
 
 Exemplo canônico: 24 pontas, manejo 2400, área 500, bico 35, pontas 108 / 106,5 / 110,2 → perda **12350**, custo **840**, troca completa.
+
+Zona de Atenção (`100 < % ≤ limiteDesgaste`): soma à parte, sem incluir Desgaste. Ex.: 103% + 105% no mesmo cenário → R$ 4.000 (2 pontas). UI via `CalcUtils.calcularPerdaZonaAtencao`. Spec: `CALCULOS/calc_perda_zona_atencao.md`.
 
 ## Plantadeira
 
