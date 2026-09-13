@@ -150,6 +150,39 @@ void main() {
     expect(find.text('corpo-parametros'), findsOneWidget);
   });
 
+  testWidgets('corpo pequeno não estica ao expandir', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ListView(
+            children: [
+              ProgressiveCard(
+                index: 3,
+                title: 'Vazão / ha',
+                locked: false,
+                complete: true,
+                showCompletedMarker: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Text('Lt/min Ideal'),
+                    TextField(decoration: InputDecoration(labelText: 'Limite')),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tileFinder = find.byType(ExpansionTile);
+    final tileBox = tester.getSize(tileFinder);
+    expect(tileBox.height, lessThan(400));
+  });
+
   testWidgets('etapa bloqueada não mostra a ficha', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

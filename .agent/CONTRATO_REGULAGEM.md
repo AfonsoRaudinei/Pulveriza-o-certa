@@ -14,7 +14,7 @@ Complemento visual de REGRA-CALC-BARRA-1. Abrir junto com `lib/screens/regulagem
 
 ## Limites de classificação (editáveis, autosalvamento)
 
-Não estão travados. O técnico informa o % na regulagem (etapa Cálculos Automáticos) e em Configurações.
+Não estão travados. O técnico informa o % na regulagem (etapa Vazão / ha) e em Configurações.
 
 | Campo na UI | Config | Regra |
 |---|---|---|
