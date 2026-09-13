@@ -31,6 +31,7 @@ class RegulagemPdfData {
     this.pressaoBar,
     required this.litroMinIdeal,
     required this.medicoes,
+    this.ladoConferenciaPontas = LadoConferenciaPontas.direita,
     required this.configuracoes,
     required this.manejo,
     required this.precoBico,
@@ -50,6 +51,7 @@ class RegulagemPdfData {
   final double? pressaoBar;
   final double litroMinIdeal;
   final List<PontaMedicao> medicoes;
+  final LadoConferenciaPontas ladoConferenciaPontas;
   final Configuracoes configuracoes;
   final double manejo;
   final double precoBico;
@@ -434,7 +436,11 @@ class RegulagemPdfService {
             ),
             for (final ponta in data.medicoes)
               _buildPontaRow(
-                  ponta, data.litroMinIdeal, percentuais[ponta.id] ?? 0),
+                ponta,
+                data.litroMinIdeal,
+                percentuais[ponta.id] ?? 0,
+                data.ladoConferenciaPontas,
+              ),
           ],
         ),
       ],
@@ -445,6 +451,7 @@ class RegulagemPdfService {
     PontaMedicao ponta,
     double ideal,
     double percentual,
+    LadoConferenciaPontas lado,
   ) {
     final (bg, fg) = _statusColors(ponta.status);
     final medido = ponta.valorMedido?.toStringAsFixed(3) ?? '-';
@@ -452,7 +459,7 @@ class RegulagemPdfService {
 
     return pw.TableRow(
       children: [
-        _tableCell('${ponta.id}'),
+        _tableCell(rotuloPonta(ponta.id, lado)),
         _tableCell(medido),
         _tableCell(ideal.toStringAsFixed(3)),
         _tableCell(pct, align: pw.TextAlign.right),
@@ -706,6 +713,7 @@ class RegulagemPdfService {
                         size: size,
                         chart: chart,
                         font: chartFont,
+                        ladoConferencia: data.ladoConferenciaPontas,
                       );
                     },
                   ),
@@ -796,6 +804,7 @@ class RegulagemPdfService {
     required PdfPoint size,
     required VazaoChartData chart,
     required PdfFont font,
+    required LadoConferenciaPontas ladoConferencia,
   }) {
     final layout = VazaoChartLayout.from(
       n: chart.pontas.length,
@@ -849,7 +858,7 @@ class RegulagemPdfService {
       _paintChartLabel(
         canvas,
         font,
-        '${ponta.id}',
+        rotuloPonta(ponta.id, ladoConferencia),
         centerX,
         VazaoChartLayout.bottomPad - 12,
         ponta.medida ? AppColors.textSecondary : AppColors.textTertiary,

@@ -12,9 +12,14 @@ import '../../../theme.dart';
 /// joga mais calda que o previsto, para baixo quando joga menos. A faixa verde
 /// é o intervalo aceitável e a legenda explica as cores.
 class GraficoVazaoPontas extends StatelessWidget {
-  const GraficoVazaoPontas({super.key, required this.data});
+  const GraficoVazaoPontas({
+    super.key,
+    required this.data,
+    this.ladoConferencia = LadoConferenciaPontas.direita,
+  });
 
   final VazaoChartData data;
+  final LadoConferenciaPontas ladoConferencia;
 
   static const _alturaCanvas = 200.0;
 
@@ -66,6 +71,7 @@ class GraficoVazaoPontas extends StatelessWidget {
                     painter: _GraficoVazaoPainter(
                       data: data,
                       colors: colors,
+                      ladoConferencia: ladoConferencia,
                       estiloBase: theme.textTheme.labelSmall ??
                           const TextStyle(fontFamily: 'Inter'),
                     ),
@@ -185,11 +191,13 @@ class _GraficoVazaoPainter extends CustomPainter {
   _GraficoVazaoPainter({
     required this.data,
     required this.colors,
+    required this.ladoConferencia,
     required this.estiloBase,
   });
 
   final VazaoChartData data;
   final AppThemeColors colors;
+  final LadoConferenciaPontas ladoConferencia;
   final TextStyle estiloBase;
 
   static const _fontSize = 10.0;
@@ -234,7 +242,7 @@ class _GraficoVazaoPainter extends CustomPainter {
 
       _texto(
         canvas,
-        '${ponta.id}',
+        rotuloPonta(ponta.id, ladoConferencia),
         centro: centerX,
         top: layout.plotBottomFlutter + 10,
         color: medida ? colors.textSecondary : colors.textTertiary,

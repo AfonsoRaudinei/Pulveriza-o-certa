@@ -57,6 +57,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   double _precoBico = 0;
   double _area = 0;
   List<PontaMedicao> _medicoes = [];
+  LadoConferenciaPontas _ladoConferenciaPontas = LadoConferenciaPontas.direita;
   late final String _id;
   DateTime? _criadoEm;
   Timer? _autoSaveDebounce;
@@ -114,6 +115,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       _precoBicoCtrl.text = _value(regulagem.precoBicoRS);
       _areaCtrl.text = _value(regulagem.areaHa);
       _medicoes = List<PontaMedicao>.from(regulagem.medicoes);
+      _ladoConferenciaPontas = regulagem.ladoConferenciaPontas;
     } else {
       _consultor.text =
           context.read<ConfiguracoesProvider>().configuracoes.nomeConsultor;
@@ -260,6 +262,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       populacaoDesejada: null,
       litroMinIdeal: _litroMinIdeal,
       medicoes: _medicoes,
+      ladoConferenciaPontas: _ladoConferenciaPontas,
       larguraUtil: null,
       rendimento: null,
       manejoRS: _manejo == 0 ? null : _manejo,
@@ -364,7 +367,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       for (final ponta in _medicoes)
         if (ponta.valorMedido != null)
           EtapaResumoLinha(
-            'Ponta ${ponta.id}',
+            rotuloPonta(ponta.id, _ladoConferenciaPontas),
             '${ponta.valorMedido!.toStringAsFixed(3)} L/min · '
                 '${CalcUtils.calcularPercentualPonta(
               valorMedido: ponta.valorMedido!,
@@ -390,6 +393,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       pressaoBar: _parseNullable(_pressao.text),
       litroMinIdeal: _litroMinIdeal,
       medicoes: _medicoes,
+      ladoConferenciaPontas: _ladoConferenciaPontas,
       configuracoes: _configParaClassificar(),
       manejo: _manejo,
       precoBico: _precoBico,
@@ -530,9 +534,17 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               manejo: _manejo,
               precoBico: _precoBico,
               area: _area,
+              ladoConferencia: _ladoConferenciaPontas,
               readonly: readonly,
               onMedicaoChanged: _updateMedicao,
               onMovedToNextPonta: _onMovedToNextPonta,
+              onLadoConferenciaChanged: readonly
+                  ? null
+                  : (lado) {
+                      setState(() => _ladoConferenciaPontas = lado);
+                      _onMovedToNextPonta();
+                    },
+              exigirConfirmacaoTrocaLado: widget.regulagem != null,
             ),
           ),
           if (_litroMinIdeal > 0 && _temMedicao) ...[
@@ -544,6 +556,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               manejo: _manejo,
               precoBico: _precoBico,
               area: _area,
+              ladoConferencia: _ladoConferenciaPontas,
             ),
             if (!readonly) ...[
               const SizedBox(height: AppSpacing.lg),
