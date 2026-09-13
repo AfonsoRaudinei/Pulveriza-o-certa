@@ -74,19 +74,11 @@ class PontasTable extends StatelessWidget {
             ideal: ideal,
             percentuais: _percentuais,
             readonly: readonly,
-            initialOpenId: _primeiraPontaAberta(medicoes),
             onMedicaoChanged: onMedicaoChanged,
             onMovedToNextPonta: onMovedToNextPonta,
           ),
       ],
     );
-  }
-
-  static int _primeiraPontaAberta(List<PontaMedicao> medicoes) {
-    for (final item in medicoes) {
-      if (item.valorMedido == null) return item.id;
-    }
-    return medicoes.first.id;
   }
 
   static ResultadoZonaAtencao _zonaFrom({
@@ -344,7 +336,6 @@ class _PontasLista extends StatefulWidget {
     required this.ideal,
     required this.percentuais,
     required this.readonly,
-    required this.initialOpenId,
     required this.onMedicaoChanged,
     required this.onMovedToNextPonta,
   });
@@ -353,7 +344,6 @@ class _PontasLista extends StatefulWidget {
   final double ideal;
   final Map<int, double> percentuais;
   final bool readonly;
-  final int initialOpenId;
   final ValueChanged<PontaInput> onMedicaoChanged;
   final VoidCallback? onMovedToNextPonta;
 
@@ -365,17 +355,11 @@ class _PontasListaState extends State<_PontasLista> {
   int? _ativaId;
 
   @override
-  void initState() {
-    super.initState();
-    _ativaId = widget.initialOpenId;
-  }
-
-  @override
   void didUpdateWidget(covariant _PontasLista oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_ativaId != null &&
         !widget.medicoes.any((ponta) => ponta.id == _ativaId)) {
-      _ativaId = PontasTable._primeiraPontaAberta(widget.medicoes);
+      _ativaId = null;
     }
   }
 
@@ -406,7 +390,10 @@ class _PontasListaState extends State<_PontasLista> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 InkWell(
-                  onTap: () => _selecionar(widget.medicoes[index].id),
+                  key: ValueKey('ponta-row-${widget.medicoes[index].id}'),
+                  onTap: widget.readonly
+                      ? null
+                      : () => _selecionar(widget.medicoes[index].id),
                   child: _PontaPanelHeader(
                     key: ValueKey('ponta-header-${widget.medicoes[index].id}'),
                     ponta: widget.medicoes[index],
@@ -460,26 +447,18 @@ class _PontaPanelHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+        vertical: AppSpacing.md,
       ),
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Ponta ${ponta.id}',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  detalhe,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                ),
-              ],
+            child: Text(
+              detalhe,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: medido == null
+                        ? colors.textSecondary
+                        : colors.textPrimary,
+                  ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

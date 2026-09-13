@@ -57,16 +57,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ExpansionPanelList), findsNothing);
-    expect(find.text('Ponta 1'), findsOneWidget);
-    expect(find.text('Ponta 2'), findsOneWidget);
-    expect(find.text('Ponta 3'), findsOneWidget);
+    expect(find.text('Ponta 1'), findsNothing);
     expect(find.textContaining('0.825 L/min'), findsWidgets);
     expect(find.text('Sem medição'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('abre a primeira ponta pendente com o campo L/min',
+  testWidgets('lista começa fechada; toque na linha abre o campo L/min',
       (tester) async {
     await pumpTable(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('L/min medido'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('ponta-row-2')));
     await tester.pumpAndSettle();
 
     expect(find.text('L/min medido'), findsOneWidget);
@@ -78,8 +81,9 @@ void main() {
     await pumpTable(tester, onMoved: () => moved++);
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Ponta 3'));
-    await tester.tap(find.text('Ponta 3'));
+    await tester.tap(find.byKey(const ValueKey('ponta-row-2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('ponta-row-3')));
     await tester.pumpAndSettle();
 
     expect(moved, greaterThan(0));
@@ -182,6 +186,8 @@ void main() {
     await pumpTable(tester, onMoved: () => moved++);
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const ValueKey('ponta-row-2')));
+    await tester.pumpAndSettle();
     expect(find.text('L/min medido'), findsOneWidget);
 
     await tester.tapAt(const Offset(20, 20));

@@ -430,6 +430,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   Widget build(BuildContext context) {
     context.watch<ConfiguracoesProvider>();
     final readonly = widget.readonly;
+    final startExpanded = widget.regulagem == null;
 
     return Scaffold(
       appBar: AppBar(
@@ -462,6 +463,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             locked: false,
             complete: _etapa1Completa,
             showCompletedMarker: false,
+            startExpanded: startExpanded,
             summary: _resumoContexto(),
             child: _ContextStep(
               produtor: _produtor,
@@ -485,6 +487,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             locked: !_etapa1Completa,
             complete: _etapa2Completa,
             showCompletedMarker: false,
+            startExpanded: startExpanded,
             summary: _resumoParametros(),
             child: _ParametrosStep(
               vazao: _vazao,
@@ -502,6 +505,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             locked: !_etapa2Completa,
             complete: _litroMinIdeal > 0,
             showCompletedMarker: false,
+            startExpanded: startExpanded,
             summary: _resumoCalculos(),
             child: _VazaoHaStep(
               litroMinIdeal: _litroMinIdeal,
@@ -517,6 +521,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             locked: _litroMinIdeal <= 0,
             complete: _medicoes.any((item) => item.valorMedido != null),
             showCompletedMarker: false,
+            startExpanded: startExpanded,
             summary: _resumoPontas(),
             child: PontasTable(
               medicoes: _medicoes,

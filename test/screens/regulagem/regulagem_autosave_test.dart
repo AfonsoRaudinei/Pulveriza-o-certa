@@ -85,12 +85,10 @@ void main() {
 
     await tester.ensureVisible(find.text('Medições das Pontas'));
     await tester.pumpAndSettle();
-    if (find.text('Ponta 3').evaluate().isEmpty) {
-      await tester.tap(find.text('Medições das Pontas'));
-      await tester.pumpAndSettle();
-    }
-    await tester.ensureVisible(find.text('Ponta 3'));
-    await tester.tap(find.text('Ponta 3'));
+    await tester.tap(find.text('Medições das Pontas'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('ponta-row-3')));
+    await tester.tap(find.byKey(const ValueKey('ponta-row-3')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();

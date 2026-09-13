@@ -12,6 +12,7 @@ class ProgressiveCard extends StatefulWidget {
     required this.child,
     this.summary,
     this.showCompletedMarker = true,
+    this.startExpanded = true,
   });
 
   final int index;
@@ -21,6 +22,8 @@ class ProgressiveCard extends StatefulWidget {
   final Widget child;
   final Widget? summary;
   final bool showCompletedMarker;
+  /// Nova regulagem: etapa ativa abre expandida. Editar existente: recolhida com resumo.
+  final bool startExpanded;
 
   @override
   State<ProgressiveCard> createState() => _ProgressiveCardState();
@@ -33,7 +36,7 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
   void initState() {
     super.initState();
     _controller = ExpansibleController();
-    if (!widget.locked) {
+    if (!widget.locked && widget.startExpanded) {
       _controller.expand();
     }
     _controller.addListener(_onExpansion);
@@ -42,7 +45,7 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
   @override
   void didUpdateWidget(covariant ProgressiveCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.locked && !widget.locked) {
+    if (oldWidget.locked && !widget.locked && widget.startExpanded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_controller.isExpanded) {
           _controller.expand();
@@ -82,7 +85,7 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
       title: widget.title,
       status: status,
       expandable: true,
-      initiallyExpanded: !widget.locked,
+      initiallyExpanded: !widget.locked && widget.startExpanded,
       expansionController: _controller,
       summary: mostrarResumo ? widget.summary : null,
       showCompletedMarker: widget.showCompletedMarker,
