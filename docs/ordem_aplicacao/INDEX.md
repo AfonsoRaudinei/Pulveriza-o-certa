@@ -25,5 +25,5 @@ Models: `lib/domain/ordem_aplicacao/` (`ordem_aplicacao.dart`, `produto_aplicaca
 
 - Backend, conta, sync
 - Seletor de galeria/câmera (`*UsageDescription` continua proibido)
-- Quarta aba na bottom nav (permanecem Início / Regulagens / Config)
+- Bottom navigation bar (app usa tela raiz única + FAB)
 - Recalcular fórmulas da barra de pontas

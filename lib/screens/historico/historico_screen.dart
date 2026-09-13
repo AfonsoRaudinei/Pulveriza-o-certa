@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../../models/regulagem.dart';
 import '../../providers/regulagens_provider.dart';
+import '../../routes.dart';
+import '../../services/feedback_whatsapp.dart';
 import '../../theme.dart';
 import '../regulagem/regulagem_screen.dart';
 
@@ -20,6 +22,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   bool _searching = false;
   final _query = TextEditingController();
   ScaffoldMessengerState? _messenger;
+
+  static const _fabBottomPadding = 80.0;
 
   @override
   void didChangeDependencies() {
@@ -48,6 +52,59 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       context,
       MaterialPageRoute<void>(
         builder: (_) => RegulagemScreen(regulagem: regulagem),
+      ),
+    );
+  }
+
+  void _mostrarFolhaAcoes() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.add_circle_outline),
+              title: const Text('Nova Regulagem'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.pushNamed(context, Routes.regulagem);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('Configuração'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.pushNamed(context, Routes.configuracoes);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_outlined),
+              title: const Text('Feedback'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                final ok = await abrirFeedbackWhatsApp();
+                if (!ok && mounted) {
+                  mostrarFeedbackFalhouSnackBar(context);
+                }
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              title: const Text(
+                'Cancelar',
+                textAlign: TextAlign.center,
+              ),
+              onTap: () => Navigator.pop(sheetContext),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ),
       ),
     );
   }
@@ -145,12 +202,24 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Ações',
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.surface,
+        onPressed: _mostrarFolhaAcoes,
+        child: const Icon(Icons.add),
+      ),
       body: regulagens.isEmpty
           ? const _HistoricoEmptyState()
           : RefreshIndicator(
               onRefresh: context.read<RegulagensProvider>().load,
               child: ListView.builder(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg + _fabBottomPadding,
+                ),
                 itemCount: regulagens.length,
                 itemBuilder: (context, index) {
                   final regulagem = regulagens[index];
@@ -296,7 +365,7 @@ class _HistoricoEmptyState extends StatelessWidget {
                 size: 56, color: AppThemeColors.of(context).textTertiary),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Nenhuma regulagem ainda. Crie a primeira!',
+              'Nenhuma regulagem ainda. Toque no + para criar a primeira.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge,
             ),

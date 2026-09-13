@@ -76,15 +76,6 @@ class AppShadows {
       blurRadius: 8,
     ),
   ];
-
-  static BoxDecoration homeCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BoxDecoration(
-      color: isDark ? AppColors.darkCardSurface : AppColors.cardSurface,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      boxShadow: card,
-    );
-  }
 }
 
 class AppRadius {
@@ -356,11 +347,6 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppRadius.lg),
           side: BorderSide(color: colors.border),
         ),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: colors.surface,
-        indicatorColor: colors.primaryLight,
-        surfaceTintColor: Colors.transparent,
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: brightness == Brightness.dark

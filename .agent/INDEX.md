@@ -32,12 +32,12 @@ lib/
   models/regulagem.dart, models/configuracoes.dart
   providers/           ← estado (Provider)
   services/storage_service.dart  ← SharedPreferences + backup JSON
-  screens/home, regulagem, historico, configuracoes
+  screens/historico, regulagem, configuracoes
   widgets/status_badge.dart, app_button.dart, progressive_step_card.dart,
   widgets/card_zona_atencao.dart
 ```
 
-Rotas: `/home`, `/regulagem`. **Não existe login.**
+Rotas: `/home` (lista de regulagens), `/regulagem`, `/configuracoes`. **Não existe login.**
 
 ## Specs de cálculo
 

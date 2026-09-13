@@ -48,7 +48,7 @@ O **AgroCalc** é uma calculadora técnica de regulagem de precisão para grande
 
 ### ✅ Incluído nesta versão
 
-- Tela inicial (Dashboard) com resumo de atividade
+- Tela inicial: lista de regulagens com FAB (+) para ações rápidas
 - Regulagem de pulverizador com formulário progressivo de 4 etapas
 - Regulagem de plantadeira com cálculos específicos
 - Medição por ponta com classificação automática
@@ -238,57 +238,37 @@ Resultado em ha/h.
 App Inicia
     │
     ▼
-Dashboard (Home) ────────────────────────────────────┐
-    │                                                 │
-    ├── [+ Nova Regulagem] ──► Regulagem Screen       │
-    │                              │                  │
-    │                              ▼                  │
-    │                         [Salvar] ──► volta para Home
-    │
-    ├── [Tab: Regulagens] ──► Histórico Screen
-    │                              │
-    │                              ▼
-    │                         [Card] ──► Regulagem Screen (visualização)
-    │
-    └── [Tab: Config] ──► Configurações Screen
+Lista de Regulagens (HistoricoScreen) ─────────────────────────┐
+    │                                                           │
+    ├── [Card] ──► Regulagem Screen (edição)                    │
+    │                                                           │
+    └── [FAB +] ──► Folha de ações                              │
+            ├── Nova Regulagem ──► Regulagem Screen             │
+            ├── Configuração ──► Configurações Screen (push)    │
+            └── Feedback ──► WhatsApp (externo)                 │
+                                                                │
+    [Salvar na Regulagem] ──► volta para lista ◄───────────────┘
 ```
 
-### 5.2 BottomNavigationBar
+### 5.2 Navegação principal
 
-3 abas com ícones iOS-style:
-
-| # | Ícone | Label | Tela |
-|---|-------|-------|------|
-| 1 | home / home_outlined | Início | DashboardTab |
-| 2 | list_alt / list_alt_outlined | Regulagens | HistoricoScreen |
-| 3 | settings / settings_outlined | Config | ConfiguracoesScreen |
-
-IndexedStack mantém estado de cada aba ao alternar.
+Sem bottom navigation bar. Tela raiz única: `HistoricoScreen` na rota `/home`.
+FAB (+) no canto inferior direito abre folha com Nova Regulagem, Configuração e Feedback.
 
 ---
 
 ## 6. Especificação Detalhada das Telas
 
-### TELA 1 — Dashboard (Aba Início)
+### TELA 1 — Lista de Regulagens (tela raiz)
 
-**Objetivo:** Ponto de entrada. Visão rápida do trabalho e acesso à nova regulagem.
+**Objetivo:** Ponto de entrada. Listar, buscar e acessar regulagens salvas.
 
-**Elementos:**
-- AppBar com "AgroCalc" + data de hoje (formato: "quarta, 12 ago 2026")
-- Card de boas-vindas: "Olá, [nomeConsultor]" — carregado das configurações
-- Botão primário centralizado: "+ Nova Regulagem" (grande, azul, borderRadius lg)
-- Card de resumo: "X regulagens realizadas"
-- Card de última regulagem: mostra produtor + fazenda + data da última entrada
+**Elementos:** ver TELA 3 (histórico unificado na raiz) + FAB (+) com folha de ações.
 
-**Comportamento:**
-- Se `nomeConsultor` estiver vazio nas configurações, exibe "Bem-vindo ao AgroCalc"
-- FutureBuilder carrega contagem do StorageService no initState
-- Pull to refresh recarrega os dados
-
-**Regras técnicas:**
-- Máximo 250 linhas
-- Nenhuma lógica de cálculo
-- StatefulWidget (precisa de FutureBuilder)
+**Folha de ações (FAB):**
+- Nova Regulagem → `RegulagemScreen`
+- Configuração → `ConfiguracoesScreen` (push)
+- Feedback → WhatsApp externo (`wa.me`, sem servidor)
 
 ---
 
@@ -410,15 +390,16 @@ Dividida em sub-componentes (widgets separados):
 
 ---
 
-### TELA 3 — Histórico de Regulagens
+### TELA 3 — Histórico de Regulagens (unificado na tela raiz)
 
-**Objetivo:** Listar, buscar e deletar regulagens salvas.
+**Objetivo:** Listar, buscar e deletar regulagens salvas. É também a tela inicial do app.
 
 **Elementos:**
 - AppBar "Regulagens" + botão lupa (busca inline)
 - Campo de busca (aparece ao tap na lupa) — filtra por produtor ou fazenda
 - ListView.builder com cards de regulagem
-- Empty state se lista vazia: ícone + "Nenhuma regulagem ainda. Crie a primeira!"
+- FAB (+) com folha: Nova Regulagem, Configuração, Feedback
+- Empty state se lista vazia: ícone + "Nenhuma regulagem ainda. Toque no + para criar a primeira."
 
 **Card de Regulagem:**
 - Linha 1: Nome do produtor (fonte headline, bold)
@@ -641,8 +622,6 @@ lib/
 ├── screens/
 │   ├── login/
 │   │   └── login_screen.dart          # ❄️ CONGELADA — não usada (≤ 200 linhas)
-│   ├── home/
-│   │   └── home_screen.dart           # Dashboard + BottomNav (≤ 250 linhas)
 │   ├── regulagem/
 │   │   ├── regulagem_screen.dart      # Formulário progressivo (≤ 700 linhas)
 │   │   └── widgets/
@@ -822,7 +801,7 @@ Um item está **feito** quando:
 1. `flutter analyze` retorna `No issues found!`
 2. `dart format` não altera nenhum arquivo
 3. Os 19 testes unitários passam (`flutter test`)
-4. O fluxo completo funciona: Dashboard → Nova Regulagem → Salvar → Histórico → Configurações
+4. O fluxo completo funciona: Lista → FAB Nova Regulagem → Salvar → Lista → FAB Configuração
 5. Exportar e importar backup funciona corretamente
 6. O app roda em iPhone (simulador ou dispositivo real) sem crashes
 7. Nenhuma cor, padding ou radius literal fora do design system
