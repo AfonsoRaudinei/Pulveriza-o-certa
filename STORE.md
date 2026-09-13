@@ -72,17 +72,18 @@ a resposta correta em **todas** as categorias do questionário é **"Dados não 
 
 ```
 O Ponta Verde é uma calculadora offline de regulagem de pulverizadores e plantadeiras. Não há
-conta, login ou cadastro de nenhum tipo — o app abre direto no Dashboard. Não há compras nem
-assinaturas. Nenhum dado é coletado ou enviado a servidores; tudo fica salvo localmente no
-aparelho.
+conta, login ou cadastro de nenhum tipo — o app abre direto na lista de Regulagens. Não há
+compras nem assinaturas. Nenhum dado é coletado ou enviado a servidores; tudo fica salvo
+localmente no aparelho.
 
 Fluxo sugerido para revisão:
-1. Na aba Início, toque em "+ Nova Regulagem".
+1. Toque no botão + (canto inferior direito) e escolha "Nova Regulagem".
 2. Preencha Produtor, Fazenda e Máquina (Etapa 1) e avance para os Parâmetros (Etapa 2).
 3. Em Medições (Etapa 4), informe um valor para uma ponta e veja a classificação automática.
-4. Toque em "Salvar" — a regulagem aparece na aba Regulagens (histórico).
-5. Em Config → Exportar Dados, a folha de compartilhamento do sistema abre com o backup em
-   JSON (nenhum dado sai do dispositivo sem ação explícita do usuário).
+4. Toque em "Salvar" — a regulagem aparece na lista de Regulagens.
+5. No botão +, escolha "Configuração" → Exportar Dados: a folha de compartilhamento do
+   sistema abre com o backup em JSON (nenhum dado sai do dispositivo sem ação explícita).
+6. Feedback (no botão +) abre o WhatsApp do desenvolvedor — ação do usuário, sem servidor.
 
 Contato para dúvidas da revisão: raudyneyb@gmail.com
 ```
@@ -106,10 +107,10 @@ AgroCalc, Calculadora do Agro). Antes de enviar o Ponta Verde para revisão:
 Necessários apenas para **iPhone** (o app foi limitado a `TARGETED_DEVICE_FAMILY = "1"`,
 dispensando iPad). Tamanho mínimo obrigatório: iPhone 6.9" (1320 × 2868 px ou 2868 × 1320 px).
 Recomendado 3 a 5 imagens, nesta ordem sugerida:
-1. Dashboard (tela inicial)
+1. Lista de regulagens (tela inicial) com botão +
 2. Formulário de Regulagem com a tabela de pontas e os badges de status
 3. Análise econômica (recomendação de troca)
-4. Histórico de regulagens
+4. Folha de ações do botão + (Nova Regulagem, Configuração, Feedback)
 5. Configurações
 
 ## Conformidade de exportação

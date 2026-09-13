@@ -20,4 +20,4 @@ Exclusão: mesmo padrão do histórico (confirmação + SnackBar Desfazer 4 s).
 
 ## Entrada no app
 
-Dashboard (aba Início): botão secundário **Nova Ordem de Aplicação** (não substitui Nova Regulagem) e atalho “Ver ordens”. Sem quarta aba na bottom nav.
+Lista de regulagens (tela raiz): atalho “Ver ordens” ou entrada via FAB expandido (módulo futuro). Sem bottom nav.

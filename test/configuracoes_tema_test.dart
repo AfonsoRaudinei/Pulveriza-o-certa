@@ -37,7 +37,7 @@ void main() {
     expect(roundtrip.tema, TemaApp.dark);
   });
 
-  testWidgets('app com tema dark inicia no Dashboard em Brightness.dark',
+  testWidgets('app com tema dark inicia na lista em Brightness.dark',
       (tester) async {
     SharedPreferences.setMockInitialValues({
       'agro_configuracoes': '{"tema":"dark"}',
@@ -46,9 +46,9 @@ void main() {
     await tester.pumpWidget(const PontaVerdeApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Ponta Verde'), findsWidgets);
+    expect(find.text('Regulagens'), findsOneWidget);
     expect(
-      Theme.of(tester.element(find.text('Ponta Verde').first)).brightness,
+      Theme.of(tester.element(find.text('Regulagens'))).brightness,
       Brightness.dark,
     );
   });
@@ -67,7 +67,9 @@ void main() {
     await tester.pumpWidget(const PontaVerdeApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Configuração'));
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Salvar'));
