@@ -555,3 +555,33 @@ Disco apenas — IPA 116 em `build/ios/ipa/pontaverde.ipa`, payload validado, **
 
 Disco apenas — IPA 190 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
 
+## Build 192 — 2026-09-13 16:43 -03
+
+- Versão solicitada: `1.0.0+192` (também em `pubspec.yaml`)
+- Motivo: build 192 na branch `cursor/fix-pontas-grafico` (PR #26) com fix de medições das pontas e gráfico de vazão.
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 192 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (6 pods: Flutter, file_picker, printing, share_plus, shared_preferences_foundation, url_launcher_ios)
+- Validação de pré-build: `./tool/validar.sh` — passou (103 testes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (170.7 MB / 163 MB no disco)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (23.9 MB / 23744972 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `192`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation`, `url_launcher_ios` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`, `Signed Time=13 Sep 2026 at 16:43:40`
+- Upload TestFlight: não enviado
+
+### Status
+
+Disco apenas — IPA 192 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
+
