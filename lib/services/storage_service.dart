@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Rect;
 
+import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -10,8 +11,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/constants/fotos_regulagem_constants.dart';
 import '../models/configuracoes.dart';
+import '../models/foto_regulagem.dart';
 import '../models/regulagem.dart';
+import 'fotos_regulagem_service.dart';
 
 /// Erro de leitura/gravação do armazenamento local, com mensagem apresentável
 /// ao usuário.
@@ -23,6 +27,11 @@ class StorageException implements Exception {
 }
 
 class StorageService {
+  StorageService({FotosRegulagemService? fotosService})
+      : _fotosService = fotosService ?? FotosRegulagemService();
+
+  final FotosRegulagemService _fotosService;
+
   /// Lê a lista de regulagens do disco.
   ///
   /// Se o conteúdo gravado estiver corrompido (JSON inválido ou registro
@@ -92,6 +101,7 @@ class StorageService {
 
   Future<void> deleteRegulagem(String id) async {
     try {
+      await _fotosService.removerTodasDaRegulagem(id);
       final prefs = await SharedPreferences.getInstance();
       final regulagens = await getRegulagens();
       regulagens.removeWhere((item) => item.id == id);
@@ -132,6 +142,7 @@ class StorageService {
 
   Future<void> clearAll() async {
     try {
+      await _fotosService.removerTodas();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(AppConstants.regulagensKey);
       await prefs.remove(AppConstants.configuracoesKey);
@@ -156,25 +167,55 @@ class StorageService {
     };
   }
 
-  /// Exporta o backup via folha de compartilhamento do sistema.
+  /// Exporta o backup (.zip) via folha de compartilhamento do sistema.
   ///
   /// [sharePositionOrigin] deve ser informado em iPad (âncora do popover); em
   /// iPhone é ignorado.
   Future<void> exportBackup({Rect? sharePositionOrigin}) async {
     try {
       final backup = await buildBackupJson();
-      final dir = await getTemporaryDirectory();
-      final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final file = File('${dir.path}/pontaverde_backup_$date.json');
-      await file.writeAsString(
+      final jsonBytes = utf8.encode(
         const JsonEncoder.withIndent('  ').convert(backup),
       );
+
+      final archive = Archive();
+      archive.addFile(
+        ArchiveFile(
+          FotosRegulagemConstants.arquivoDadosBackup,
+          jsonBytes.length,
+          jsonBytes,
+        ),
+      );
+
+      final regulagens = await getRegulagens();
+      for (final regulagem in regulagens) {
+        for (final foto in regulagem.fotos) {
+          final file = await _fotosService.resolverArquivo(foto);
+          if (!await file.exists()) continue;
+          final bytes = await file.readAsBytes();
+          archive.addFile(
+            ArchiveFile(
+              '${FotosRegulagemConstants.pastaFotosBackup}/${foto.arquivo}',
+              bytes.length,
+              bytes,
+            ),
+          );
+        }
+      }
+
+      final zipBytes = ZipEncoder().encode(archive);
+
+      final dir = await getTemporaryDirectory();
+      final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final zipFile = File('${dir.path}/pontaverde_backup_$date.zip');
+      await zipFile.writeAsBytes(zipBytes);
       await Share.shareXFiles(
-        [XFile(file.path)],
+        [XFile(zipFile.path)],
         text: 'Backup ${AppConstants.appName}',
         sharePositionOrigin: sharePositionOrigin,
       );
     } catch (error) {
+      if (error is StorageException) rethrow;
       debugPrint('Erro ao exportar backup: $error');
       throw const StorageException('Não foi possível exportar o backup.');
     }
@@ -182,23 +223,72 @@ class StorageService {
 
   /// Retorna `false` quando o usuário cancela o seletor de arquivos.
   Future<bool> importBackup() async {
-    final String raw;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['json'],
+        allowedExtensions: ['zip', 'json'],
       );
       if (result == null || result.files.single.path == null) return false;
-      raw = await File(result.files.single.path!).readAsString();
+
+      final path = result.files.single.path!;
+      if (path.toLowerCase().endsWith('.zip')) {
+        final bytes = await File(path).readAsBytes();
+        await importBackupFromZipBytes(bytes);
+      } else {
+        final raw = await File(path).readAsString();
+        await importBackupFromString(raw);
+      }
+      return true;
     } catch (error) {
+      if (error is StorageException) rethrow;
       debugPrint('Erro ao ler arquivo de backup: $error');
       throw const StorageException('Não foi possível ler o arquivo escolhido.');
     }
-    await importBackupFromString(raw);
-    return true;
   }
 
   Future<void> importBackupFromString(String raw) async {
+    final parsed = _parseBackupPayload(raw);
+    await _persistBackupImport(
+      regulagens: parsed.regulagens,
+      configuracoes: parsed.configuracoes,
+      fotosPorArquivo: const {},
+    );
+  }
+
+  Future<void> importBackupFromZipBytes(List<int> zipBytes) async {
+    final archive = ZipDecoder().decodeBytes(zipBytes);
+    final dadosFile = _localizarArquivoNoZip(
+      archive,
+      FotosRegulagemConstants.arquivoDadosBackup,
+    );
+    if (dadosFile == null) {
+      throw const StorageException('O arquivo .zip não contém dados.json.');
+    }
+
+    final raw = utf8.decode(dadosFile.content as List<int>);
+    final parsed = _parseBackupPayload(raw);
+
+    final fotosPorArquivo = <String, List<int>>{};
+    for (final entry in archive.files) {
+      if (entry.isFile &&
+          _caminhoRelativoNoZip(entry.name)
+              .startsWith('${FotosRegulagemConstants.pastaFotosBackup}/')) {
+        final nome = _caminhoRelativoNoZip(entry.name).split('/').last;
+        fotosPorArquivo[nome] = entry.content as List<int>;
+      }
+    }
+
+    await _persistBackupImport(
+      regulagens: parsed.regulagens,
+      configuracoes: parsed.configuracoes,
+      fotosPorArquivo: fotosPorArquivo,
+    );
+  }
+
+  ({
+    List<Regulagem> regulagens,
+    Configuracoes configuracoes,
+  }) _parseBackupPayload(String raw) {
     final Map<String, dynamic> data;
     try {
       data = jsonDecode(raw) as Map<String, dynamic>;
@@ -212,27 +302,46 @@ class StorageService {
       throw const StorageException('O arquivo não é um backup do Ponta Verde.');
     }
 
-    final List<Regulagem> regulagens;
-    final Configuracoes configuracoes;
     try {
-      regulagens = regulagensRaw
+      final regulagens = regulagensRaw
           .map((item) => Regulagem.fromJson(item as Map<String, dynamic>))
           .toList();
-      configuracoes = Configuracoes.fromJson(
+      final configuracoes = Configuracoes.fromJson(
         Map<String, dynamic>.from(configuracoesRaw),
       );
+      return (regulagens: regulagens, configuracoes: configuracoes);
     } catch (error) {
       debugPrint('Backup malformado: $error');
       throw const StorageException(
         'O backup está incompleto ou foi gerado por outra versão.',
       );
     }
+  }
+
+  Future<void> _persistBackupImport({
+    required List<Regulagem> regulagens,
+    required Configuracoes configuracoes,
+    required Map<String, List<int>> fotosPorArquivo,
+  }) async {
+    await _fotosService.removerTodas();
+
+    final regulagensImportadas = <Regulagem>[];
+    for (final regulagem in regulagens) {
+      final fotosValidas = <FotoRegulagem>[];
+      for (final foto in regulagem.fotos) {
+        final bytes = fotosPorArquivo[foto.arquivo];
+        if (bytes == null) continue;
+        await _fotosService.gravarFotoImportada(bytes, foto);
+        fotosValidas.add(foto);
+      }
+      regulagensImportadas.add(regulagem.copyWith(fotos: fotosValidas));
+    }
 
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
         AppConstants.regulagensKey,
-        jsonEncode(regulagens.map((item) => item.toJson()).toList()),
+        jsonEncode(regulagensImportadas.map((item) => item.toJson()).toList()),
       );
       await prefs.setString(
         AppConstants.configuracoesKey,
@@ -244,5 +353,19 @@ class StorageService {
         'Não foi possível gravar o backup importado.',
       );
     }
+  }
+
+  ArchiveFile? _localizarArquivoNoZip(Archive archive, String nomeAlvo) {
+    for (final file in archive.files) {
+      if (!file.isFile) continue;
+      if (_caminhoRelativoNoZip(file.name) == nomeAlvo) {
+        return file;
+      }
+    }
+    return null;
+  }
+
+  String _caminhoRelativoNoZip(String caminho) {
+    return caminho.replaceAll('\\', '/');
   }
 }

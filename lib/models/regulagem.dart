@@ -1,3 +1,5 @@
+import 'foto_regulagem.dart';
+
 enum TipoOperacao { pulverizador, plantadeira }
 
 enum StatusPonta { pendente, ideal, irregular, desgaste }
@@ -68,6 +70,7 @@ class Regulagem {
     this.populacaoDesejada,
     required this.litroMinIdeal,
     required this.medicoes,
+    this.fotos = const [],
     this.ladoConferenciaPontas = LadoConferenciaPontas.direita,
     this.larguraUtil,
     this.rendimento,
@@ -97,6 +100,7 @@ class Regulagem {
   final int? populacaoDesejada;
   final double litroMinIdeal;
   final List<PontaMedicao> medicoes;
+  final List<FotoRegulagem> fotos;
   final LadoConferenciaPontas ladoConferenciaPontas;
   final double? larguraUtil;
   final double? rendimento;
@@ -131,6 +135,9 @@ class Regulagem {
       medicoes: ((json['medicoes'] as List<dynamic>?) ?? [])
           .map((item) => PontaMedicao.fromJson(item as Map<String, dynamic>))
           .toList(),
+      fotos: ((json['fotos'] as List<dynamic>?) ?? [])
+          .map((item) => FotoRegulagem.fromJson(item as Map<String, dynamic>))
+          .toList(),
       ladoConferenciaPontas: LadoConferenciaPontas.values.byName(
         json['ladoConferenciaPontas'] as String? ?? 'direita',
       ),
@@ -141,6 +148,41 @@ class Regulagem {
       areaHa: (json['areaHa'] as num?)?.toDouble(),
       criadoEm: DateTime.parse(json['criadoEm'] as String),
       atualizadoEm: DateTime.parse(json['atualizadoEm'] as String),
+    );
+  }
+
+  Regulagem copyWith({
+    List<FotoRegulagem>? fotos,
+  }) {
+    return Regulagem(
+      id: id,
+      produtor: produtor,
+      fazenda: fazenda,
+      talhao: talhao,
+      maquina: maquina,
+      tipoOperacao: tipoOperacao,
+      dataRegulagem: dataRegulagem,
+      consultor: consultor,
+      vazaoLha: vazaoLha,
+      velocidade: velocidade,
+      espacamentoCm: espacamentoCm,
+      numeroPontas: numeroPontas,
+      pressaoBar: pressaoBar,
+      nLinhas: nLinhas,
+      espacamentoLinhasM: espacamentoLinhasM,
+      eficiencia: eficiencia,
+      populacaoDesejada: populacaoDesejada,
+      litroMinIdeal: litroMinIdeal,
+      medicoes: medicoes,
+      fotos: fotos ?? this.fotos,
+      ladoConferenciaPontas: ladoConferenciaPontas,
+      larguraUtil: larguraUtil,
+      rendimento: rendimento,
+      manejoRS: manejoRS,
+      precoBicoRS: precoBicoRS,
+      areaHa: areaHa,
+      criadoEm: criadoEm,
+      atualizadoEm: atualizadoEm,
     );
   }
 
@@ -165,6 +207,7 @@ class Regulagem {
       'populacaoDesejada': populacaoDesejada,
       'litroMinIdeal': litroMinIdeal,
       'medicoes': medicoes.map((item) => item.toJson()).toList(),
+      'fotos': fotos.map((item) => item.toJson()).toList(),
       'ladoConferenciaPontas': ladoConferenciaPontas.name,
       'larguraUtil': larguraUtil,
       'rendimento': rendimento,
