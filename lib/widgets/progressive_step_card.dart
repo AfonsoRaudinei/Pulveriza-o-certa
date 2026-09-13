@@ -148,6 +148,8 @@ class _ExpandableBody extends StatelessWidget {
         initiallyExpanded: initiallyExpanded,
         maintainState: true,
         enabled: !locked,
+        backgroundColor: Colors.transparent,
+        collapsedBackgroundColor: Colors.transparent,
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(top: AppSpacing.lg),
         shape: const Border(),
@@ -168,7 +170,13 @@ class _ExpandableBody extends StatelessWidget {
                     description!,
                     style: Theme.of(context).textTheme.bodySmall,
                   )),
-        children: [child],
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [child],
+          ),
+        ],
       ),
     );
   }

@@ -499,38 +499,17 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
           ),
           ProgressiveCard(
             index: 3,
-            title: 'Cálculos Automáticos',
+            title: 'Vazão / ha',
             locked: !_etapa2Completa,
             complete: _litroMinIdeal > 0,
             showCompletedMarker: false,
             summary: _resumoCalculos(),
-            child: Column(
-              children: [
-                _ReadonlyResult(
-                  label: 'Lt/min Ideal',
-                  value: '${_litroMinIdeal.toStringAsFixed(3)} L/min',
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _FieldRow(
-                  stacked: true,
-                  left: _LabeledField(
-                    controller: _limiteEntupido,
-                    label: 'Limite entupido (%)',
-                    helper: 'Abaixo disso o bico fica Entupido. Salva sozinho.',
-                    readonly: readonly,
-                    onChanged: _onLimiteChanged,
-                    decimal: true,
-                  ),
-                  right: _LabeledField(
-                    controller: _limiteDesgaste,
-                    label: 'Limite desgaste (%)',
-                    helper: 'Acima disso o bico fica Desgaste. Salva sozinho.',
-                    readonly: readonly,
-                    onChanged: _onLimiteChanged,
-                    decimal: true,
-                  ),
-                ),
-              ],
+            child: _VazaoHaStep(
+              litroMinIdeal: _litroMinIdeal,
+              limiteEntupido: _limiteEntupido,
+              limiteDesgaste: _limiteDesgaste,
+              readonly: readonly,
+              onLimiteChanged: _onLimiteChanged,
             ),
           ),
           ProgressiveCard(
@@ -672,6 +651,54 @@ class _ContextStep extends StatelessWidget {
             onChanged: onEconomiaChanged,
             decimal: true,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _VazaoHaStep extends StatelessWidget {
+  const _VazaoHaStep({
+    required this.litroMinIdeal,
+    required this.limiteEntupido,
+    required this.limiteDesgaste,
+    required this.readonly,
+    required this.onLimiteChanged,
+  });
+
+  final double litroMinIdeal;
+  final TextEditingController limiteEntupido;
+  final TextEditingController limiteDesgaste;
+  final bool readonly;
+  final VoidCallback onLimiteChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ReadonlyResult(
+          label: 'Lt/min Ideal',
+          value: '${litroMinIdeal.toStringAsFixed(3)} L/min',
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _LabeledField(
+          controller: limiteEntupido,
+          label: 'Limite entupido (%)',
+          helper: 'Abaixo disso o bico fica Entupido. Salva sozinho.',
+          readonly: readonly,
+          onChanged: onLimiteChanged,
+          decimal: true,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _LabeledField(
+          controller: limiteDesgaste,
+          label: 'Limite desgaste (%)',
+          helper: 'Acima disso o bico fica Desgaste. Salva sozinho.',
+          readonly: readonly,
+          onChanged: onLimiteChanged,
+          decimal: true,
         ),
       ],
     );
@@ -827,6 +854,7 @@ class _LabeledField extends StatelessWidget {
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.bodySmall),
