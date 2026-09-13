@@ -22,9 +22,12 @@ class PontasTable extends StatelessWidget {
     required this.manejo,
     required this.precoBico,
     required this.area,
+    required this.ladoConferencia,
     required this.readonly,
     required this.onMedicaoChanged,
     this.onMovedToNextPonta,
+    this.onLadoConferenciaChanged,
+    this.exigirConfirmacaoTrocaLado = false,
   })  : _resumoPontas = _ResumoPontasData.from(
           medicoes: medicoes,
           ideal: ideal,
@@ -45,9 +48,12 @@ class PontasTable extends StatelessWidget {
   final double manejo;
   final double precoBico;
   final double area;
+  final LadoConferenciaPontas ladoConferencia;
   final bool readonly;
   final ValueChanged<PontaInput> onMedicaoChanged;
   final VoidCallback? onMovedToNextPonta;
+  final ValueChanged<LadoConferenciaPontas>? onLadoConferenciaChanged;
+  final bool exigirConfirmacaoTrocaLado;
   final _ResumoPontasData _resumoPontas;
   final Map<int, double> _percentuais;
   final ResultadoZonaAtencao _zonaAtencao;
@@ -58,6 +64,13 @@ class PontasTable extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _LadoConferenciaToggle(
+          value: ladoConferencia,
+          readonly: readonly,
+          exigirConfirmacao: exigirConfirmacaoTrocaLado,
+          onChanged: onLadoConferenciaChanged,
+        ),
+        const SizedBox(height: AppSpacing.md),
         _ResumoPontas(resumo: _resumoPontas),
         if (_zonaAtencao.qtdPontasNaZona > 0) ...[
           const SizedBox(height: AppSpacing.md),
@@ -73,6 +86,7 @@ class PontasTable extends StatelessWidget {
             medicoes: medicoes,
             ideal: ideal,
             percentuais: _percentuais,
+            ladoConferencia: ladoConferencia,
             readonly: readonly,
             onMedicaoChanged: onMedicaoChanged,
             onMovedToNextPonta: onMovedToNextPonta,
@@ -131,6 +145,7 @@ class PontasAnaliseSection extends StatelessWidget {
     required this.manejo,
     required this.precoBico,
     required this.area,
+    this.ladoConferencia = LadoConferenciaPontas.direita,
   })  : _hasMedicoes = medicoes.any((item) => item.valorMedido != null),
         _economiaResumo = _EconomiaResumo.from(
           medicoes: medicoes,
@@ -148,6 +163,7 @@ class PontasAnaliseSection extends StatelessWidget {
   final double manejo;
   final double precoBico;
   final double area;
+  final LadoConferenciaPontas ladoConferencia;
   final bool _hasMedicoes;
   final _EconomiaResumo _economiaResumo;
   final _OrientacoesResumo _orientacoesResumo;
@@ -167,6 +183,7 @@ class PontasAnaliseSection extends StatelessWidget {
             limiteIrregular: configuracoes.limiteIrregular,
             limiteDesgaste: configuracoes.limiteDesgaste,
           ),
+          ladoConferencia: ladoConferencia,
         ),
         const SizedBox(height: AppSpacing.xl),
         _EconomiaSection(resumo: _economiaResumo),
@@ -330,11 +347,94 @@ class _ResumoPontas extends StatelessWidget {
   }
 }
 
+class _LadoConferenciaToggle extends StatelessWidget {
+  const _LadoConferenciaToggle({
+    required this.value,
+    required this.readonly,
+    required this.exigirConfirmacao,
+    required this.onChanged,
+  });
+
+  final LadoConferenciaPontas value;
+  final bool readonly;
+  final bool exigirConfirmacao;
+  final ValueChanged<LadoConferenciaPontas>? onChanged;
+
+  Future<void> _tentarAlterar(
+    BuildContext context,
+    LadoConferenciaPontas novo,
+  ) async {
+    if (novo == value || onChanged == null) return;
+    if (exigirConfirmacao) {
+      final confirmou = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Alterar lado da conferência?'),
+          content: const Text(
+            'Isso muda a numeração das pontas (1D/1E, 2D/2E…). '
+            'Confirma a alteração?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirmar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmou != true) return;
+    }
+    onChanged!(novo);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Conferência iniciada por',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.textSecondary,
+              ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<LadoConferenciaPontas>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(
+                value: LadoConferenciaPontas.direita,
+                label: Text('Direita'),
+              ),
+              ButtonSegment(
+                value: LadoConferenciaPontas.esquerda,
+                label: Text('Esquerda'),
+              ),
+            ],
+            selected: {value},
+            onSelectionChanged: readonly || onChanged == null
+                ? null
+                : (selected) => _tentarAlterar(context, selected.first),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PontasLista extends StatefulWidget {
   const _PontasLista({
     required this.medicoes,
     required this.ideal,
     required this.percentuais,
+    required this.ladoConferencia,
     required this.readonly,
     required this.onMedicaoChanged,
     required this.onMovedToNextPonta,
@@ -343,6 +443,7 @@ class _PontasLista extends StatefulWidget {
   final List<PontaMedicao> medicoes;
   final double ideal;
   final Map<int, double> percentuais;
+  final LadoConferenciaPontas ladoConferencia;
   final bool readonly;
   final ValueChanged<PontaInput> onMedicaoChanged;
   final VoidCallback? onMovedToNextPonta;
@@ -391,12 +492,11 @@ class _PontasListaState extends State<_PontasLista> {
               children: [
                 InkWell(
                   key: ValueKey('ponta-row-${widget.medicoes[index].id}'),
-                  onTap: widget.readonly
-                      ? null
-                      : () => _selecionar(widget.medicoes[index].id),
+                  onTap: () => _selecionar(widget.medicoes[index].id),
                   child: _PontaPanelHeader(
                     key: ValueKey('ponta-header-${widget.medicoes[index].id}'),
                     ponta: widget.medicoes[index],
+                    ladoConferencia: widget.ladoConferencia,
                     percentual: widget.medicoes[index].valorMedido == null
                         ? null
                         : widget.percentuais[widget.medicoes[index].id],
@@ -408,6 +508,7 @@ class _PontasListaState extends State<_PontasLista> {
                     child: _PontaPanelBody(
                       key: ValueKey('ponta-body-${widget.medicoes[index].id}'),
                       ponta: widget.medicoes[index],
+                      ladoConferencia: widget.ladoConferencia,
                       ideal: widget.ideal,
                       readonly: widget.readonly,
                       onChanged: (value) => widget.onMedicaoChanged(
@@ -430,20 +531,24 @@ class _PontaPanelHeader extends StatelessWidget {
   const _PontaPanelHeader({
     super.key,
     required this.ponta,
+    required this.ladoConferencia,
     required this.percentual,
   });
 
   final PontaMedicao ponta;
+  final LadoConferenciaPontas ladoConferencia;
   final double? percentual;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final medido = ponta.valorMedido;
-    final detalhe = medido == null
+    final rotulo = rotuloPonta(ponta.id, ladoConferencia);
+    final medicao = medido == null
         ? 'Sem medição'
         : '${medido.toStringAsFixed(3)} L/min'
             '${percentual == null ? '' : ' · ${percentual!.toStringAsFixed(1)}%'}';
+    final detalhe = '$rotulo · $medicao';
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -473,12 +578,14 @@ class _PontaPanelBody extends StatefulWidget {
   const _PontaPanelBody({
     super.key,
     required this.ponta,
+    required this.ladoConferencia,
     required this.ideal,
     required this.readonly,
     required this.onChanged,
   });
 
   final PontaMedicao ponta;
+  final LadoConferenciaPontas ladoConferencia;
   final double ideal;
   final bool readonly;
   final ValueChanged<String> onChanged;
@@ -527,7 +634,7 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'L/min medido',
+            '${rotuloPonta(widget.ponta.id, widget.ladoConferencia)} · L/min medido',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: AppSpacing.xs),

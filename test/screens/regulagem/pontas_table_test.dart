@@ -41,6 +41,7 @@ void main() {
               manejo: 0,
               precoBico: 0,
               area: 0,
+              ladoConferencia: LadoConferenciaPontas.direita,
               readonly: false,
               onMedicaoChanged: onChanged ?? (_) {},
               onMovedToNextPonta: onMoved,
@@ -58,8 +59,8 @@ void main() {
 
     expect(find.byType(ExpansionPanelList), findsNothing);
     expect(find.text('Ponta 1'), findsNothing);
-    expect(find.textContaining('0.825 L/min'), findsWidgets);
-    expect(find.text('Sem medição'), findsAtLeastNWidgets(1));
+    expect(find.textContaining('1D · 0.825 L/min'), findsOneWidget);
+    expect(find.textContaining('2D · Sem medição'), findsOneWidget);
   });
 
   testWidgets('lista começa fechada; toque na linha abre o campo L/min',
@@ -72,8 +73,78 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('ponta-row-2')));
     await tester.pumpAndSettle();
 
-    expect(find.text('L/min medido'), findsOneWidget);
+    expect(find.text('2D · L/min medido'), findsOneWidget);
     expect(find.text('Ideal: 0.825 L/min'), findsOneWidget);
+  });
+
+  testWidgets('toggle Esquerda renomeia pontas para 1E, 2E…', (tester) async {
+    LadoConferenciaPontas? lado;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PontasTable(
+              medicoes: medicoes,
+              ideal: 0.825,
+              configuracoes: const Configuracoes(),
+              manejo: 0,
+              precoBico: 0,
+              area: 0,
+              ladoConferencia: LadoConferenciaPontas.esquerda,
+              readonly: false,
+              onMedicaoChanged: (_) {},
+              onLadoConferenciaChanged: (value) => lado = value,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('1E · 0.825 L/min'), findsOneWidget);
+    expect(find.textContaining('2E · Sem medição'), findsOneWidget);
+
+    await tester.tap(find.text('Direita'));
+    await tester.pumpAndSettle();
+    expect(lado, LadoConferenciaPontas.direita);
+
+    lado = LadoConferenciaPontas.esquerda;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PontasTable(
+              medicoes: medicoes,
+              ideal: 0.825,
+              configuracoes: const Configuracoes(),
+              manejo: 0,
+              precoBico: 0,
+              area: 0,
+              ladoConferencia: LadoConferenciaPontas.esquerda,
+              readonly: false,
+              exigirConfirmacaoTrocaLado: true,
+              onMedicaoChanged: (_) {},
+              onLadoConferenciaChanged: (value) => lado = value,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Direita'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alterar lado da conferência?'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(lado, LadoConferenciaPontas.esquerda);
+
+    await tester.tap(find.text('Direita'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    expect(lado, LadoConferenciaPontas.direita);
   });
 
   testWidgets('passar para a ponta de baixo dispara auto-save', (tester) async {
@@ -113,6 +184,7 @@ void main() {
               manejo: 2400,
               precoBico: 35,
               area: 500,
+              ladoConferencia: LadoConferenciaPontas.direita,
               readonly: true,
               onMedicaoChanged: (_) {},
             ),
@@ -188,7 +260,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('ponta-row-2')));
     await tester.pumpAndSettle();
-    expect(find.text('L/min medido'), findsOneWidget);
+    expect(find.text('2D · L/min medido'), findsOneWidget);
 
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
@@ -221,6 +293,7 @@ void main() {
               manejo: 0,
               precoBico: 0,
               area: 0,
+              ladoConferencia: LadoConferenciaPontas.direita,
               readonly: true,
               onMedicaoChanged: (_) {},
             ),
@@ -230,7 +303,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('0.000 L/min'), findsOneWidget);
+    expect(find.textContaining('1D · 0.000 L/min'), findsOneWidget);
     expect(find.textContaining('0.0%'), findsOneWidget);
     expect(find.text('Sem medição'), findsNothing);
   });

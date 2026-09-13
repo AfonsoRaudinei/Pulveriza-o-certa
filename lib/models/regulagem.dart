@@ -2,6 +2,14 @@ enum TipoOperacao { pulverizador, plantadeira }
 
 enum StatusPonta { pendente, ideal, irregular, desgaste }
 
+/// Lado por onde a conferência das pontas começou (1D = direita, 1E = esquerda).
+enum LadoConferenciaPontas { direita, esquerda }
+
+String rotuloPonta(int id, LadoConferenciaPontas lado) {
+  final sufixo = lado == LadoConferenciaPontas.direita ? 'D' : 'E';
+  return '$id$sufixo';
+}
+
 class PontaMedicao {
   const PontaMedicao({
     required this.id,
@@ -60,6 +68,7 @@ class Regulagem {
     this.populacaoDesejada,
     required this.litroMinIdeal,
     required this.medicoes,
+    this.ladoConferenciaPontas = LadoConferenciaPontas.direita,
     this.larguraUtil,
     this.rendimento,
     this.manejoRS,
@@ -88,6 +97,7 @@ class Regulagem {
   final int? populacaoDesejada;
   final double litroMinIdeal;
   final List<PontaMedicao> medicoes;
+  final LadoConferenciaPontas ladoConferenciaPontas;
   final double? larguraUtil;
   final double? rendimento;
   final double? manejoRS;
@@ -121,6 +131,9 @@ class Regulagem {
       medicoes: ((json['medicoes'] as List<dynamic>?) ?? [])
           .map((item) => PontaMedicao.fromJson(item as Map<String, dynamic>))
           .toList(),
+      ladoConferenciaPontas: LadoConferenciaPontas.values.byName(
+        json['ladoConferenciaPontas'] as String? ?? 'direita',
+      ),
       larguraUtil: (json['larguraUtil'] as num?)?.toDouble(),
       rendimento: (json['rendimento'] as num?)?.toDouble(),
       manejoRS: (json['manejoRS'] as num?)?.toDouble(),
@@ -152,6 +165,7 @@ class Regulagem {
       'populacaoDesejada': populacaoDesejada,
       'litroMinIdeal': litroMinIdeal,
       'medicoes': medicoes.map((item) => item.toJson()).toList(),
+      'ladoConferenciaPontas': ladoConferenciaPontas.name,
       'larguraUtil': larguraUtil,
       'rendimento': rendimento,
       'manejoRS': manejoRS,
