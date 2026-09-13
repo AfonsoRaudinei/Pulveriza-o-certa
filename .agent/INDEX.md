@@ -49,6 +49,7 @@ Rotas: `/home` (lista de regulagens), `/regulagem`, `/configuracoes`. **Não exi
 | 04 | `CALCULOS/calc_tolerancia_ponta.md` | `calc_tolerancia_ponta.dart` | `calc_tolerancia_ponta_test.dart` |
 | 05 | `CALCULOS/calc_analise_economica.md` | `calc_analise_economica.dart` | `calc_analise_economica_test.dart` |
 | 06 | `CALCULOS/calc_perda_zona_atencao.md` | `calc_perda_zona_atencao.dart` | `calc_perda_zona_atencao_test.dart` |
+| 07 | `CALCULOS/calc_valor_total_safra.md` | `calc_valor_total_safra.dart` | `calc_valor_total_safra_test.dart` |
 
 Barrel: `lib/domain/calculos/calculos_barra.dart`.
 

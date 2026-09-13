@@ -49,6 +49,14 @@ ENTRADAS DO FORMULÁRIO
           │  100 < % ≤ limiteDesgaste                │
           │  → perda R$ da faixa (sem Desgaste)      │
           └──────────────────────────────────────────┘
+
+CARD CONTEXTO DA OPERAÇÃO (paralelo ao pipeline de pontas)
+  manejoRS + areaHa
+  ▼
+┌──────────────────────────────────────────┐
+│  Cálculo 07 — Valor Total da Safra       │
+│  manejoRS × areaHa → R$                  │
+└──────────────────────────────────────────┘
 ```
 
 ---
@@ -63,6 +71,7 @@ ENTRADAS DO FORMULÁRIO
 | 04 | `calc_tolerancia_ponta.md`       | percentual, tolMin/Max  | entreTolerancias, acimaMIN   | Cards azul e roxo do painel           |
 | 05 | `calc_analise_economica.md`      | percentuais, R$, ha     | perdaTotal, recomendarTroca  | Card laranja/cinza + recomendação     |
 | 06 | `calc_perda_zona_atencao.md`     | percentuais, R$, ha, 105| perda zona, qtd na faixa     | Card Zona de Atenção + linha do PDF   |
+| 07 | `calc_valor_total_safra.md`      | manejoRS, areaHa        | valor total safra (R$)       | Card Contexto da Operação (readonly)  |
 
 ---
 
@@ -106,6 +115,7 @@ lib/
         ├── calc_tolerancia_ponta.dart       ← Cálculo 04
         ├── calc_analise_economica.dart      ← Cálculo 05
         ├── calc_perda_zona_atencao.dart     ← Cálculo 06
+        ├── calc_valor_total_safra.dart      ← Cálculo 07
         └── calculos_barra.dart             ← barrel export
 ```
 
@@ -118,6 +128,7 @@ export 'calc_classificacao_status.dart';
 export 'calc_tolerancia_ponta.dart';
 export 'calc_analise_economica.dart';
 export 'calc_perda_zona_atencao.dart';
+export 'calc_valor_total_safra.dart';
 ```
 
 ---
@@ -133,7 +144,8 @@ test/
         ├── calc_classificacao_status_test.dart
         ├── calc_tolerancia_ponta_test.dart
         ├── calc_analise_economica_test.dart
-        └── calc_perda_zona_atencao_test.dart
+        ├── calc_perda_zona_atencao_test.dart
+        └── calc_valor_total_safra_test.dart
 ```
 
 Rodar com:

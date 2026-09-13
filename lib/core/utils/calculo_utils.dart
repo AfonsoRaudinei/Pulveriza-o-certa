@@ -72,6 +72,16 @@ class CalcUtils {
     );
   }
 
+  static double calcularValorTotalSafra({
+    required double manejoRS,
+    required double areaHa,
+  }) {
+    return calculos.calcularValorTotalSafra(
+      manejoRS: manejoRS,
+      areaHa: areaHa,
+    );
+  }
+
   static double calcularPontaRS({
     required double manejoRS,
     required int numeroPontas,

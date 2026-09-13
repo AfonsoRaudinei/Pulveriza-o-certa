@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/charts/vazao_chart_data.dart' show rotuloStatusPonta;
+import '../../core/extensions/double_extension.dart';
 import '../../core/utils/calculo_utils.dart';
 import '../../models/configuracoes.dart';
 import '../../models/foto_regulagem.dart';
@@ -499,6 +500,10 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               consultor: _consultor,
               area: _areaCtrl,
               manejo: _manejoCtrl,
+              valorTotalSafra: CalcUtils.calcularValorTotalSafra(
+                manejoRS: _manejo,
+                areaHa: _area,
+              ),
               precoBico: _precoBicoCtrl,
               data: _data,
               readonly: readonly,
@@ -618,6 +623,7 @@ class _ContextStep extends StatelessWidget {
     required this.consultor,
     required this.area,
     required this.manejo,
+    required this.valorTotalSafra,
     required this.precoBico,
     required this.data,
     required this.readonly,
@@ -633,6 +639,7 @@ class _ContextStep extends StatelessWidget {
   final TextEditingController consultor;
   final TextEditingController area;
   final TextEditingController manejo;
+  final double valorTotalSafra;
   final TextEditingController precoBico;
   final DateTime data;
   final bool readonly;
@@ -693,12 +700,21 @@ class _ContextStep extends StatelessWidget {
             onChanged: onEconomiaChanged,
             decimal: true,
           ),
-          right: _LabeledField(
-            controller: manejo,
-            label: 'Manejo (R\$)',
-            readonly: readonly,
-            onChanged: onEconomiaChanged,
-            decimal: true,
+          right: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _LabeledField(
+                controller: manejo,
+                label: 'Manejo (R\$)',
+                readonly: readonly,
+                onChanged: onEconomiaChanged,
+                decimal: true,
+              ),
+              _ReadonlyResult(
+                label: 'Valor Total da Safra (R\$)',
+                value: valorTotalSafra.toMoeda(),
+              ),
+            ],
           ),
         ),
         Padding(
