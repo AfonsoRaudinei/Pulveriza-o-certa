@@ -143,7 +143,7 @@ class _ExpandableBody extends StatelessWidget {
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
-        key: PageStorageKey<String>('step-$stepNumber'),
+        key: PageStorageKey<String>('pv-expansion-step-$stepNumber'),
         controller: expansionController,
         initiallyExpanded: initiallyExpanded,
         maintainState: true,

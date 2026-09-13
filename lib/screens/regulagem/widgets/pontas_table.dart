@@ -25,8 +25,7 @@ class PontasTable extends StatelessWidget {
     required this.readonly,
     required this.onMedicaoChanged,
     this.onMovedToNextPonta,
-  })  : _hasMedicoes = medicoes.any((item) => item.valorMedido != null),
-        _resumoPontas = _ResumoPontasData.from(
+  })  : _resumoPontas = _ResumoPontasData.from(
           medicoes: medicoes,
           ideal: ideal,
           configuracoes: configuracoes,
@@ -38,16 +37,7 @@ class PontasTable extends StatelessWidget {
           manejo: manejo,
           area: area,
           limiteDesgaste: configuracoes.limiteDesgaste,
-        ),
-        _economiaResumo = _EconomiaResumo.from(
-          medicoes: medicoes,
-          ideal: ideal,
-          manejo: manejo,
-          precoBico: precoBico,
-          area: area,
-          limiteDesgaste: configuracoes.limiteDesgaste,
-        ),
-        _orientacoesResumo = _OrientacoesResumo.from(medicoes);
+        );
 
   final List<PontaMedicao> medicoes;
   final double ideal;
@@ -58,16 +48,14 @@ class PontasTable extends StatelessWidget {
   final bool readonly;
   final ValueChanged<PontaInput> onMedicaoChanged;
   final VoidCallback? onMovedToNextPonta;
-  final bool _hasMedicoes;
   final _ResumoPontasData _resumoPontas;
   final Map<int, double> _percentuais;
   final ResultadoZonaAtencao _zonaAtencao;
-  final _EconomiaResumo _economiaResumo;
-  final _OrientacoesResumo _orientacoesResumo;
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ResumoPontas(resumo: _resumoPontas),
@@ -90,21 +78,6 @@ class PontasTable extends StatelessWidget {
             onMedicaoChanged: onMedicaoChanged,
             onMovedToNextPonta: onMovedToNextPonta,
           ),
-        if (_hasMedicoes) ...[
-          const SizedBox(height: AppSpacing.xl),
-          GraficoVazaoPontas(
-            data: VazaoChartData.from(
-              medicoes: medicoes,
-              litroMinIdeal: ideal,
-              limiteIrregular: configuracoes.limiteIrregular,
-              limiteDesgaste: configuracoes.limiteDesgaste,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          _EconomiaSection(resumo: _economiaResumo),
-          const SizedBox(height: AppSpacing.xl),
-          _Orientacoes(resumo: _orientacoesResumo),
-        ],
       ],
     );
   }
@@ -153,6 +126,62 @@ class PontasTable extends StatelessWidget {
                 litroMinIdeal: ideal,
               ),
     };
+  }
+}
+
+/// Gráfico, economia e orientações — fora do card de medições (evita conflito de layout).
+class PontasAnaliseSection extends StatelessWidget {
+  PontasAnaliseSection({
+    super.key,
+    required this.medicoes,
+    required this.ideal,
+    required this.configuracoes,
+    required this.manejo,
+    required this.precoBico,
+    required this.area,
+  })  : _hasMedicoes = medicoes.any((item) => item.valorMedido != null),
+        _economiaResumo = _EconomiaResumo.from(
+          medicoes: medicoes,
+          ideal: ideal,
+          manejo: manejo,
+          precoBico: precoBico,
+          area: area,
+          limiteDesgaste: configuracoes.limiteDesgaste,
+        ),
+        _orientacoesResumo = _OrientacoesResumo.from(medicoes);
+
+  final List<PontaMedicao> medicoes;
+  final double ideal;
+  final Configuracoes configuracoes;
+  final double manejo;
+  final double precoBico;
+  final double area;
+  final bool _hasMedicoes;
+  final _EconomiaResumo _economiaResumo;
+  final _OrientacoesResumo _orientacoesResumo;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_hasMedicoes) return const SizedBox.shrink();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GraficoVazaoPontas(
+          data: VazaoChartData.from(
+            medicoes: medicoes,
+            litroMinIdeal: ideal,
+            limiteIrregular: configuracoes.limiteIrregular,
+            limiteDesgaste: configuracoes.limiteDesgaste,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        _EconomiaSection(resumo: _economiaResumo),
+        const SizedBox(height: AppSpacing.xl),
+        _Orientacoes(resumo: _orientacoesResumo),
+      ],
+    );
   }
 }
 
@@ -333,7 +362,7 @@ class _PontasLista extends StatefulWidget {
 }
 
 class _PontasListaState extends State<_PontasLista> {
-  late int _ativaId;
+  int? _ativaId;
 
   @override
   void initState() {
@@ -344,15 +373,25 @@ class _PontasListaState extends State<_PontasLista> {
   @override
   void didUpdateWidget(covariant _PontasLista oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.medicoes.any((ponta) => ponta.id == _ativaId)) {
+    if (_ativaId != null &&
+        !widget.medicoes.any((ponta) => ponta.id == _ativaId)) {
       _ativaId = PontasTable._primeiraPontaAberta(widget.medicoes);
     }
   }
 
+  void _fecharPainel({bool salvar = true}) {
+    if (_ativaId == null) return;
+    if (salvar) widget.onMovedToNextPonta?.call();
+    setState(() => _ativaId = null);
+  }
+
   void _selecionar(int id) {
-    if (id == _ativaId) return;
+    if (id == _ativaId) {
+      _fecharPainel();
+      return;
+    }
+    if (_ativaId != null) widget.onMovedToNextPonta?.call();
     setState(() => _ativaId = id);
-    widget.onMovedToNextPonta?.call();
   }
 
   @override
@@ -377,13 +416,16 @@ class _PontasListaState extends State<_PontasLista> {
                   ),
                 ),
                 if (widget.medicoes[index].id == _ativaId)
-                  _PontaPanelBody(
-                    key: ValueKey('ponta-body-${widget.medicoes[index].id}'),
-                    ponta: widget.medicoes[index],
-                    ideal: widget.ideal,
-                    readonly: widget.readonly,
-                    onChanged: (value) => widget.onMedicaoChanged(
-                      PontaInput(widget.medicoes[index].id, value),
+                  TapRegion(
+                    onTapOutside: (_) => _fecharPainel(),
+                    child: _PontaPanelBody(
+                      key: ValueKey('ponta-body-${widget.medicoes[index].id}'),
+                      ponta: widget.medicoes[index],
+                      ideal: widget.ideal,
+                      readonly: widget.readonly,
+                      onChanged: (value) => widget.onMedicaoChanged(
+                        PontaInput(widget.medicoes[index].id, value),
+                      ),
                     ),
                   ),
               ],
@@ -468,7 +510,6 @@ class _PontaPanelBody extends StatefulWidget {
 
 class _PontaPanelBodyState extends State<_PontaPanelBody> {
   late final TextEditingController _controller;
-  late final ScrollController _scrollController;
 
   @override
   void initState() {
@@ -476,7 +517,6 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
     _controller = TextEditingController(
       text: widget.ponta.valorMedido?.toStringAsFixed(3) ?? '',
     );
-    _scrollController = ScrollController(keepScrollOffset: false);
   }
 
   @override
@@ -491,7 +531,6 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
   @override
   void dispose() {
     _controller.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -505,6 +544,7 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
         AppSpacing.lg,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
@@ -514,7 +554,6 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
           const SizedBox(height: AppSpacing.xs),
           _MedidoField(
             controller: _controller,
-            scrollController: _scrollController,
             readonly: widget.readonly,
             onChanged: widget.onChanged,
           ),
@@ -529,25 +568,37 @@ class _PontaPanelBodyState extends State<_PontaPanelBody> {
   }
 }
 
-class _MedidoField extends StatelessWidget {
+class _MedidoField extends StatefulWidget {
   const _MedidoField({
     required this.controller,
-    required this.scrollController,
     required this.readonly,
     required this.onChanged,
   });
 
   final TextEditingController controller;
-  final ScrollController scrollController;
   final bool readonly;
   final ValueChanged<String> onChanged;
 
   @override
+  State<_MedidoField> createState() => _MedidoFieldState();
+}
+
+class _MedidoFieldState extends State<_MedidoField> {
+  late final ScrollController _scroll =
+      ScrollController(keepScrollOffset: false);
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return TextField(
-      controller: controller,
-      scrollController: scrollController,
-      enabled: !readonly,
+      controller: widget.controller,
+      scrollController: _scroll,
+      enabled: !widget.readonly,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
@@ -582,7 +633,7 @@ class _MedidoField extends StatelessWidget {
           borderSide: const BorderSide(color: AppColors.border),
         ),
       ),
-      onChanged: onChanged,
+      onChanged: widget.onChanged,
     );
   }
 }
