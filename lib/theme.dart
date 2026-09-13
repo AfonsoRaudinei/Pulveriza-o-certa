@@ -13,6 +13,14 @@ class AppColors {
   static const textTertiary = Color(0xFF9CA3AF);
   static const border = Color(0xFFE5E7EB);
   static const borderFocus = Color(0xFF0057FF);
+
+  /// Tokens iOS usados na seção de fotos da regulagem.
+  static const iosPrimary = Color(0xFF007AFF);
+  static const iosPrimaryDark = Color(0xFF0051D5);
+  static const iosCardBorder = Color(0xFFE5E5E7);
+  static const iosDashedBorder = Color(0xFFD1D1D6);
+  static const iosFocusFill = Color(0xFFF0F9FF);
+  static const iosDestructive = Color(0xFFFF3B30);
   static const success = Color(0xFF10B981);
   static const successLight = Color(0xFFD1FAE5);
   static const warning = Color(0xFFF59E0B);

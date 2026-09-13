@@ -13,8 +13,10 @@ import '../core/extensions/double_extension.dart';
 import '../core/utils/calculo_utils.dart';
 import '../domain/calculos/calc_perda_zona_atencao.dart';
 import '../models/configuracoes.dart';
+import '../models/foto_regulagem.dart';
 import '../models/regulagem.dart';
 import '../theme.dart';
+import 'fotos_regulagem_service.dart';
 
 class RegulagemPdfData {
   const RegulagemPdfData({
@@ -36,6 +38,7 @@ class RegulagemPdfData {
     required this.manejo,
     required this.precoBico,
     required this.area,
+    this.fotos = const [],
   });
 
   final String produtor;
@@ -56,6 +59,7 @@ class RegulagemPdfData {
   final double manejo;
   final double precoBico;
   final double area;
+  final List<FotoRegulagem> fotos;
 }
 
 class RegulagemPdfService {
@@ -65,12 +69,19 @@ class RegulagemPdfService {
   static pw.Font? _semiBold;
   static pw.Font? _bold;
 
-  static Future<Uint8List> generate(RegulagemPdfData data) async {
+  static Future<Uint8List> generate(
+    RegulagemPdfData data, {
+    FotosRegulagemService? fotosService,
+  }) async {
     await _ensureFonts();
     final resumo = _ResumoPontasData.from(data);
     final economia = _EconomiaResumo.from(data);
     final orientacoes = _OrientacoesResumo.from(data.medicoes);
     final percentuais = _percentuaisPorPonta(data);
+    final fotosWidget = await _buildFotosSection(
+      data.fotos,
+      fotosService: fotosService,
+    );
 
     final pdf = pw.Document(
       title: 'Laudo Técnico — Regulagem de Pulverizador',
@@ -109,6 +120,10 @@ class RegulagemPdfService {
             if (orientacoesWidget != null) ...[
               pw.SizedBox(height: 20),
               orientacoesWidget,
+            ],
+            if (fotosWidget != null) ...[
+              pw.SizedBox(height: 20),
+              fotosWidget,
             ],
           ];
         },
@@ -937,6 +952,104 @@ class RegulagemPdfService {
     canvas
       ..setFillColor(_pdfColor(color))
       ..drawString(font, fontSize, text, centerX - metrics.width / 2, y);
+  }
+
+  static Future<pw.Widget?> _buildFotosSection(
+    List<FotoRegulagem> fotos, {
+    FotosRegulagemService? fotosService,
+  }) async {
+    if (fotos.isEmpty) return null;
+
+    final service = fotosService ?? FotosRegulagemService();
+    final itens = <({FotoRegulagem foto, Uint8List bytes})>[];
+    for (final foto in fotos) {
+      final file = await service.resolverArquivo(foto);
+      if (!await file.exists()) continue;
+      itens.add((foto: foto, bytes: await file.readAsBytes()));
+    }
+    if (itens.isEmpty) return null;
+
+    final rows = <pw.Widget>[];
+    for (var i = 0; i < itens.length; i += 2) {
+      rows.add(
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(child: _buildFotoCelula(itens[i])),
+            if (i + 1 < itens.length) ...[
+              pw.SizedBox(width: 12),
+              pw.Expanded(child: _buildFotoCelula(itens[i + 1])),
+            ] else
+              pw.Spacer(),
+          ],
+        ),
+      );
+      if (i + 2 < itens.length) {
+        rows.add(pw.SizedBox(height: 12));
+      }
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Fotos da Regulagem',
+          style: pw.TextStyle(font: _semiBold, fontSize: 13),
+        ),
+        pw.SizedBox(height: 8),
+        ...rows,
+      ],
+    );
+  }
+
+  static pw.Widget _buildFotoCelula(
+      ({FotoRegulagem foto, Uint8List bytes}) item) {
+    final titulo = item.foto.titulo?.trim();
+    final observacao = item.foto.observacao?.trim();
+    final legenda = <pw.Widget>[];
+
+    if (titulo != null && titulo.isNotEmpty) {
+      legenda.add(
+        pw.Text(
+          titulo,
+          style: pw.TextStyle(font: _semiBold, fontSize: 10),
+        ),
+      );
+    }
+    if (observacao != null && observacao.isNotEmpty) {
+      if (legenda.isNotEmpty) legenda.add(pw.SizedBox(height: 2));
+      legenda.add(
+        pw.Text(
+          observacao,
+          style: pw.TextStyle(
+            font: _regular,
+            fontSize: 9,
+            color: _pdfColor(AppColors.textSecondary),
+          ),
+        ),
+      );
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.ClipRRect(
+          horizontalRadius: 6,
+          verticalRadius: 6,
+          child: pw.SizedBox(
+            height: 140,
+            child: pw.Image(
+              pw.MemoryImage(item.bytes),
+              fit: pw.BoxFit.cover,
+            ),
+          ),
+        ),
+        if (legenda.isNotEmpty) ...[
+          pw.SizedBox(height: 6),
+          ...legenda,
+        ],
+      ],
+    );
   }
 
   static pw.Widget? _buildOrientacoes(_OrientacoesResumo resumo) {
