@@ -35,6 +35,32 @@ void main() {
     expect(find.byIcon(Icons.expand_more), findsOneWidget);
   });
 
+  testWidgets('editar regulagem começa recolhida com resumo', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ProgressiveCard(
+            index: 1,
+            title: 'Contexto da Operação',
+            locked: false,
+            complete: true,
+            startExpanded: false,
+            summary: EtapaResumo(
+              linhas: const [EtapaResumoLinha('Produtor', 'João')],
+            ),
+            child: const Text('corpo-contexto'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('corpo-contexto'), findsNothing);
+    expect(find.text('João'), findsOneWidget);
+    expect(find.text('Produtor'), findsOneWidget);
+  });
+
   testWidgets('etapa bloqueada começa recolhida e ignora toque',
       (tester) async {
     await pumpCard(tester, locked: true);
