@@ -127,18 +127,68 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Perda por desgaste'), findsOneWidget);
+    expect(find.text('Perda por desgaste'), findsNothing);
   });
 
-  testWidgets('gráfico aparece uma vez, fora da lista de pontas',
-      (tester) async {
+  testWidgets('gráfico não fica dentro da tabela de pontas', (tester) async {
     await pumpTable(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GraficoVazaoPontas), findsNothing);
+    expect(find.text('Vazão por ponta'), findsNothing);
+  });
+
+  testWidgets('PontasAnaliseSection mostra gráfico e análise fora da lista',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PontasAnaliseSection(
+              medicoes: const [
+                PontaMedicao(
+                    id: 1, valorMedido: 0.84975, status: StatusPonta.ideal),
+                PontaMedicao(
+                    id: 2, valorMedido: 0.891, status: StatusPonta.desgaste),
+              ],
+              ideal: 0.825,
+              configuracoes: const Configuracoes(),
+              manejo: 2400,
+              precoBico: 35,
+              area: 500,
+            ),
+          ),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(GraficoVazaoPontas), findsOneWidget);
     expect(find.text('Vazão por ponta'), findsOneWidget);
+    expect(find.text('Perda por desgaste'), findsOneWidget);
     expect(find.text('Análise econômica'), findsOneWidget);
     expect(find.text('Orientações'), findsOneWidget);
+  });
+
+  testWidgets('toque fora do painel fecha a edição e dispara auto-save',
+      (tester) async {
+    var moved = 0;
+    await pumpTable(tester, onMoved: () => moved++);
+    await tester.pumpAndSettle();
+
+    expect(find.text('L/min medido'), findsOneWidget);
+
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+
+    expect(find.text('L/min medido'), findsNothing);
+    expect(moved, greaterThan(0));
   });
 
   testWidgets('ponta com 0 L/min não vira Sem medição', (tester) async {

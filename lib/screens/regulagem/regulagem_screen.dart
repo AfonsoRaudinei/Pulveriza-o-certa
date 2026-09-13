@@ -454,7 +454,6 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
         ],
       ),
       body: ListView(
-        key: PageStorageKey<String>('regulagem-form-$_id'),
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           ProgressiveCard(
@@ -519,30 +518,36 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             complete: _medicoes.any((item) => item.valorMedido != null),
             showCompletedMarker: false,
             summary: _resumoPontas(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                PontasTable(
-                  medicoes: _medicoes,
-                  ideal: _litroMinIdeal,
-                  configuracoes: _configParaClassificar(),
-                  manejo: _manejo,
-                  precoBico: _precoBico,
-                  area: _area,
-                  readonly: readonly,
-                  onMedicaoChanged: _updateMedicao,
-                  onMovedToNextPonta: _onMovedToNextPonta,
-                ),
-                if (_temMedicao && !readonly) ...[
-                  const SizedBox(height: AppSpacing.lg),
-                  ExportarPdfButton(
-                    data: _pdfData(),
-                    variant: ExportarPdfButtonVariant.outlined,
-                  ),
-                ],
-              ],
+            child: PontasTable(
+              medicoes: _medicoes,
+              ideal: _litroMinIdeal,
+              configuracoes: _configParaClassificar(),
+              manejo: _manejo,
+              precoBico: _precoBico,
+              area: _area,
+              readonly: readonly,
+              onMedicaoChanged: _updateMedicao,
+              onMovedToNextPonta: _onMovedToNextPonta,
             ),
           ),
+          if (_litroMinIdeal > 0 && _temMedicao) ...[
+            const SizedBox(height: AppSpacing.lg),
+            PontasAnaliseSection(
+              medicoes: _medicoes,
+              ideal: _litroMinIdeal,
+              configuracoes: _configParaClassificar(),
+              manejo: _manejo,
+              precoBico: _precoBico,
+              area: _area,
+            ),
+            if (!readonly) ...[
+              const SizedBox(height: AppSpacing.lg),
+              ExportarPdfButton(
+                data: _pdfData(),
+                variant: ExportarPdfButtonVariant.outlined,
+              ),
+            ],
+          ],
         ],
       ),
     );
@@ -817,7 +822,7 @@ class _FieldRow extends StatelessWidget {
   }
 }
 
-class _LabeledField extends StatelessWidget {
+class _LabeledField extends StatefulWidget {
   const _LabeledField({
     required this.controller,
     required this.label,
@@ -837,15 +842,29 @@ class _LabeledField extends StatelessWidget {
   final bool integer;
 
   @override
+  State<_LabeledField> createState() => _LabeledFieldState();
+}
+
+class _LabeledFieldState extends State<_LabeledField> {
+  late final ScrollController _scroll =
+      ScrollController(keepScrollOffset: false);
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final TextInputType keyboardType;
     final List<TextInputFormatter> formatters;
-    if (decimal) {
+    if (widget.decimal) {
       keyboardType = const TextInputType.numberWithOptions(decimal: true);
       formatters = [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
       ];
-    } else if (integer) {
+    } else if (widget.integer) {
       keyboardType = TextInputType.number;
       formatters = [FilteringTextInputFormatter.digitsOnly];
     } else {
@@ -857,11 +876,12 @@ class _LabeledField extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Text(widget.label, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: AppSpacing.xs),
         TextField(
-          controller: controller,
-          enabled: !readonly,
+          controller: widget.controller,
+          scrollController: _scroll,
+          enabled: !widget.readonly,
           keyboardType: keyboardType,
           inputFormatters: formatters,
           style: Theme.of(context).textTheme.bodyLarge,
@@ -872,11 +892,11 @@ class _LabeledField extends StatelessWidget {
               vertical: AppSpacing.md,
             ),
           ),
-          onChanged: (_) => onChanged(),
+          onChanged: (_) => widget.onChanged(),
         ),
-        if (helper != null) ...[
+        if (widget.helper != null) ...[
           const SizedBox(height: AppSpacing.xs),
-          Text(helper!, style: Theme.of(context).textTheme.bodySmall),
+          Text(widget.helper!, style: Theme.of(context).textTheme.bodySmall),
         ],
       ],
     );

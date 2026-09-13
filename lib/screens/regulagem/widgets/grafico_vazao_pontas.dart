@@ -31,6 +31,7 @@ class GraficoVazaoPontas extends StatelessWidget {
     );
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Vazão por ponta', style: theme.textTheme.headlineSmall),
@@ -53,6 +54,7 @@ class GraficoVazaoPontas extends StatelessWidget {
             AppSpacing.md,
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SingleChildScrollView(
