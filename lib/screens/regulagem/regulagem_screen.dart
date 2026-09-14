@@ -375,12 +375,25 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   Widget? _resumoFotos() {
     if (_fotos.isEmpty) return null;
     final quantidade = _fotos.length;
-    return EtapaResumo.ouNulo([
+    final linhas = <EtapaResumoLinha>[
       EtapaResumoLinha(
         'Fotos',
         '$quantidade ${quantidade == 1 ? 'foto' : 'fotos'}',
       ),
-    ]);
+    ];
+    for (var i = 0; i < _fotos.length; i++) {
+      final foto = _fotos[i];
+      final titulo = foto.titulo?.trim();
+      final observacao = foto.observacao?.trim();
+      final sufixo = quantidade == 1 ? '' : ' (${i + 1})';
+      if (titulo != null && titulo.isNotEmpty) {
+        linhas.add(EtapaResumoLinha('Título$sufixo', titulo));
+      }
+      if (observacao != null && observacao.isNotEmpty) {
+        linhas.add(EtapaResumoLinha('Observação$sufixo', observacao));
+      }
+    }
+    return EtapaResumo(linhas: linhas);
   }
 
   Widget? _resumoPontas() {

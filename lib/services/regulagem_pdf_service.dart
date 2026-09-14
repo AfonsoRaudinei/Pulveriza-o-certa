@@ -102,10 +102,10 @@ class RegulagemPdfService {
           final orientacoesWidget = _buildOrientacoes(orientacoes);
           return [
             _buildTitle(),
-            pw.SizedBox(height: 16),
-            _buildHeaderGrid(data),
-            pw.SizedBox(height: 16),
-            _buildMachineSummary(data),
+            pw.SizedBox(height: 12),
+            _buildFichaBreadcrumb(data),
+            pw.SizedBox(height: 12),
+            _buildVereditoBanner(resumo, economia),
             pw.SizedBox(height: 16),
             _buildStatusIndicators(resumo),
             pw.SizedBox(height: 16),
@@ -125,6 +125,8 @@ class RegulagemPdfService {
               pw.SizedBox(height: 20),
               fotosWidget,
             ],
+            pw.SizedBox(height: 16),
+            _buildMachineSummary(data),
           ];
         },
       ),
@@ -210,78 +212,105 @@ class RegulagemPdfService {
     );
   }
 
-  static pw.Widget _buildHeaderGrid(RegulagemPdfData data) {
+  static pw.Widget _buildFichaBreadcrumb(RegulagemPdfData data) {
     final dateStr =
         DateFormat('dd/MM/yyyy', 'pt_BR').format(data.dataRegulagem);
-    final fields = <(String, String)>[
-      ('Produtor', data.produtor),
-      ('Fazenda', data.fazenda),
-      ('Máquina', data.maquina),
-      ('Data', dateStr),
-    ];
-    if (data.talhao != null && data.talhao!.trim().isNotEmpty) {
-      fields.insert(2, ('Talhão', data.talhao!.trim()));
-    }
-    if (data.consultor != null && data.consultor!.trim().isNotEmpty) {
-      fields.add(('Consultor', data.consultor!.trim()));
-    }
+    final parts = <String>[
+      data.produtor.trim(),
+      data.fazenda.trim(),
+      if (data.talhao != null && data.talhao!.trim().isNotEmpty)
+        data.talhao!.trim(),
+      data.maquina.trim(),
+      if (data.consultor != null && data.consultor!.trim().isNotEmpty)
+        data.consultor!.trim(),
+      dateStr,
+    ].where((part) => part.isNotEmpty);
 
-    final rows = <List<(String, String)>>[];
-    for (var i = 0; i < fields.length; i += 2) {
-      final left = fields[i];
-      final right = i + 1 < fields.length ? fields[i + 1] : ('', '');
-      rows.add([left, right]);
-    }
+    return pw.Text(
+      parts.join(' · '),
+      style: pw.TextStyle(
+        font: _regular,
+        fontSize: 10,
+        color: _pdfColor(AppColors.textSecondary),
+      ),
+    );
+  }
+
+  static pw.Widget _buildVereditoBanner(
+    _ResumoPontasData resumo,
+    _EconomiaResumo economia,
+  ) {
+    final acaoNecessaria = resumo.irregular > 0 || resumo.desgaste > 0;
+    final barColor = acaoNecessaria ? AppColors.danger : AppColors.success;
+    final titulo = acaoNecessaria ? 'Ação necessária' : 'Regulagem aprovada';
 
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
+      width: double.infinity,
       decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: _pdfColor(AppColors.border)),
+        color: _pdfColor(AppColors.background),
         borderRadius: pw.BorderRadius.circular(8),
-        color: _pdfColor(AppColors.surfaceAlt),
       ),
-      child: pw.Column(
+      child: pw.Table(
+        columnWidths: const {
+          0: pw.FixedColumnWidth(4),
+          1: pw.FlexColumnWidth(),
+        },
         children: [
-          for (final row in rows)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 6),
-              child: pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Expanded(child: _headerCell(row[0].$1, row[0].$2)),
-                  pw.SizedBox(width: 12),
-                  pw.Expanded(
-                    child: row[1].$1.isEmpty
-                        ? pw.SizedBox()
-                        : _headerCell(row[1].$1, row[1].$2),
-                  ),
-                ],
+          pw.TableRow(
+            children: [
+              pw.Container(color: _pdfColor(barColor)),
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(12),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      titulo,
+                      style: pw.TextStyle(
+                        font: _semiBold,
+                        fontSize: 12,
+                        color: _pdfColor(barColor),
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      _vereditoFrase(resumo, economia),
+                      style: pw.TextStyle(font: _regular, fontSize: 10),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  static pw.Widget _headerCell(String label, String value) {
-    if (label.isEmpty) return pw.SizedBox();
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          label,
-          style: pw.TextStyle(
-            font: _regular,
-            fontSize: 9,
-            color: _pdfColor(AppColors.textSecondary),
-          ),
-        ),
-        pw.Text(
-          value,
-          style: pw.TextStyle(font: _semiBold, fontSize: 11),
-        ),
-      ],
-    );
+  static String _vereditoFrase(
+    _ResumoPontasData resumo,
+    _EconomiaResumo economia,
+  ) {
+    if (resumo.irregular == 0 && resumo.desgaste == 0) {
+      return 'Todas as pontas medidas estão na faixa ideal — continue o monitoramento.';
+    }
+
+    if (resumo.desgaste == 0) {
+      return '${resumo.irregular} ponta(s) entupida(s) — limpar bicos e repetir o teste.';
+    }
+
+    final partes = <String>[
+      '${resumo.desgaste} ponta(s) em desgaste crítico',
+    ];
+    if (resumo.irregular > 0) {
+      partes.add('${resumo.irregular} entupida(s)');
+    }
+
+    final acao = economia.trocarTudo
+        ? 'troca completa recomendada antes da próxima aplicação'
+        : 'troca seletiva das pontas em desgaste';
+
+    return '${partes.join(' e ')} — $acao.';
   }
 
   static pw.Widget _buildMachineSummary(RegulagemPdfData data) {
@@ -302,32 +331,47 @@ class RegulagemPdfService {
       rows.add(items.sublist(i, min(i + columns, items.length)));
     }
 
-    return pw.Container(
-      width: double.infinity,
-      padding: const pw.EdgeInsets.all(12),
-      decoration: pw.BoxDecoration(
-        color: _pdfColor(AppColors.primaryLight),
-        borderRadius: pw.BorderRadius.circular(8),
-      ),
-      child: pw.Column(
-        children: [
-          for (var r = 0; r < rows.length; r++)
-            pw.Padding(
-              padding: pw.EdgeInsets.only(bottom: r == rows.length - 1 ? 0 : 8),
-              child: pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  for (var c = 0; c < columns; c++)
-                    pw.Expanded(
-                      child: c < rows[r].length
-                          ? _machineSummaryCell(rows[r][c].$1, rows[r][c].$2)
-                          : pw.SizedBox(),
-                    ),
-                ],
-              ),
-            ),
-        ],
-      ),
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Parâmetros da regulagem',
+          style: pw.TextStyle(font: _semiBold, fontSize: 13),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            color: _pdfColor(AppColors.primaryLight),
+            borderRadius: pw.BorderRadius.circular(8),
+          ),
+          child: pw.Column(
+            children: [
+              for (var r = 0; r < rows.length; r++)
+                pw.Padding(
+                  padding: pw.EdgeInsets.only(
+                    bottom: r == rows.length - 1 ? 0 : 8,
+                  ),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      for (var c = 0; c < columns; c++)
+                        pw.Expanded(
+                          child: c < rows[r].length
+                              ? _machineSummaryCell(
+                                  rows[r][c].$1,
+                                  rows[r][c].$2,
+                                )
+                              : pw.SizedBox(),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -353,9 +397,27 @@ class RegulagemPdfService {
 
   static pw.Widget _buildStatusIndicators(_ResumoPontasData resumo) {
     final stats = [
-      ('Ideal', resumo.ideal, AppColors.success, AppColors.successLight),
-      ('Entupido', resumo.irregular, AppColors.warning, AppColors.warningLight),
-      ('Desgaste', resumo.desgaste, AppColors.danger, AppColors.dangerLight),
+      (
+        'Ideal',
+        resumo.ideal,
+        AppColors.success,
+        AppColors.successLight,
+        'dentro da faixa, sem ação',
+      ),
+      (
+        'Entupido',
+        resumo.irregular,
+        AppColors.warning,
+        AppColors.warningLight,
+        'abaixo do ideal — limpar bico',
+      ),
+      (
+        'Desgaste',
+        resumo.desgaste,
+        AppColors.danger,
+        AppColors.dangerLight,
+        'acima do ideal — substituir',
+      ),
     ];
 
     return pw.Row(
@@ -381,16 +443,26 @@ class RegulagemPdfService {
                     pw.Text(
                       '${stat.$2}',
                       style: pw.TextStyle(
-                        font: _bold,
-                        fontSize: 16,
+                        font: _semiBold,
+                        fontSize: 18,
                         color: _pdfColor(stat.$3),
                       ),
                     ),
                     pw.Text(
                       stat.$1,
                       style: pw.TextStyle(
-                        font: _regular,
+                        font: _semiBold,
                         fontSize: 8,
+                        color: _pdfColor(stat.$3),
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      stat.$5,
+                      style: pw.TextStyle(
+                        font: _regular,
+                        fontSize: 7,
                         color: _pdfColor(AppColors.textSecondary),
                       ),
                       textAlign: pw.TextAlign.center,
@@ -473,6 +545,7 @@ class RegulagemPdfService {
     final pct = percentual == 0 ? '-' : percentual.toStringAsFixed(1);
 
     return pw.TableRow(
+      decoration: pw.BoxDecoration(color: _statusRowBackground(ponta.status)),
       children: [
         _tableCell(rotuloPonta(ponta.id, lado)),
         _tableCell(medido),
@@ -620,6 +693,15 @@ class RegulagemPdfService {
             ],
           ),
           pw.SizedBox(height: 6),
+          pw.Text(
+            _fraseMultiploPerda(economia),
+            style: pw.TextStyle(
+              font: _regular,
+              fontSize: 10,
+              color: _pdfColor(AppColors.textSecondary),
+            ),
+          ),
+          pw.SizedBox(height: 6),
           pw.Container(
             width: double.infinity,
             padding: const pw.EdgeInsets.all(10),
@@ -636,6 +718,20 @@ class RegulagemPdfService {
         ],
       ],
     );
+  }
+
+  static String _fraseMultiploPerda(_EconomiaResumo economia) {
+    if (economia.custo <= 0 || economia.perdaTotal <= 0) {
+      return '';
+    }
+    final multiplo = economia.perdaTotal / economia.custo;
+    final multiploStr = multiplo >= 10
+        ? '~${multiplo.round()}×'
+        : '~${multiplo.toStringAsFixed(1)}×';
+    if (economia.trocarTudo) {
+      return 'A perda estimada é $multiploStr o custo da troca completa — trocar compensa.';
+    }
+    return 'A perda estimada é $multiploStr o custo da troca completa — troca seletiva pode bastar.';
   }
 
   static pw.Widget _metricBox(
@@ -1138,6 +1234,15 @@ class RegulagemPdfService {
       StatusPonta.irregular => 'Entupido',
       StatusPonta.desgaste => 'Desgaste',
       StatusPonta.pendente => 'Pendente',
+    };
+  }
+
+  static PdfColor _statusRowBackground(StatusPonta status) {
+    return switch (status) {
+      StatusPonta.ideal => _pdfColor(AppColors.successLight),
+      StatusPonta.irregular => _pdfColor(AppColors.warningLight),
+      StatusPonta.desgaste => _pdfColor(AppColors.dangerLight),
+      StatusPonta.pendente => _pdfColor(AppColors.surfaceAlt),
     };
   }
 
