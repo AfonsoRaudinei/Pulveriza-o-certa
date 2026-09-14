@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' show max, min;
 import 'dart:typed_data';
 
@@ -13,6 +14,7 @@ import '../core/extensions/double_extension.dart';
 import '../core/utils/calculo_utils.dart';
 import '../domain/calculos/calc_perda_zona_atencao.dart';
 import '../models/configuracoes.dart';
+import '../models/perfil_relatorio.dart';
 import '../models/foto_regulagem.dart';
 import '../models/regulagem.dart';
 import '../theme.dart';
@@ -82,6 +84,9 @@ class RegulagemPdfService {
       data.fotos,
       fotosService: fotosService,
     );
+    final perfil = data.configuracoes.perfilRelatorio;
+    final logoBytes = await _loadImageBytes(perfil.logoPath);
+    final assinaturaBytes = await _loadImageBytes(perfil.assinaturaPath);
 
     final pdf = pw.Document(
       title: 'Laudo Técnico — Regulagem de Pulverizador',
@@ -96,14 +101,20 @@ class RegulagemPdfService {
           base: _regular!,
           bold: _bold!,
         ),
-        footer: (context) => _buildFooter(data, context),
+        footer: (context) =>
+            _buildFooter(data, context, assinaturaBytes: assinaturaBytes),
         build: (context) {
           final chartFont = _regular!.getFont(context);
           final orientacoesWidget = _buildOrientacoes(orientacoes);
           return [
+            if (_temBrandingPerfil(perfil, logoBytes))
+              ...[
+                _buildPerfilBranding(perfil, logoBytes),
+                pw.SizedBox(height: 12),
+              ],
             _buildTitle(),
             pw.SizedBox(height: 16),
-            _buildHeaderGrid(data),
+            _buildHeaderGrid(data, perfil),
             pw.SizedBox(height: 16),
             _buildMachineSummary(data),
             pw.SizedBox(height: 16),
@@ -186,7 +197,11 @@ class RegulagemPdfService {
     );
   }
 
-  static pw.Widget _buildFooter(RegulagemPdfData data, pw.Context context) {
+  static pw.Widget _buildFooter(
+    RegulagemPdfData data,
+    pw.Context context, {
+    Uint8List? assinaturaBytes,
+  }) {
     final style = pw.TextStyle(
       font: _regular,
       fontSize: 8,
@@ -197,6 +212,7 @@ class RegulagemPdfService {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(top: 8),
       child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(AppConstants.appName, style: style),
@@ -204,13 +220,88 @@ class RegulagemPdfService {
             'página ${context.pageNumber} de ${context.pagesCount}',
             style: style,
           ),
-          pw.Text(dateStr, style: style),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              if (assinaturaBytes != null) ...[
+                pw.Image(
+                  pw.MemoryImage(assinaturaBytes),
+                  width: 72,
+                  height: 28,
+                  fit: pw.BoxFit.contain,
+                ),
+                pw.Text('Assinatura', style: style),
+              ] else
+                pw.Text(dateStr, style: style),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  static pw.Widget _buildHeaderGrid(RegulagemPdfData data) {
+  static bool _temBrandingPerfil(
+    PerfilRelatorio perfil,
+    Uint8List? logoBytes,
+  ) {
+    return logoBytes != null ||
+        perfil.empresaNome.trim().isNotEmpty ||
+        perfil.nomeConsultor.trim().isNotEmpty;
+  }
+
+  static pw.Widget _buildPerfilBranding(
+    PerfilRelatorio perfil,
+    Uint8List? logoBytes,
+  ) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        if (logoBytes != null)
+          pw.Container(
+            margin: const pw.EdgeInsets.only(right: 10),
+            child: pw.Image(
+              pw.MemoryImage(logoBytes),
+              width: 44,
+              height: 44,
+              fit: pw.BoxFit.contain,
+            ),
+          ),
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              if (perfil.empresaNome.trim().isNotEmpty)
+                pw.Text(
+                  perfil.empresaNome.trim(),
+                  style: pw.TextStyle(font: _semiBold, fontSize: 13),
+                ),
+              if (perfil.nomeConsultor.trim().isNotEmpty)
+                pw.Text(
+                  perfil.nomeConsultor.trim(),
+                  style: pw.TextStyle(
+                    font: _regular,
+                    fontSize: 10,
+                    color: _pdfColor(AppColors.textSecondary),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  static Future<Uint8List?> _loadImageBytes(String? path) async {
+    if (path == null || path.isEmpty) return null;
+    final file = File(path);
+    if (!await file.exists()) return null;
+    return file.readAsBytes();
+  }
+
+  static pw.Widget _buildHeaderGrid(
+    RegulagemPdfData data,
+    PerfilRelatorio perfil,
+  ) {
     final dateStr =
         DateFormat('dd/MM/yyyy', 'pt_BR').format(data.dataRegulagem);
     final fields = <(String, String)>[
@@ -222,8 +313,11 @@ class RegulagemPdfService {
     if (data.talhao != null && data.talhao!.trim().isNotEmpty) {
       fields.insert(2, ('Talhão', data.talhao!.trim()));
     }
-    if (data.consultor != null && data.consultor!.trim().isNotEmpty) {
-      fields.add(('Consultor', data.consultor!.trim()));
+    final consultor = data.consultor?.trim().isNotEmpty == true
+        ? data.consultor!.trim()
+        : perfil.nomeConsultor.trim();
+    if (consultor.isNotEmpty) {
+      fields.add(('Consultor', consultor));
     }
 
     final rows = <List<(String, String)>>[];

@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/constants/fotos_regulagem_constants.dart';
+import '../core/constants/perfil_imagem_constants.dart';
 import '../models/configuracoes.dart';
 import '../models/foto_regulagem.dart';
 import '../models/regulagem.dart';
@@ -193,6 +194,23 @@ class StorageService {
         ),
       );
 
+      final configuracoes = await getConfiguracoes();
+      final perfil = configuracoes.perfilRelatorio;
+      for (final path in [perfil.logoPath, perfil.assinaturaPath]) {
+        if (path == null || path.isEmpty) continue;
+        final file = File(path);
+        if (!await file.exists()) continue;
+        final bytes = await file.readAsBytes();
+        final nome = path.split('/').last;
+        archive.addFile(
+          ArchiveFile(
+            '${PerfilImagemConstants.pastaPerfilBackup}/$nome',
+            bytes.length,
+            bytes,
+          ),
+        );
+      }
+
       final regulagens = await getRegulagens();
       for (final regulagem in regulagens) {
         for (final foto in regulagem.fotos) {
@@ -275,12 +293,17 @@ class StorageService {
     final parsed = _parseBackupPayload(raw);
 
     final fotosPorArquivo = <String, List<int>>{};
+    final perfilPorArquivo = <String, List<int>>{};
     for (final entry in archive.files) {
-      if (entry.isFile &&
-          _caminhoRelativoNoZip(entry.name)
-              .startsWith('${FotosRegulagemConstants.pastaFotosBackup}/')) {
-        final nome = _caminhoRelativoNoZip(entry.name).split('/').last;
+      if (!entry.isFile) continue;
+      final relativo = _caminhoRelativoNoZip(entry.name);
+      if (relativo.startsWith('${FotosRegulagemConstants.pastaFotosBackup}/')) {
+        final nome = relativo.split('/').last;
         fotosPorArquivo[nome] = entry.content as List<int>;
+      } else if (relativo
+          .startsWith('${PerfilImagemConstants.pastaPerfilBackup}/')) {
+        final nome = relativo.split('/').last;
+        perfilPorArquivo[nome] = entry.content as List<int>;
       }
     }
 
@@ -288,6 +311,7 @@ class StorageService {
       regulagens: parsed.regulagens,
       configuracoes: parsed.configuracoes,
       fotosPorArquivo: fotosPorArquivo,
+      perfilPorArquivo: perfilPorArquivo,
     );
   }
 
@@ -328,8 +352,10 @@ class StorageService {
     required List<Regulagem> regulagens,
     required Configuracoes configuracoes,
     required Map<String, List<int>> fotosPorArquivo,
+    Map<String, List<int>> perfilPorArquivo = const {},
   }) async {
     await _fotosService.removerTodas();
+    await _perfilService.removerTodas();
 
     final regulagensImportadas = <Regulagem>[];
     for (final regulagem in regulagens) {
@@ -343,6 +369,26 @@ class StorageService {
       regulagensImportadas.add(regulagem.copyWith(fotos: fotosValidas));
     }
 
+    var perfil = configuracoes.perfilRelatorio;
+    if (perfil.logoPath != null) {
+      final nome = perfil.logoPath!.split('/').last;
+      final bytes = perfilPorArquivo[nome];
+      if (bytes != null) {
+        final path = await _perfilService.gravarImportada(bytes, nome);
+        perfil = perfil.copyWith(logoPath: path);
+      }
+    }
+    if (perfil.assinaturaPath != null) {
+      final nome = perfil.assinaturaPath!.split('/').last;
+      final bytes = perfilPorArquivo[nome];
+      if (bytes != null) {
+        final path = await _perfilService.gravarImportada(bytes, nome);
+        perfil = perfil.copyWith(assinaturaPath: path);
+      }
+    }
+    final configuracoesImportadas =
+        configuracoes.copyWith(perfilRelatorio: perfil);
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
@@ -351,7 +397,7 @@ class StorageService {
       );
       await prefs.setString(
         AppConstants.configuracoesKey,
-        jsonEncode(configuracoes.toJson()),
+        jsonEncode(configuracoesImportadas.toJson()),
       );
     } catch (error) {
       debugPrint('Erro ao gravar backup importado: $error');

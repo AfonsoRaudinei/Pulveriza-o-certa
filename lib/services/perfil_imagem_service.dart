@@ -49,6 +49,14 @@ class PerfilImagemService {
     }
   }
 
+  Future<String?> gravarImportada(List<int> bytes, String nomeArquivo) async {
+    if (bytes.isEmpty) return null;
+    final dir = await _diretorio();
+    final destino = File('${dir.path}/$nomeArquivo');
+    await destino.writeAsBytes(bytes);
+    return destino.path;
+  }
+
   Future<void> removerTodas() async {
     final dir = await _diretorio();
     if (!await dir.exists()) return;
