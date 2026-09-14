@@ -15,7 +15,14 @@ class PontaVerdeApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ConfiguracoesProvider()..load()),
-        ChangeNotifierProvider(create: (_) => RegulagensProvider()..load()),
+        ChangeNotifierProvider(
+          create: (context) {
+            final regulagens = RegulagensProvider()
+              ..bindConfiguracoes(context.read<ConfiguracoesProvider>())
+              ..load();
+            return regulagens;
+          },
+        ),
       ],
       child: Consumer<ConfiguracoesProvider>(
         builder: (context, configuracoes, _) {

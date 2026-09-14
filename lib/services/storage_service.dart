@@ -16,6 +16,7 @@ import '../models/configuracoes.dart';
 import '../models/foto_regulagem.dart';
 import '../models/regulagem.dart';
 import 'fotos_regulagem_service.dart';
+import 'perfil_imagem_service.dart';
 
 /// Erro de leitura/gravação do armazenamento local, com mensagem apresentável
 /// ao usuário.
@@ -27,10 +28,14 @@ class StorageException implements Exception {
 }
 
 class StorageService {
-  StorageService({FotosRegulagemService? fotosService})
-      : _fotosService = fotosService ?? FotosRegulagemService();
+  StorageService({
+    FotosRegulagemService? fotosService,
+    PerfilImagemService? perfilService,
+  })  : _fotosService = fotosService ?? FotosRegulagemService(),
+        _perfilService = perfilService ?? PerfilImagemService();
 
   final FotosRegulagemService _fotosService;
+  final PerfilImagemService _perfilService;
 
   /// Lê a lista de regulagens do disco.
   ///
@@ -143,6 +148,7 @@ class StorageService {
   Future<void> clearAll() async {
     try {
       await _fotosService.removerTodas();
+      await _perfilService.removerTodas();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(AppConstants.regulagensKey);
       await prefs.remove(AppConstants.configuracoesKey);

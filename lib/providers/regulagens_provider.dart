@@ -2,9 +2,21 @@ import 'package:flutter/foundation.dart';
 
 import '../models/regulagem.dart';
 import '../services/storage_service.dart';
+import 'configuracoes_provider.dart';
 
 class RegulagensProvider extends ChangeNotifier {
-  final StorageService _storage = StorageService();
+  RegulagensProvider({
+    StorageService? storage,
+    ConfiguracoesProvider? configuracoesProvider,
+  })  : _storage = storage ?? StorageService(),
+        _configuracoesProvider = configuracoesProvider;
+
+  final StorageService _storage;
+  ConfiguracoesProvider? _configuracoesProvider;
+
+  void bindConfiguracoes(ConfiguracoesProvider provider) {
+    _configuracoesProvider = provider;
+  }
 
   List<Regulagem> _regulagens = [];
   bool _loading = false;
@@ -27,8 +39,12 @@ class RegulagensProvider extends ChangeNotifier {
 
   Future<void> save(Regulagem regulagem) async {
     try {
+      final existia = _regulagens.any((item) => item.id == regulagem.id);
       await _storage.saveRegulagem(regulagem);
       await load();
+      if (!existia) {
+        await _configuracoesProvider?.registrarRegulagemSalva();
+      }
     } catch (error) {
       debugPrint('Erro ao salvar provider de regulagens: $error');
       rethrow;
