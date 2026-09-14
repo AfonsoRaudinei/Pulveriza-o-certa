@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -40,43 +39,13 @@ class _FotosRegulagemSectionState extends State<FotosRegulagemSection> {
       !widget.readonly &&
       widget.fotos.length < FotosRegulagemConstants.maxFotosPorRegulagem;
 
-  Future<void> _mostrarOrigem() async {
-    if (!_podeAdicionar || _busy) return;
-
-    await showCupertinoModalPopup<void>(
-      context: context,
-      builder: (ctx) => CupertinoActionSheet(
-        actions: [
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _capturar(ImageSource.camera);
-            },
-            child: const Text('Câmera'),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _capturar(ImageSource.gallery);
-            },
-            child: const Text('Galeria'),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Cancelar'),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _capturar(ImageSource source) async {
+  Future<void> _capturar() async {
     if (!_podeAdicionar || _busy) return;
 
     setState(() => _busy = true);
     try {
       final picked = await _picker.pickImage(
-        source: source,
+        source: ImageSource.gallery,
         maxWidth: FotosRegulagemConstants.maxLadoPx.toDouble(),
         imageQuality: FotosRegulagemConstants.qualidadeJpeg,
       );
@@ -166,7 +135,7 @@ class _FotosRegulagemSectionState extends State<FotosRegulagemSection> {
       if (_podeAdicionar)
         _AdicionarFotoSlot(
           busy: _busy,
-          onTap: _mostrarOrigem,
+          onTap: _capturar,
         ),
     ];
 

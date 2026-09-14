@@ -252,6 +252,7 @@ class StorageService {
       regulagens: parsed.regulagens,
       configuracoes: parsed.configuracoes,
       fotosPorArquivo: const {},
+      substituirFotosLocais: false,
     );
   }
 
@@ -282,6 +283,7 @@ class StorageService {
       regulagens: parsed.regulagens,
       configuracoes: parsed.configuracoes,
       fotosPorArquivo: fotosPorArquivo,
+      substituirFotosLocais: true,
     );
   }
 
@@ -322,17 +324,28 @@ class StorageService {
     required List<Regulagem> regulagens,
     required Configuracoes configuracoes,
     required Map<String, List<int>> fotosPorArquivo,
+    required bool substituirFotosLocais,
   }) async {
-    await _fotosService.removerTodas();
+    if (substituirFotosLocais) {
+      await _fotosService.removerTodas();
+    }
 
     final regulagensImportadas = <Regulagem>[];
     for (final regulagem in regulagens) {
       final fotosValidas = <FotoRegulagem>[];
       for (final foto in regulagem.fotos) {
         final bytes = fotosPorArquivo[foto.arquivo];
-        if (bytes == null) continue;
-        await _fotosService.gravarFotoImportada(bytes, foto);
-        fotosValidas.add(foto);
+        if (bytes != null) {
+          await _fotosService.gravarFotoImportada(bytes, foto);
+          fotosValidas.add(foto);
+          continue;
+        }
+        if (!substituirFotosLocais) {
+          final arquivo = await _fotosService.resolverArquivo(foto);
+          if (await arquivo.exists()) {
+            fotosValidas.add(foto);
+          }
+        }
       }
       regulagensImportadas.add(regulagem.copyWith(fotos: fotosValidas));
     }

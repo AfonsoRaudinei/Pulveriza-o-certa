@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:agrocalc/core/constants/fotos_regulagem_constants.dart';
+import 'package:agrocalc/models/configuracoes.dart';
+import 'package:agrocalc/models/regulagem.dart';
 import 'package:agrocalc/services/fotos_regulagem_service.dart';
 import 'package:agrocalc/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -127,5 +130,51 @@ void main() {
 
     await storage.deleteRegulagem(regulagemId);
     expect(await arquivo.exists(), isFalse);
+  });
+
+  test('importBackupFromString preserva fotos locais existentes', () async {
+    SharedPreferences.setMockInitialValues({});
+    const regulagemId = 'reg-json-import';
+    final fotosService = FotosRegulagemService(diretorioOverride: tempDir);
+    final storage = StorageService(fotosService: fotosService);
+
+    final original = await criarImagemGrande(
+      largura: 400,
+      altura: 300,
+      nome: 'json-import.png',
+    );
+    final foto = await fotosService.salvarFoto(original, regulagemId);
+    final arquivo = await fotosService.resolverArquivo(foto);
+    expect(await arquivo.exists(), isTrue);
+
+    final now = DateTime(2026, 1, 15);
+    final regulagem = Regulagem(
+      id: regulagemId,
+      produtor: 'Produtor Teste',
+      fazenda: 'Fazenda Teste',
+      maquina: 'Pulverizador',
+      tipoOperacao: TipoOperacao.pulverizador,
+      dataRegulagem: now,
+      vazaoLha: 100,
+      velocidade: 12,
+      espacamentoCm: 50,
+      numeroPontas: 5,
+      litroMinIdeal: 0.8,
+      medicoes: const [],
+      fotos: [foto],
+      criadoEm: now,
+      atualizadoEm: now,
+    );
+
+    final backupJson = jsonEncode({
+      'regulagens': [regulagem.toJson()],
+      'configuracoes': const Configuracoes().toJson(),
+    });
+
+    await storage.importBackupFromString(backupJson);
+
+    expect(await arquivo.exists(), isTrue);
+    final importadas = await storage.getRegulagens();
+    expect(importadas.single.fotos.single.arquivo, foto.arquivo);
   });
 }
