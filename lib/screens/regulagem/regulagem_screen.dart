@@ -52,6 +52,9 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   final _limiteEntupido = TextEditingController();
   final _limiteDesgaste = TextEditingController();
   Timer? _limitesDebounce;
+  Timer? _recalculateDebounce;
+  Timer? _economiaDebounce;
+  Configuracoes? _recalculateConfigOverride;
 
   DateTime _data = DateTime.now();
   double _litroMinIdeal = 0;
@@ -91,6 +94,8 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     _limiteEntupido.dispose();
     _limiteDesgaste.dispose();
     _limitesDebounce?.cancel();
+    _recalculateDebounce?.cancel();
+    _economiaDebounce?.cancel();
     _autoSaveDebounce?.cancel();
     super.dispose();
   }
@@ -134,7 +139,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     final entupido = _parse(_limiteEntupido.text);
     final desgaste = _parse(_limiteDesgaste.text);
     if (entupido > 0 && desgaste > 0) {
-      _recalculate(
+      _recalculateDebounced(
         context.read<ConfiguracoesProvider>().configuracoes.copyWith(
               limiteIrregular: entupido,
               limiteDesgaste: desgaste,
@@ -183,6 +188,30 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     );
     _syncPontas(numeroPontas, config);
     setState(() {});
+  }
+
+  /// Campos de texto do contexto não alteram cálculos — só atualiza resumos.
+  void _onSummaryFieldChanged() {
+    setState(() {});
+  }
+
+  void _recalculateDebounced([Configuracoes? configOverride]) {
+    _recalculateConfigOverride = configOverride;
+    _recalculateDebounce?.cancel();
+    _recalculateDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      final override = _recalculateConfigOverride;
+      _recalculateConfigOverride = null;
+      _recalculate(override);
+    });
+  }
+
+  void _updateEconomiaDebounced() {
+    _economiaDebounce?.cancel();
+    _economiaDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      _updateEconomiaFromControllers();
+    });
   }
 
   Configuracoes _configParaClassificar() {
@@ -467,7 +496,6 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    context.watch<ConfiguracoesProvider>();
     final readonly = widget.readonly;
     final startExpanded = widget.regulagem == null;
 
@@ -515,8 +543,8 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               precoBico: _precoBicoCtrl,
               data: _data,
               readonly: readonly,
-              onChanged: _recalculate,
-              onEconomiaChanged: _updateEconomiaFromControllers,
+              onChanged: _onSummaryFieldChanged,
+              onEconomiaChanged: _updateEconomiaDebounced,
               onPickDate: _pickDate,
             ),
           ),
@@ -535,7 +563,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               numeroPontas: _numeroPontas,
               pressao: _pressao,
               readonly: readonly,
-              onChanged: _recalculate,
+              onChanged: () => _recalculateDebounced(),
             ),
           ),
           ProgressiveCard(

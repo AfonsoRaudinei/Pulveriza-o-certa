@@ -64,16 +64,18 @@ class GraficoVazaoPontas extends StatelessWidget {
             children: [
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: larguraGrafico,
-                  height: _alturaCanvas,
-                  child: CustomPaint(
-                    painter: _GraficoVazaoPainter(
-                      data: data,
-                      colors: colors,
-                      ladoConferencia: ladoConferencia,
-                      estiloBase: theme.textTheme.labelSmall ??
-                          const TextStyle(fontFamily: 'Inter'),
+                child: RepaintBoundary(
+                  child: SizedBox(
+                    width: larguraGrafico,
+                    height: _alturaCanvas,
+                    child: CustomPaint(
+                      painter: _GraficoVazaoPainter(
+                        data: data,
+                        colors: colors,
+                        ladoConferencia: ladoConferencia,
+                        estiloBase: theme.textTheme.labelSmall ??
+                            const TextStyle(fontFamily: 'Inter'),
+                      ),
                     ),
                   ),
                 ),
