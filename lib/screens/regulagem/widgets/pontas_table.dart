@@ -482,47 +482,47 @@ class _PontasListaState extends State<_PontasLista> {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    return Column(
-      children: [
-        for (var index = 0; index < widget.medicoes.length; index++) ...[
-          Material(
-            color: colors.surface,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                InkWell(
-                  key: ValueKey('ponta-row-${widget.medicoes[index].id}'),
-                  onTap: () => _selecionar(widget.medicoes[index].id),
-                  child: _PontaPanelHeader(
-                    key: ValueKey('ponta-header-${widget.medicoes[index].id}'),
-                    ponta: widget.medicoes[index],
-                    ladoConferencia: widget.ladoConferencia,
-                    percentual: widget.medicoes[index].valorMedido == null
-                        ? null
-                        : widget.percentuais[widget.medicoes[index].id],
-                  ),
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: widget.medicoes.length,
+      separatorBuilder: (_, __) => Divider(height: 1, color: colors.border),
+      itemBuilder: (context, index) {
+        final ponta = widget.medicoes[index];
+        return Material(
+          color: colors.surface,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              InkWell(
+                key: ValueKey('ponta-row-${ponta.id}'),
+                onTap: () => _selecionar(ponta.id),
+                child: _PontaPanelHeader(
+                  key: ValueKey('ponta-header-${ponta.id}'),
+                  ponta: ponta,
+                  ladoConferencia: widget.ladoConferencia,
+                  percentual:
+                      ponta.valorMedido == null ? null : widget.percentuais[ponta.id],
                 ),
-                if (widget.medicoes[index].id == _ativaId)
-                  TapRegion(
-                    onTapOutside: (_) => _fecharPainel(),
-                    child: _PontaPanelBody(
-                      key: ValueKey('ponta-body-${widget.medicoes[index].id}'),
-                      ponta: widget.medicoes[index],
-                      ladoConferencia: widget.ladoConferencia,
-                      ideal: widget.ideal,
-                      readonly: widget.readonly,
-                      onChanged: (value) => widget.onMedicaoChanged(
-                        PontaInput(widget.medicoes[index].id, value),
-                      ),
+              ),
+              if (ponta.id == _ativaId)
+                TapRegion(
+                  onTapOutside: (_) => _fecharPainel(),
+                  child: _PontaPanelBody(
+                    key: ValueKey('ponta-body-${ponta.id}'),
+                    ponta: ponta,
+                    ladoConferencia: widget.ladoConferencia,
+                    ideal: widget.ideal,
+                    readonly: widget.readonly,
+                    onChanged: (value) => widget.onMedicaoChanged(
+                      PontaInput(ponta.id, value),
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
-          if (index < widget.medicoes.length - 1)
-            Divider(height: 1, color: colors.border),
-        ],
-      ],
+        );
+      },
     );
   }
 }
