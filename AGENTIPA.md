@@ -585,3 +585,33 @@ Disco apenas — IPA 190 em `build/ios/ipa/pontaverde.ipa`, payload validado, **
 
 Disco apenas — IPA 192 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
 
+## Build 193 — 2026-09-13 21:09 -03
+
+- Versão solicitada: `1.0.0+193` (também em `pubspec.yaml`)
+- Motivo: build 193 na branch `cursor/analise-economica-segmentada-3892` (Análise Econômica segmentada + Valor Total da Safra).
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 193 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (7 pods: Flutter, file_picker, image_picker_ios, printing, share_plus, shared_preferences_foundation, url_launcher_ios)
+- Validação de pré-build: `./tool/validar.sh` — passou (123 testes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (172.5 MB)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (22.2 MB / 23234743 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — **falhou** (`*UsageDescription` presente — fotos da regulagem)
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `193`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription` (fotos da regulagem via `image_picker_ios`)
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `image_picker_ios`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation`, `url_launcher_ios` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`, `Signed Time=13 Sep 2026 at 21:09:10`
+- Upload TestFlight: não enviado
+
+### Status
+
+Disco apenas — IPA 193 em `build/ios/ipa/pontaverde.ipa`, arquivo físico gerado e assinado. Inspeção automática **falhou** por `*UsageDescription` (esperado nesta branch com fotos). **Não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
+
