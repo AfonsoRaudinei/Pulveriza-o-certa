@@ -38,11 +38,28 @@ custoManejoP  = manejoRS / numeroPontas        ← custo por ponta da aplicaçã
 perdaBico     = excesso × custoManejoP × areaHa
 ```
 
-### Acumulação
+### Acumulação segmentada
+
+Para cada ponta com `percentual > 100%`, a mesma `perdaBico` vai para **um** dos acumuladores:
 
 ```
-perdaTotal = Σ perdaBico  (para todas as pontas com percentual > 100%)
+100% < percentual ≤ limiteDesgaste  →  perdaTolerancia += perdaBico
+percentual > limiteDesgaste         →  perdaDesgaste   += perdaBico
+percentual == 100%                  →  nenhuma faixa (perdaBico = 0)
+percentual == limiteDesgaste (105%) →  tolerância (não desgaste)
 ```
+
+```
+perdaTotal = perdaTolerancia + perdaDesgaste
+           = Σ perdaBico  (para todas as pontas com percentual > 100%)
+```
+
+| Output             | Unidade | Descrição                                              |
+|--------------------|---------|--------------------------------------------------------|
+| `perdaTolerancia`  | R$      | Soma das perdas na faixa 100% < % ≤ `limiteDesgaste`   |
+| `perdaDesgaste`    | R$      | Soma das perdas com % > `limiteDesgaste`               |
+| `perdaTotal`       | R$      | Soma das duas parcelas (compara com `custoTrocaTotal`) |
+| `recomendarTroca`  | bool    | Inalterado: `perdaTotal >= custoTrocaTotal`            |
 
 ---
 
@@ -151,14 +168,16 @@ ResultadoEconomico analisarEconomia({
 
 Pontas com excesso:
 
-| Ponta | percentual | excesso     | custoManejoP       | perdaBico               |
-|-------|------------|-------------|---------------------|-------------------------|
-| 3     | 108,0 %    | 0,08        | 2400/24 = R$ 100   | 0,08 × 100 × 500 = R$ 4.000 |
-| 7     | 106,5 %    | 0,065       | R$ 100              | 0,065 × 100 × 500 = R$ 3.250 |
-| 19    | 110,2 %    | 0,102       | R$ 100              | 0,102 × 100 × 500 = R$ 5.100 |
+| Ponta | percentual | faixa      | perdaBico    |
+|-------|------------|------------|--------------|
+| 3     | 108,0 %    | Desgaste   | R$ 4.000     |
+| 7     | 106,5 %    | Desgaste   | R$ 3.250     |
+| 19    | 110,2 %    | Desgaste   | R$ 5.100     |
 
 ```
-perdaTotal     = 4.000 + 3.250 + 5.100 = R$ 12.350,00
+perdaTolerancia = R$ 0,00        (nenhuma ponta ≤ 105% neste cenário)
+perdaDesgaste   = R$ 12.350,00
+perdaTotal      = R$ 12.350,00
 custoTrocaTotal = 35 × 24              = R$ 840,00
 recomendarTroca = 12.350 >= 840        = TRUE  🚨 TROCA COMPLETA
 ```
@@ -171,7 +190,8 @@ recomendarTroca = 12.350 >= 840        = TRUE  🚨 TROCA COMPLETA
 ┌─────────────────────────────────────────────────────┐
 │  💰  Análise Econômica                              │
 │                                                     │
-│  Perda estimada por aplicação:  R$ 12.350,00        │
+│  Perda por Desgaste:            R$ 12.350,00        │
+│  Perda Total Estimada:          R$ 12.350,00        │
 │  Custo troca completa:          R$    840,00         │
 │                                                     │
 │  🚨 Recomendação: TROCA COMPLETA dos bicos          │

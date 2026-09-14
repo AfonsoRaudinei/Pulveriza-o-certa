@@ -1,12 +1,16 @@
 class ResultadoEconomico {
   const ResultadoEconomico({
     required this.perdaTotal,
+    required this.perdaTolerancia,
+    required this.perdaDesgaste,
     required this.custoTrocaTotal,
     required this.pontaRS,
     required this.recomendarTroca,
   });
 
   final double perdaTotal;
+  final double perdaTolerancia;
+  final double perdaDesgaste;
   final double custoTrocaTotal;
   final double pontaRS;
   final bool recomendarTroca;
@@ -22,6 +26,28 @@ double calcularPerdaPorPonta({
     return 0;
   }
   return ((percentual - 100) / 100) * (manejoRS / numeroPontas) * areaHa;
+}
+
+({double tolerancia, double desgaste}) segmentarPerdaPorPonta({
+  required double percentual,
+  required double manejoRS,
+  required int numeroPontas,
+  required double areaHa,
+  required double limiteDesgaste,
+}) {
+  final perda = calcularPerdaPorPonta(
+    percentual: percentual,
+    manejoRS: manejoRS,
+    numeroPontas: numeroPontas,
+    areaHa: areaHa,
+  );
+  if (perda <= 0) {
+    return (tolerancia: 0, desgaste: 0);
+  }
+  if (percentual <= limiteDesgaste) {
+    return (tolerancia: perda, desgaste: 0);
+  }
+  return (tolerancia: 0, desgaste: perda);
 }
 
 double calcularPontaRS({
@@ -54,18 +80,22 @@ ResultadoEconomico analisarEconomia({
   required int numeroPontas,
   required double areaHa,
   required double precoBicoRS,
+  double limiteDesgaste = 105,
 }) {
-  final perdaTotal = percentuais.fold<double>(
-    0,
-    (total, percentual) =>
-        total +
-        calcularPerdaPorPonta(
-          percentual: percentual,
-          manejoRS: manejoRS,
-          numeroPontas: numeroPontas,
-          areaHa: areaHa,
-        ),
-  );
+  var perdaTolerancia = 0.0;
+  var perdaDesgaste = 0.0;
+  for (final percentual in percentuais) {
+    final segmento = segmentarPerdaPorPonta(
+      percentual: percentual,
+      manejoRS: manejoRS,
+      numeroPontas: numeroPontas,
+      areaHa: areaHa,
+      limiteDesgaste: limiteDesgaste,
+    );
+    perdaTolerancia += segmento.tolerancia;
+    perdaDesgaste += segmento.desgaste;
+  }
+  final perdaTotal = perdaTolerancia + perdaDesgaste;
   final custoTrocaTotal = calcularCustoTrocaTotal(
     precoBicoRS: precoBicoRS,
     numeroPontas: numeroPontas,
@@ -73,6 +103,8 @@ ResultadoEconomico analisarEconomia({
 
   return ResultadoEconomico(
     perdaTotal: perdaTotal,
+    perdaTolerancia: perdaTolerancia,
+    perdaDesgaste: perdaDesgaste,
     custoTrocaTotal: custoTrocaTotal,
     pontaRS: calcularPontaRS(manejoRS: manejoRS, numeroPontas: numeroPontas),
     recomendarTroca: recomendarTrocaCompleta(
