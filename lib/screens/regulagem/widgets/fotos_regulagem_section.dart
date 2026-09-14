@@ -179,6 +179,7 @@ class _FotosRegulagemSectionState extends State<FotosRegulagemSection> {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.md,
           crossAxisSpacing: AppSpacing.md,
+          childAspectRatio: 1,
           children: slots,
         ),
         if (!widget.readonly &&
@@ -197,7 +198,7 @@ class _FotosRegulagemSectionState extends State<FotosRegulagemSection> {
   }
 }
 
-class _FotoThumbnail extends StatelessWidget {
+class _FotoThumbnail extends StatefulWidget {
   const _FotoThumbnail({
     required this.foto,
     required this.service,
@@ -209,34 +210,61 @@ class _FotoThumbnail extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_FotoThumbnail> createState() => _FotoThumbnailState();
+}
+
+class _FotoThumbnailState extends State<_FotoThumbnail> {
+  late Future<File> _arquivoFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _arquivoFuture = widget.service.resolverArquivo(widget.foto);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FotoThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.foto.arquivo != widget.foto.arquivo) {
+      _arquivoFuture = widget.service.resolverArquivo(widget.foto);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surfaceAlt,
       borderRadius: BorderRadius.circular(AppRadius.sm),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
-        child: FutureBuilder<File>(
-          future: service.resolverArquivo(foto),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+        onTap: widget.onTap,
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: FutureBuilder<File>(
+            future: _arquivoFuture,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              }
+              return Image.file(
+                snapshot.data!,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+                errorBuilder: (_, __, ___) => const Center(
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.textTertiary,
+                  ),
                 ),
               );
-            }
-            return Image.file(
-              snapshot.data!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.broken_image_outlined,
-                    color: AppColors.textTertiary),
-              ),
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -272,22 +300,25 @@ class _AdicionarFotoSlotState extends State<_AdicionarFotoSlot> {
         onTap: widget.busy ? null : widget.onTap,
         onHighlightChanged: (value) => setState(() => _focused = value),
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: CustomPaint(
-          painter: _DashedBorderPainter(color: borderColor),
-          child: Center(
-            child: widget.busy
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(
-                    Icons.add,
-                    size: 28,
-                    color: _focused
-                        ? AppColors.iosPrimary
-                        : AppColors.textSecondary,
-                  ),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: CustomPaint(
+            painter: _DashedBorderPainter(color: borderColor),
+            child: Center(
+              child: widget.busy
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      Icons.add,
+                      size: 28,
+                      color: _focused
+                          ? AppColors.iosPrimary
+                          : AppColors.textSecondary,
+                    ),
+            ),
           ),
         ),
       ),
