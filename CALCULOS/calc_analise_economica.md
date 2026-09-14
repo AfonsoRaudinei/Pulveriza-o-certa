@@ -175,7 +175,7 @@ Pontas com excesso:
 | 19    | 110,2 %    | Desgaste   | R$ 5.100     |
 
 ```
-perdaTolerancia = R$ 0,00        (nenhuma ponta ≤ 105% neste cenário)
+perdaTolerancia = R$ 0,00        (nenhuma ponta na faixa 100% < % ≤ 105%)
 perdaDesgaste   = R$ 12.350,00
 perdaTotal      = R$ 12.350,00
 custoTrocaTotal = 35 × 24              = R$ 840,00
