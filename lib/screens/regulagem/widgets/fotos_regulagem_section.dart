@@ -142,14 +142,16 @@ class _FotosRegulagemSectionState extends State<FotosRegulagemSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        GridView.count(
-          crossAxisCount: 3,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.md,
-          crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: 1,
-          children: slots,
+        RepaintBoundary(
+          child: GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: AppSpacing.md,
+            crossAxisSpacing: AppSpacing.md,
+            childAspectRatio: 1,
+            children: slots,
+          ),
         ),
         if (!widget.readonly &&
             widget.fotos.length >= FotosRegulagemConstants.maxFotosPorRegulagem)
@@ -199,8 +201,21 @@ class _FotoThumbnailState extends State<_FotoThumbnail> {
     }
   }
 
+  int _cacheSidePx(BuildContext context) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    const listPadding = AppSpacing.lg * 2;
+    const cardPadding = AppSpacing.lg * 2;
+    const gridGaps = AppSpacing.md * 2;
+    final cellLogical =
+        (screenWidth - listPadding - cardPadding - gridGaps) / 3;
+    return (cellLogical * dpr).round().clamp(64, 512);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cacheSide = _cacheSidePx(context);
+
     return Material(
       color: AppColors.surfaceAlt,
       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -225,6 +240,8 @@ class _FotoThumbnailState extends State<_FotoThumbnail> {
                 snapshot.data!,
                 fit: BoxFit.cover,
                 gaplessPlayback: true,
+                cacheWidth: cacheSide,
+                cacheHeight: cacheSide,
                 errorBuilder: (_, __, ___) => const Center(
                   child: Icon(
                     Icons.broken_image_outlined,
