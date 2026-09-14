@@ -246,6 +246,7 @@ class _ResumoPontasData {
 class _EconomiaResumo {
   const _EconomiaResumo({
     required this.perdaTotal,
+    required this.perdaTolerancia,
     required this.perdaDesgaste,
     required this.custo,
     required this.pontaRS,
@@ -260,47 +261,35 @@ class _EconomiaResumo {
     required double area,
     required double limiteDesgaste,
   }) {
-    var perdaTotal = 0.0;
-    var perdaDesgaste = 0.0;
-    for (final item in medicoes) {
-      if (item.valorMedido == null) continue;
-      final percentual = CalcUtils.calcularPercentualPonta(
-        valorMedido: item.valorMedido!,
-        litroMinIdeal: ideal,
-      );
-      final perda = CalcUtils.calcularPerdaEstimada(
-        percentual: percentual,
-        manejoRS: manejo,
-        numeroPontas: medicoes.length,
-        areaHa: area,
-      );
-      perdaTotal += perda;
-      if (percentual > limiteDesgaste) {
-        perdaDesgaste += perda;
-      }
-    }
-    final custo = CalcUtils.calcularCustoTrocaTotal(
-      precoBicoRS: precoBico,
-      numeroPontas: medicoes.length,
-    );
-    final pontaRS = CalcUtils.calcularPontaRS(
+    final percentuais = medicoes
+        .where((item) => item.valorMedido != null)
+        .map(
+          (item) => CalcUtils.calcularPercentualPonta(
+            valorMedido: item.valorMedido!,
+            litroMinIdeal: ideal,
+          ),
+        );
+    final resultado = CalcUtils.analisarEconomia(
+      percentuais: percentuais,
       manejoRS: manejo,
       numeroPontas: medicoes.length,
+      areaHa: area,
+      precoBicoRS: precoBico,
+      limiteDesgaste: limiteDesgaste,
     );
 
     return _EconomiaResumo(
-      perdaTotal: perdaTotal,
-      perdaDesgaste: perdaDesgaste,
-      custo: custo,
-      pontaRS: pontaRS,
-      trocarTudo: CalcUtils.recomendarTrocaCompleta(
-        perdaEstimadaTotal: perdaTotal,
-        custoTrocaTotal: custo,
-      ),
+      perdaTotal: resultado.perdaTotal,
+      perdaTolerancia: resultado.perdaTolerancia,
+      perdaDesgaste: resultado.perdaDesgaste,
+      custo: resultado.custoTrocaTotal,
+      pontaRS: resultado.pontaRS,
+      trocarTudo: resultado.recomendarTroca,
     );
   }
 
   final double perdaTotal;
+  final double perdaTolerancia;
   final double perdaDesgaste;
   final double custo;
   final double pontaRS;
@@ -749,30 +738,41 @@ class _EconomiaSection extends StatelessWidget {
         ),
         if (resumo.exibirResultado) ...[
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              if (resumo.perdaDesgaste > 0) ...[
-                Expanded(
-                  child: _ResultadoMetricCard(
-                    icon: Icons.trending_down,
-                    iconColor: colors.danger,
-                    background: colors.dangerLight,
-                    label: 'Perda por desgaste',
-                    value: resumo.perdaDesgaste.toMoeda(),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-              ],
-              Expanded(
-                child: _ResultadoMetricCard(
-                  icon: Icons.build_outlined,
-                  iconColor: colors.info,
-                  background: colors.info.withValues(alpha: 0.12),
-                  label: 'Custo de troca',
-                  value: resumo.custo.toMoeda(),
-                ),
-              ),
-            ],
+          if (resumo.perdaTolerancia > 0) ...[
+            _ResultadoMetricCard(
+              icon: Icons.check_circle,
+              iconColor: colors.info,
+              background: AppColors.infoLight,
+              label: 'Perda por Tolerância',
+              value: resumo.perdaTolerancia.toMoeda(),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          if (resumo.perdaDesgaste > 0) ...[
+            _ResultadoMetricCard(
+              icon: Icons.trending_up,
+              iconColor: colors.danger,
+              background: colors.dangerLight,
+              label: 'Perda por Desgaste',
+              value: resumo.perdaDesgaste.toMoeda(),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          _ResultadoMetricCard(
+            icon: Icons.payments_outlined,
+            iconColor: colors.primary,
+            background: colors.primaryLight,
+            label: 'Perda Total Estimada',
+            value: resumo.perdaTotal.toMoeda(),
+            emphasizeValue: true,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _ResultadoMetricCard(
+            icon: Icons.build_outlined,
+            iconColor: colors.info,
+            background: colors.info.withValues(alpha: 0.12),
+            label: 'Custo de troca',
+            value: resumo.custo.toMoeda(),
           ),
           const SizedBox(height: AppSpacing.sm),
           _RecomendacaoBanner(trocarTudo: resumo.trocarTudo),
@@ -789,6 +789,7 @@ class _ResultadoMetricCard extends StatelessWidget {
     required this.background,
     required this.label,
     required this.value,
+    this.emphasizeValue = false,
   });
 
   final IconData icon;
@@ -796,6 +797,7 @@ class _ResultadoMetricCard extends StatelessWidget {
   final Color background;
   final String label;
   final String value;
+  final bool emphasizeValue;
 
   @override
   Widget build(BuildContext context) {
@@ -816,10 +818,13 @@ class _ResultadoMetricCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
+            style: (emphasizeValue
+                    ? Theme.of(context).textTheme.headlineMedium
+                    : Theme.of(context).textTheme.headlineSmall)
+                ?.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

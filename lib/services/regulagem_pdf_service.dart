@@ -596,28 +596,36 @@ class RegulagemPdfService {
           pw.SizedBox(height: 6),
         ],
         if (economia.exibirResultado) ...[
-          pw.Row(
-            children: [
-              if (economia.perdaDesgaste > 0) ...[
-                pw.Expanded(
-                  child: _metricBox(
-                    'Perda por desgaste',
-                    economia.perdaDesgaste.toMoeda(),
-                    AppColors.dangerLight,
-                    AppColors.danger,
-                  ),
-                ),
-                pw.SizedBox(width: 8),
-              ],
-              pw.Expanded(
-                child: _metricBox(
-                  'Custo de troca',
-                  economia.custo.toMoeda(),
-                  AppColors.infoLight,
-                  AppColors.info,
-                ),
-              ),
-            ],
+          if (economia.perdaTolerancia > 0) ...[
+            _metricBox(
+              'Perda por Tolerância',
+              economia.perdaTolerancia.toMoeda(),
+              AppColors.infoLight,
+              AppColors.info,
+            ),
+            pw.SizedBox(height: 6),
+          ],
+          if (economia.perdaDesgaste > 0) ...[
+            _metricBox(
+              'Perda por Desgaste',
+              economia.perdaDesgaste.toMoeda(),
+              AppColors.dangerLight,
+              AppColors.danger,
+            ),
+            pw.SizedBox(height: 6),
+          ],
+          _metricBox(
+            'Perda Total Estimada',
+            economia.perdaTotal.toMoeda(),
+            AppColors.primaryLight,
+            AppColors.primary,
+          ),
+          pw.SizedBox(height: 6),
+          _metricBox(
+            'Custo de troca',
+            economia.custo.toMoeda(),
+            AppColors.infoLight,
+            AppColors.info,
           ),
           pw.SizedBox(height: 6),
           pw.Container(
@@ -1213,6 +1221,7 @@ class _ResumoPontasData {
 class _EconomiaResumo {
   const _EconomiaResumo({
     required this.perdaTotal,
+    required this.perdaTolerancia,
     required this.perdaDesgaste,
     required this.custo,
     required this.pontaRS,
@@ -1222,34 +1231,22 @@ class _EconomiaResumo {
 
   factory _EconomiaResumo.from(RegulagemPdfData data) {
     final limite = data.configuracoes.limiteDesgaste;
-    var perdaTotal = 0.0;
-    var perdaDesgaste = 0.0;
-    final percentuais = <double>[];
-    for (final item in data.medicoes) {
-      if (item.valorMedido == null) continue;
-      final percentual = CalcUtils.calcularPercentualPonta(
-        valorMedido: item.valorMedido!,
-        litroMinIdeal: data.litroMinIdeal,
-      );
-      percentuais.add(percentual);
-      final perda = CalcUtils.calcularPerdaEstimada(
-        percentual: percentual,
-        manejoRS: data.manejo,
-        numeroPontas: data.medicoes.length,
-        areaHa: data.area,
-      );
-      perdaTotal += perda;
-      if (percentual > limite) {
-        perdaDesgaste += perda;
-      }
-    }
-    final custo = CalcUtils.calcularCustoTrocaTotal(
-      precoBicoRS: data.precoBico,
-      numeroPontas: data.medicoes.length,
-    );
-    final pontaRS = CalcUtils.calcularPontaRS(
+    final percentuais = data.medicoes
+        .where((item) => item.valorMedido != null)
+        .map(
+          (item) => CalcUtils.calcularPercentualPonta(
+            valorMedido: item.valorMedido!,
+            litroMinIdeal: data.litroMinIdeal,
+          ),
+        )
+        .toList();
+    final resultado = CalcUtils.analisarEconomia(
+      percentuais: percentuais,
       manejoRS: data.manejo,
       numeroPontas: data.medicoes.length,
+      areaHa: data.area,
+      precoBicoRS: data.precoBico,
+      limiteDesgaste: limite,
     );
     final zona = CalcUtils.calcularPerdaZonaAtencao(
       percentuais: percentuais,
@@ -1260,19 +1257,18 @@ class _EconomiaResumo {
     );
 
     return _EconomiaResumo(
-      perdaTotal: perdaTotal,
-      perdaDesgaste: perdaDesgaste,
-      custo: custo,
-      pontaRS: pontaRS,
-      trocarTudo: CalcUtils.recomendarTrocaCompleta(
-        perdaEstimadaTotal: perdaTotal,
-        custoTrocaTotal: custo,
-      ),
+      perdaTotal: resultado.perdaTotal,
+      perdaTolerancia: resultado.perdaTolerancia,
+      perdaDesgaste: resultado.perdaDesgaste,
+      custo: resultado.custoTrocaTotal,
+      pontaRS: resultado.pontaRS,
+      trocarTudo: resultado.recomendarTroca,
       zona: zona,
     );
   }
 
   final double perdaTotal;
+  final double perdaTolerancia;
   final double perdaDesgaste;
   final double custo;
   final double pontaRS;

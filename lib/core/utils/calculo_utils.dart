@@ -112,6 +112,24 @@ class CalcUtils {
     );
   }
 
+  static calculos.ResultadoEconomico analisarEconomia({
+    required Iterable<double> percentuais,
+    required double manejoRS,
+    required int numeroPontas,
+    required double areaHa,
+    required double precoBicoRS,
+    double limiteDesgaste = 105,
+  }) {
+    return calculos.analisarEconomia(
+      percentuais: percentuais,
+      manejoRS: manejoRS,
+      numeroPontas: numeroPontas,
+      areaHa: areaHa,
+      precoBicoRS: precoBicoRS,
+      limiteDesgaste: limiteDesgaste,
+    );
+  }
+
   static calculos.ResultadoZonaAtencao calcularPerdaZonaAtencao({
     required List<double> percentuais,
     required double manejoRS,

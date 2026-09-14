@@ -203,7 +203,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Perda por desgaste'), findsNothing);
+    expect(find.text('Perda por Desgaste'), findsNothing);
   });
 
   testWidgets('gráfico não fica dentro da tabela de pontas', (tester) async {
@@ -247,7 +247,8 @@ void main() {
 
     expect(find.byType(GraficoVazaoPontas), findsOneWidget);
     expect(find.text('Vazão por ponta'), findsOneWidget);
-    expect(find.text('Perda por desgaste'), findsOneWidget);
+    expect(find.text('Perda por Desgaste'), findsOneWidget);
+    expect(find.text('Perda Total Estimada'), findsOneWidget);
     expect(find.text('Análise econômica'), findsOneWidget);
     expect(find.text('Orientações'), findsOneWidget);
   });
