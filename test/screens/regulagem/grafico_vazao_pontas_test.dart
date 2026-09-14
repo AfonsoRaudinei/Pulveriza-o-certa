@@ -16,6 +16,7 @@ Future<void> _pump(
   WidgetTester tester, {
   required List<PontaMedicao> medicoes,
   double ideal = 0.825,
+  LadoConferenciaPontas ladoConferencia = LadoConferenciaPontas.direita,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -28,6 +29,7 @@ Future<void> _pump(
             limiteIrregular: 92,
             limiteDesgaste: 105,
           ),
+          ladoConferencia: ladoConferencia,
         ),
       ),
     ),
@@ -95,6 +97,20 @@ void main() {
       ],
     );
 
+    expect(find.byType(CustomPaint), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'ladoConferencia esquerda renderiza sem exceção (shouldRepaint)',
+      (tester) async {
+    await _pump(
+      tester,
+      medicoes: _medicoes,
+      ladoConferencia: LadoConferenciaPontas.esquerda,
+    );
+
+    expect(find.text('Vazão por ponta'), findsOneWidget);
     expect(find.byType(CustomPaint), findsWidgets);
     expect(tester.takeException(), isNull);
   });

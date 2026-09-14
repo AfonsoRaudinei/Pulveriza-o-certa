@@ -307,4 +307,92 @@ void main() {
     expect(find.textContaining('0.0%'), findsOneWidget);
     expect(find.text('Sem medição'), findsNothing);
   });
+
+  testWidgets(
+      'PontasAnaliseSection mantém gráfico após rebuild com mesmos inputs',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const medicoesAnalise = [
+      PontaMedicao(id: 1, valorMedido: 0.84975, status: StatusPonta.ideal),
+      PontaMedicao(id: 2, valorMedido: 0.891, status: StatusPonta.desgaste),
+    ];
+    const config = Configuracoes();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: _AnaliseRebuildHarness(
+              medicoes: medicoesAnalise,
+              ideal: 0.825,
+              configuracoes: config,
+              manejo: 2400,
+              precoBico: 35,
+              area: 500,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GraficoVazaoPontas), findsOneWidget);
+    expect(find.text('Vazão por ponta'), findsOneWidget);
+
+    await tester.tap(find.text('rebuild'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GraficoVazaoPontas), findsOneWidget);
+    expect(find.text('Vazão por ponta'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+class _AnaliseRebuildHarness extends StatefulWidget {
+  const _AnaliseRebuildHarness({
+    required this.medicoes,
+    required this.ideal,
+    required this.configuracoes,
+    required this.manejo,
+    required this.precoBico,
+    required this.area,
+  });
+
+  final List<PontaMedicao> medicoes;
+  final double ideal;
+  final Configuracoes configuracoes;
+  final double manejo;
+  final double precoBico;
+  final double area;
+
+  @override
+  State<_AnaliseRebuildHarness> createState() => _AnaliseRebuildHarnessState();
+}
+
+class _AnaliseRebuildHarnessState extends State<_AnaliseRebuildHarness> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextButton(
+          onPressed: () => setState(() {}),
+          child: const Text('rebuild'),
+        ),
+        PontasAnaliseSection(
+          medicoes: widget.medicoes,
+          ideal: widget.ideal,
+          configuracoes: widget.configuracoes,
+          manejo: widget.manejo,
+          precoBico: widget.precoBico,
+          area: widget.area,
+        ),
+      ],
+    );
+  }
 }
