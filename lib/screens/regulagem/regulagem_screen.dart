@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/charts/vazao_chart_data.dart' show rotuloStatusPonta;
 import '../../core/utils/calculo_utils.dart';
 import '../../models/configuracoes.dart';
+import '../../models/foto_regulagem.dart';
 import '../../models/regulagem.dart';
 import '../../providers/configuracoes_provider.dart';
 import '../../providers/regulagens_provider.dart';
@@ -16,6 +17,7 @@ import '../../theme.dart';
 import '../../services/regulagem_pdf_service.dart';
 import 'widgets/etapa_resumo.dart';
 import 'widgets/exportar_pdf_button.dart';
+import 'widgets/fotos_regulagem_section.dart';
 import 'widgets/pontas_table.dart';
 import 'widgets/progressive_card.dart';
 
@@ -57,6 +59,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   double _precoBico = 0;
   double _area = 0;
   List<PontaMedicao> _medicoes = [];
+  List<FotoRegulagem> _fotos = [];
   LadoConferenciaPontas _ladoConferenciaPontas = LadoConferenciaPontas.direita;
   late final String _id;
   DateTime? _criadoEm;
@@ -115,6 +118,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       _precoBicoCtrl.text = _value(regulagem.precoBicoRS);
       _areaCtrl.text = _value(regulagem.areaHa);
       _medicoes = List<PontaMedicao>.from(regulagem.medicoes);
+      _fotos = List<FotoRegulagem>.from(regulagem.fotos);
       _ladoConferenciaPontas = regulagem.ladoConferenciaPontas;
     } else {
       _consultor.text =
@@ -262,6 +266,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       populacaoDesejada: null,
       litroMinIdeal: _litroMinIdeal,
       medicoes: _medicoes,
+      fotos: _fotos,
       ladoConferenciaPontas: _ladoConferenciaPontas,
       larguraUtil: null,
       rendimento: null,
@@ -279,6 +284,11 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     _autoSaveDebounce = Timer(const Duration(milliseconds: 400), () {
       unawaited(_persist(closeAfter: false));
     });
+  }
+
+  void _onFotosChanged(List<FotoRegulagem> fotos) {
+    setState(() => _fotos = fotos);
+    _onMovedToNextPonta();
   }
 
   Future<void> _save() => _persist(closeAfter: true);
@@ -362,6 +372,30 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     ]);
   }
 
+  Widget? _resumoFotos() {
+    if (_fotos.isEmpty) return null;
+    final quantidade = _fotos.length;
+    final linhas = <EtapaResumoLinha>[
+      EtapaResumoLinha(
+        'Fotos',
+        '$quantidade ${quantidade == 1 ? 'foto' : 'fotos'}',
+      ),
+    ];
+    for (var i = 0; i < _fotos.length; i++) {
+      final foto = _fotos[i];
+      final titulo = foto.titulo?.trim();
+      final observacao = foto.observacao?.trim();
+      final sufixo = quantidade == 1 ? '' : ' (${i + 1})';
+      if (titulo != null && titulo.isNotEmpty) {
+        linhas.add(EtapaResumoLinha('Título$sufixo', titulo));
+      }
+      if (observacao != null && observacao.isNotEmpty) {
+        linhas.add(EtapaResumoLinha('Observação$sufixo', observacao));
+      }
+    }
+    return EtapaResumo(linhas: linhas);
+  }
+
   Widget? _resumoPontas() {
     return EtapaResumo.ouNulo([
       for (final ponta in _medicoes)
@@ -369,11 +403,11 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
           EtapaResumoLinha(
             rotuloPonta(ponta.id, _ladoConferenciaPontas),
             '${ponta.valorMedido!.toStringAsFixed(3)} L/min · '
-                '${CalcUtils.calcularPercentualPonta(
+            '${CalcUtils.calcularPercentualPonta(
               valorMedido: ponta.valorMedido!,
               litroMinIdeal: _litroMinIdeal,
             ).toStringAsFixed(1)}% · '
-                '${rotuloStatusPonta(ponta.status)}',
+            '${rotuloStatusPonta(ponta.status)}',
           ),
     ]);
   }
@@ -398,6 +432,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       manejo: _manejo,
       precoBico: _precoBico,
       area: _area,
+      fotos: _fotos,
     );
   }
 
@@ -545,6 +580,21 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
                       _onMovedToNextPonta();
                     },
               exigirConfirmacaoTrocaLado: widget.regulagem != null,
+            ),
+          ),
+          ProgressiveCard(
+            index: 5,
+            title: 'Fotos da Regulagem',
+            locked: !_etapa1Completa,
+            complete: _fotos.isNotEmpty,
+            showCompletedMarker: false,
+            startExpanded: startExpanded,
+            summary: _resumoFotos(),
+            child: FotosRegulagemSection(
+              regulagemId: _id,
+              fotos: _fotos,
+              readonly: readonly,
+              onChanged: _onFotosChanged,
             ),
           ),
           if (_litroMinIdeal > 0 && _temMedicao) ...[
