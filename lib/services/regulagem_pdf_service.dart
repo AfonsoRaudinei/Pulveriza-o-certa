@@ -280,17 +280,20 @@ class RegulagemPdfService {
       return 'Todas as pontas medidas estão na faixa ideal — continue o monitoramento.';
     }
 
-    final partes = <String>[];
-    if (resumo.desgaste > 0) {
-      partes.add('${resumo.desgaste} ponta(s) em desgaste crítico');
+    if (resumo.desgaste == 0) {
+      return '${resumo.irregular} ponta(s) entupida(s) — limpar bicos e repetir o teste.';
     }
+
+    final partes = <String>[
+      '${resumo.desgaste} ponta(s) em desgaste crítico',
+    ];
     if (resumo.irregular > 0) {
-      partes.add('${resumo.irregular} ponta(s) entupida(s)');
+      partes.add('${resumo.irregular} entupida(s)');
     }
 
     final acao = economia.trocarTudo
         ? 'troca completa recomendada antes da próxima aplicação'
-        : 'troca seletiva das pontas problemáticas';
+        : 'troca seletiva das pontas em desgaste';
 
     return '${partes.join(' e ')} — $acao.';
   }
