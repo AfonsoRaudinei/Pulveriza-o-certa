@@ -9,11 +9,12 @@ enum ExportarPdfButtonVariant { icon, outlined }
 class ExportarPdfButton extends StatefulWidget {
   const ExportarPdfButton({
     super.key,
-    required this.data,
+    required this.buildData,
     this.variant = ExportarPdfButtonVariant.outlined,
   });
 
-  final RegulagemPdfData data;
+  /// Monta [RegulagemPdfData] só no momento da exportação (evita trabalho no build).
+  final RegulagemPdfData Function() buildData;
   final ExportarPdfButtonVariant variant;
 
   @override
@@ -27,8 +28,9 @@ class _ExportarPdfButtonState extends State<ExportarPdfButton> {
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      final bytes = await RegulagemPdfService.generate(widget.data);
-      final filename = RegulagemPdfService.suggestedFilename(widget.data);
+      final data = widget.buildData();
+      final bytes = await RegulagemPdfService.generate(data);
+      final filename = RegulagemPdfService.suggestedFilename(data);
       await Printing.sharePdf(bytes: bytes, filename: filename);
     } catch (error) {
       debugPrint('Erro ao exportar PDF: $error');
