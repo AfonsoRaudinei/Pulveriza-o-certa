@@ -10,6 +10,8 @@ class LembretesConfig {
     this.intervaloPersonalizado = false,
     this.regulagensDesdeUltimoLembrete = 0,
     this.lembreteBackupAtivo = false,
+    this.proximoLembreteRevisao,
+    this.proximoLembreteBackup,
   });
 
   final bool revisaoAtivo;
@@ -19,6 +21,8 @@ class LembretesConfig {
   final bool intervaloPersonalizado;
   final int regulagensDesdeUltimoLembrete;
   final bool lembreteBackupAtivo;
+  final DateTime? proximoLembreteRevisao;
+  final DateTime? proximoLembreteBackup;
 
   static const opcoesDias = [7, 15, 30, 60, 90];
   static const opcoesRegulagens = [3, 5, 10, 20, 50];
@@ -34,6 +38,8 @@ class LembretesConfig {
       regulagensDesdeUltimoLembrete:
           (json['regulagensDesdeUltimoLembrete'] as num?)?.toInt() ?? 0,
       lembreteBackupAtivo: json['lembreteBackupAtivo'] as bool? ?? false,
+      proximoLembreteRevisao: _dateFromJson(json['proximoLembreteRevisao']),
+      proximoLembreteBackup: _dateFromJson(json['proximoLembreteBackup']),
     );
   }
 
@@ -46,6 +52,10 @@ class LembretesConfig {
       'intervaloPersonalizado': intervaloPersonalizado,
       'regulagensDesdeUltimoLembrete': regulagensDesdeUltimoLembrete,
       'lembreteBackupAtivo': lembreteBackupAtivo,
+      if (proximoLembreteRevisao != null)
+        'proximoLembreteRevisao': proximoLembreteRevisao!.toIso8601String(),
+      if (proximoLembreteBackup != null)
+        'proximoLembreteBackup': proximoLembreteBackup!.toIso8601String(),
     };
   }
 
@@ -57,6 +67,10 @@ class LembretesConfig {
     bool? intervaloPersonalizado,
     int? regulagensDesdeUltimoLembrete,
     bool? lembreteBackupAtivo,
+    DateTime? proximoLembreteRevisao,
+    DateTime? proximoLembreteBackup,
+    bool limparProximoRevisao = false,
+    bool limparProximoBackup = false,
   }) {
     return LembretesConfig(
       revisaoAtivo: revisaoAtivo ?? this.revisaoAtivo,
@@ -68,7 +82,18 @@ class LembretesConfig {
       regulagensDesdeUltimoLembrete:
           regulagensDesdeUltimoLembrete ?? this.regulagensDesdeUltimoLembrete,
       lembreteBackupAtivo: lembreteBackupAtivo ?? this.lembreteBackupAtivo,
+      proximoLembreteRevisao: limparProximoRevisao
+          ? null
+          : (proximoLembreteRevisao ?? this.proximoLembreteRevisao),
+      proximoLembreteBackup: limparProximoBackup
+          ? null
+          : (proximoLembreteBackup ?? this.proximoLembreteBackup),
     );
+  }
+
+  static DateTime? _dateFromJson(Object? value) {
+    if (value is! String || value.isEmpty) return null;
+    return DateTime.tryParse(value);
   }
 
   static CriterioLembrete _criterioFromJson(Object? value) {

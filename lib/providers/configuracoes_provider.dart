@@ -27,11 +27,6 @@ class ConfiguracoesProvider extends ChangeNotifier {
       _loading = true;
       notifyListeners();
       _configuracoes = await _storage.getConfiguracoes();
-      try {
-        await _notifications.sincronizarLembretes(_configuracoes.lembretes);
-      } catch (error) {
-        debugPrint('Lembretes locais indisponíveis neste ambiente: $error');
-      }
     } catch (error) {
       debugPrint('Erro no provider de configurações: $error');
     } finally {
@@ -72,8 +67,13 @@ class ConfiguracoesProvider extends ChangeNotifier {
   }
 
   Future<void> saveLembretes(LembretesConfig lembretes) async {
-    await save(_configuracoes.copyWith(lembretes: lembretes));
-    await _notifications.sincronizarLembretes(lembretes);
+    try {
+      final sincronizado = await _notifications.sincronizarLembretes(lembretes);
+      await save(_configuracoes.copyWith(lembretes: sincronizado));
+    } catch (error) {
+      debugPrint('Lembretes locais indisponíveis neste ambiente: $error');
+      await save(_configuracoes.copyWith(lembretes: lembretes));
+    }
   }
 
   Future<bool> ativarLembretesRevisao(bool ativo) async {

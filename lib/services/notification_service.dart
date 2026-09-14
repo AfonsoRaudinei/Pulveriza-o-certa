@@ -12,6 +12,7 @@ class NotificationService {
 
   static const _idRevisao = 1001;
   static const _idBackup = 1002;
+  static const _diasLembreteBackup = 30;
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
@@ -60,18 +61,28 @@ class NotificationService {
     return true;
   }
 
-  Future<void> sincronizarLembretes(LembretesConfig config) async {
+  /// Reagenda lembretes e devolve config com datas de próximo disparo.
+  Future<LembretesConfig> sincronizarLembretes(LembretesConfig config) async {
     await ensureInitialized();
     await cancelarRevisao();
     await cancelarBackup();
 
+    var atualizado = config.copyWith(
+      limparProximoRevisao: true,
+      limparProximoBackup: true,
+    );
+
     if (config.revisaoAtivo && config.criterio == CriterioLembrete.tempo) {
-      await _agendarRevisaoPorTempo(config.intervaloDias);
+      final proximo = await _agendarRevisaoPorTempo(config.intervaloDias);
+      atualizado = atualizado.copyWith(proximoLembreteRevisao: proximo);
     }
 
     if (config.lembreteBackupAtivo) {
-      await _agendarBackup();
+      final proximo = await _agendarBackup();
+      atualizado = atualizado.copyWith(proximoLembreteBackup: proximo);
     }
+
+    return atualizado;
   }
 
   Future<void> cancelarRevisao() => _plugin.cancel(_idRevisao);
@@ -88,8 +99,8 @@ class NotificationService {
     );
   }
 
-  Future<void> _agendarRevisaoPorTempo(int dias) async {
-    if (dias <= 0) return;
+  Future<DateTime> _agendarRevisaoPorTempo(int dias) async {
+    if (dias <= 0) dias = 1;
     final agendado = tz.TZDateTime.now(tz.local).add(Duration(days: dias));
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -108,14 +119,14 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
     );
+    return agendado.toLocal();
   }
 
-  Future<void> _agendarBackup() async {
-    const dias = 30;
-    final agendado =
-        tz.TZDateTime.now(tz.local).add(const Duration(days: dias));
+  Future<DateTime> _agendarBackup() async {
+    final agendado = tz.TZDateTime.now(tz.local).add(
+      const Duration(days: _diasLembreteBackup),
+    );
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
         'ponta_verde_lembretes',
@@ -133,8 +144,8 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
     );
+    return agendado.toLocal();
   }
 
   Future<void> _mostrar({
