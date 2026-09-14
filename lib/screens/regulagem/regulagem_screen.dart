@@ -55,6 +55,8 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   Timer? _recalculateDebounce;
   Timer? _economiaDebounce;
   Configuracoes? _recalculateConfigOverride;
+  String? _resumoPontasCacheKey;
+  Widget? _resumoPontasCache;
 
   DateTime _data = DateTime.now();
   double _litroMinIdeal = 0;
@@ -425,8 +427,23 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     return EtapaResumo(linhas: linhas);
   }
 
+  String _resumoPontasKey() {
+    final buffer = StringBuffer(
+      '$_litroMinIdeal|${_ladoConferenciaPontas.name}|',
+    );
+    for (final ponta in _medicoes) {
+      buffer.write(
+        '${ponta.id}:${ponta.valorMedido}:${ponta.status.name};',
+      );
+    }
+    return buffer.toString();
+  }
+
   Widget? _resumoPontas() {
-    return EtapaResumo.ouNulo([
+    final key = _resumoPontasKey();
+    if (key == _resumoPontasCacheKey) return _resumoPontasCache;
+
+    final resumo = EtapaResumo.ouNulo([
       for (final ponta in _medicoes)
         if (ponta.valorMedido != null)
           EtapaResumoLinha(
@@ -439,6 +456,9 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             '${rotuloStatusPonta(ponta.status)}',
           ),
     ]);
+    _resumoPontasCacheKey = key;
+    _resumoPontasCache = resumo;
+    return resumo;
   }
 
   RegulagemPdfData _pdfData() {
@@ -511,7 +531,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
         actions: [
           if (readonly && _temMedicao)
             ExportarPdfButton(
-              data: _pdfData(),
+              buildData: _pdfData,
               variant: ExportarPdfButtonVariant.icon,
             ),
           if (!readonly)
@@ -639,7 +659,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             if (!readonly) ...[
               const SizedBox(height: AppSpacing.lg),
               ExportarPdfButton(
-                data: _pdfData(),
+                buildData: _pdfData,
                 variant: ExportarPdfButtonVariant.outlined,
               ),
             ],

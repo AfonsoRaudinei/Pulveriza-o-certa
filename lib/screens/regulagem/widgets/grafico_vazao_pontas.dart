@@ -345,6 +345,7 @@ class _GraficoVazaoPainter extends CustomPainter {
   bool shouldRepaint(covariant _GraficoVazaoPainter oldDelegate) {
     return oldDelegate.data != data ||
         oldDelegate.colors != colors ||
+        oldDelegate.ladoConferencia != ladoConferencia ||
         oldDelegate.estiloBase != estiloBase;
   }
 }

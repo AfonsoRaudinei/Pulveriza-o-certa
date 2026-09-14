@@ -136,8 +136,8 @@ class PontasTable extends StatelessWidget {
 }
 
 /// Gráfico, economia e orientações — fora do card de medições (evita conflito de layout).
-class PontasAnaliseSection extends StatelessWidget {
-  PontasAnaliseSection({
+class PontasAnaliseSection extends StatefulWidget {
+  const PontasAnaliseSection({
     super.key,
     required this.medicoes,
     required this.ideal,
@@ -146,16 +146,7 @@ class PontasAnaliseSection extends StatelessWidget {
     required this.precoBico,
     required this.area,
     this.ladoConferencia = LadoConferenciaPontas.direita,
-  })  : _hasMedicoes = medicoes.any((item) => item.valorMedido != null),
-        _economiaResumo = _EconomiaResumo.from(
-          medicoes: medicoes,
-          ideal: ideal,
-          manejo: manejo,
-          precoBico: precoBico,
-          area: area,
-          limiteDesgaste: configuracoes.limiteDesgaste,
-        ),
-        _orientacoesResumo = _OrientacoesResumo.from(medicoes);
+  });
 
   final List<PontaMedicao> medicoes;
   final double ideal;
@@ -164,9 +155,75 @@ class PontasAnaliseSection extends StatelessWidget {
   final double precoBico;
   final double area;
   final LadoConferenciaPontas ladoConferencia;
-  final bool _hasMedicoes;
-  final _EconomiaResumo _economiaResumo;
-  final _OrientacoesResumo _orientacoesResumo;
+
+  @override
+  State<PontasAnaliseSection> createState() => _PontasAnaliseSectionState();
+}
+
+class _PontasAnaliseSectionState extends State<PontasAnaliseSection> {
+  late bool _hasMedicoes;
+  late VazaoChartData _chartData;
+  late _EconomiaResumo _economiaResumo;
+  late _OrientacoesResumo _orientacoesResumo;
+
+  @override
+  void initState() {
+    super.initState();
+    _recomputeDerived();
+  }
+
+  @override
+  void didUpdateWidget(covariant PontasAnaliseSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_inputsChanged(oldWidget)) {
+      _recomputeDerived();
+    }
+  }
+
+  bool _inputsChanged(PontasAnaliseSection oldWidget) {
+    return oldWidget.ideal != widget.ideal ||
+        oldWidget.manejo != widget.manejo ||
+        oldWidget.precoBico != widget.precoBico ||
+        oldWidget.area != widget.area ||
+        oldWidget.ladoConferencia != widget.ladoConferencia ||
+        oldWidget.configuracoes.limiteIrregular !=
+            widget.configuracoes.limiteIrregular ||
+        oldWidget.configuracoes.limiteDesgaste !=
+            widget.configuracoes.limiteDesgaste ||
+        !_medicoesIguais(oldWidget.medicoes, widget.medicoes);
+  }
+
+  bool _medicoesIguais(List<PontaMedicao> a, List<PontaMedicao> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id ||
+          a[i].valorMedido != b[i].valorMedido ||
+          a[i].status != b[i].status) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _recomputeDerived() {
+    _hasMedicoes =
+        widget.medicoes.any((item) => item.valorMedido != null);
+    _chartData = VazaoChartData.from(
+      medicoes: widget.medicoes,
+      litroMinIdeal: widget.ideal,
+      limiteIrregular: widget.configuracoes.limiteIrregular,
+      limiteDesgaste: widget.configuracoes.limiteDesgaste,
+    );
+    _economiaResumo = _EconomiaResumo.from(
+      medicoes: widget.medicoes,
+      ideal: widget.ideal,
+      manejo: widget.manejo,
+      precoBico: widget.precoBico,
+      area: widget.area,
+      limiteDesgaste: widget.configuracoes.limiteDesgaste,
+    );
+    _orientacoesResumo = _OrientacoesResumo.from(widget.medicoes);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,13 +234,8 @@ class PontasAnaliseSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         GraficoVazaoPontas(
-          data: VazaoChartData.from(
-            medicoes: medicoes,
-            litroMinIdeal: ideal,
-            limiteIrregular: configuracoes.limiteIrregular,
-            limiteDesgaste: configuracoes.limiteDesgaste,
-          ),
-          ladoConferencia: ladoConferencia,
+          data: _chartData,
+          ladoConferencia: widget.ladoConferencia,
         ),
         const SizedBox(height: AppSpacing.xl),
         _EconomiaSection(resumo: _economiaResumo),
