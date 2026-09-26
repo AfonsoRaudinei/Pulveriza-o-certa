@@ -14,7 +14,7 @@ Use este checklist após cada release que altere Configurações ou o gerador de
 ## Laudo (10 pontas, 30 ha, sem fotos)
 
 - [ ] Arquivo: `Laudo_Regulagem_<produtor_ou_fazenda>_<AAAA-MM-DD>.pdf`.
-- [ ] Página 2: veredito, O que fazer, comparativo 2 linhas, motivo, Dados usados.
+- [ ] Página 2: Diagnóstico e Recomendação (zonas + ponte se aplicável + recomendação + comparativo), Dados usados.
 - [ ] Total exibido = soma das parcelas (ex.: R$ 446,63).
 - [ ] “Como calculamos” com cm ÷ 100 e regra da troca completa.
 - [ ] Sem payback / apl. no corpo; “perda” só na linha metodológica.

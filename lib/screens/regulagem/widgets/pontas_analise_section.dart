@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/charts/vazao_chart_data.dart';
-import '../../../core/iconografia/zona_icon.dart';
-import '../../../core/zona_visual.dart';
+import '../../../domain/calculos/calc_diagnostico_recomendacao_laudo.dart';
 import '../../../domain/calculos/calc_diagnostico_regulagem.dart';
 import '../../../domain/calculos/calc_layout_laudo_pdf.dart';
 import '../../../models/configuracoes.dart';
 import '../../../models/regulagem.dart';
 import '../../../theme.dart';
-import '../../../widgets/orientacoes_zona_laudo.dart';
-import '../../../widgets/secao_laudo_titulo.dart';
+import '../../../widgets/diagnostico_recomendacao_laudo.dart';
 import 'grafico_vazao_pontas.dart';
 
 /// Gráfico, economia e orientações — fora do card de medições.
@@ -41,6 +39,7 @@ class _PontasAnaliseSectionState extends State<PontasAnaliseSection> {
   late bool _hasMedicoes;
   late VazaoChartData _chartData;
   late DiagnosticoRegulagem _diagnostico;
+  late DiagnosticoRecomendacaoLaudo _diagnosticoRecomendacao;
 
   @override
   void initState() {
@@ -99,6 +98,7 @@ class _PontasAnaliseSectionState extends State<PontasAnaliseSection> {
       precoBicoRS: widget.precoBico,
       areaHa: widget.area,
     );
+    _diagnosticoRecomendacao = montarDiagnosticoRecomendacaoLaudo(_diagnostico);
   }
 
   @override
@@ -123,14 +123,11 @@ class _PontasAnaliseSectionState extends State<PontasAnaliseSection> {
           ladoConferencia: widget.ladoConferencia,
         ),
         const SizedBox(height: AppSpacing.xl),
-        OrientacoesZonaLaudo(
-          orientacoes: _diagnostico.orientacoes,
-          atencao: _diagnostico.atencao,
+        DiagnosticoRecomendacaoLaudoView(
+          conteudo: _diagnosticoRecomendacao,
         ),
         const SizedBox(height: AppSpacing.xl),
-        _Veredito(diagnostico: _diagnostico),
-        const SizedBox(height: AppSpacing.xl),
-        _LaudoPosVeredito(diagnostico: _diagnostico),
+        _DadosCalculoLaudo(diagnostico: _diagnostico),
       ],
     );
   }
@@ -153,82 +150,31 @@ class _AvisoMedicao extends StatelessWidget {
   }
 }
 
-class _Veredito extends StatelessWidget {
-  const _Veredito({required this.diagnostico});
+class _DadosCalculoLaudo extends StatelessWidget {
+  const _DadosCalculoLaudo({required this.diagnostico});
 
   final DiagnosticoRegulagem diagnostico;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SecaoLaudoTitulo(titulo: 'Recomendação'),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          diagnostico.vereditoLaudo,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            height: 1.35,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LaudoPosVeredito extends StatelessWidget {
-  const _LaudoPosVeredito({required this.diagnostico});
-
-  final DiagnosticoRegulagem diagnostico;
-
-  @override
-  Widget build(BuildContext context) {
-    final d = diagnostico;
-    final theme = Theme.of(context);
     final colors = AppThemeColors.of(context);
-    final plano = d.planoLaudo;
-    final oQueFazer = montarOQueFazerLaudo(
-      plano: plano,
-      desgaste: d.desgaste,
-      entupida: d.entupida,
-      atencao: d.atencao,
-    );
-    final comparativo = montarComparativoLaudo(plano);
-    final motivo = montarFraseMotivoTrocaLaudo(plano);
     final dados = montarDadosCalculoLaudo(
-      manejoRS: d.manejoRS,
-      manejoPorPonta: d.manejoPorPonta,
-      precoBicoRS: d.precoBicoRS,
-      areaHa: d.areaHa,
+      manejoRS: diagnostico.manejoRS,
+      manejoPorPonta: diagnostico.manejoPorPonta,
+      precoBicoRS: diagnostico.precoBicoRS,
+      areaHa: diagnostico.areaHa,
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('O que fazer', style: theme.textTheme.titleSmall),
-        const SizedBox(height: AppSpacing.sm),
-        for (final item in oQueFazer) ...[
-          _LinhaOQueFazer(item: item),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-        if (comparativo != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          _ComparativoLaudo(comparativo: comparativo),
-        ],
-        if (motivo != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(motivo, style: theme.textTheme.bodySmall),
-        ],
-        const SizedBox(height: AppSpacing.lg),
         Divider(color: colors.border, height: 1),
         const SizedBox(height: AppSpacing.sm),
         Text(
           'Dados usados no cálculo',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: colors.textSecondary,
-          ),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.textSecondary,
+              ),
         ),
         const SizedBox(height: AppSpacing.xs),
         _DadoCalculo(
@@ -236,142 +182,6 @@ class _LaudoPosVeredito extends StatelessWidget {
         _DadoCalculo(label: 'Manejo por ponta', value: dados.manejoPorPonta),
         _DadoCalculo(label: 'Preço do bico', value: dados.precoBico),
         _DadoCalculo(label: 'Área', value: dados.area),
-      ],
-    );
-  }
-}
-
-class _LinhaOQueFazer extends StatelessWidget {
-  const _LinhaOQueFazer({required this.item});
-
-  final ItemOQueFazerLaudo item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = AppThemeColors.of(context);
-    final pontas =
-        item.todosOsBicos ? 'todos os bicos' : rotulosPontasLinha(item.rotulos);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ZonaIcon(status: item.marcador, size: 11),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '${item.verbo} ',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (pontas.isNotEmpty)
-                  TextSpan(
-                    text: '$pontas ',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                if (item.complemento != null && item.complemento!.isNotEmpty)
-                  TextSpan(
-                    text: '— ${item.complemento}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ComparativoLaudo extends StatelessWidget {
-  const _ComparativoLaudo({required this.comparativo});
-
-  final ComparativoLaudo comparativo;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = AppThemeColors.of(context);
-    final header = theme.textTheme.labelSmall?.copyWith(
-      color: colors.textSecondary,
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            const Expanded(child: SizedBox()),
-            SizedBox(
-              width: 72,
-              child:
-                  Text('Você gasta', style: header, textAlign: TextAlign.right),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                'Continua perdendo por aplicação',
-                style: header,
-                textAlign: TextAlign.right,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _LinhaComparativo(linha: comparativo.naoFazer),
-        Divider(color: colors.border, height: 8),
-        _LinhaComparativo(linha: comparativo.seguir),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          comparativo.rodape,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: colors.textTertiary,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LinhaComparativo extends StatelessWidget {
-  const _LinhaComparativo({required this.linha});
-
-  final LinhaComparativoLaudo linha;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final destaque = linha.valorPerdaDestaque > 0;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: Text(linha.titulo, style: theme.textTheme.bodySmall)),
-        SizedBox(
-          width: 72,
-          child: Text(
-            linha.voceGasta,
-            textAlign: TextAlign.right,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            linha.continuaPerdendo,
-            textAlign: TextAlign.right,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: destaque ? FontWeight.w600 : FontWeight.w400,
-              color: destaque ? AppColors.zonaDesgaste : null,
-            ),
-          ),
-        ),
       ],
     );
   }

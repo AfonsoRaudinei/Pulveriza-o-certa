@@ -4,7 +4,6 @@ import '../../models/regulagem.dart';
 import 'calc_analise_economica.dart';
 import 'calc_classificacao_status.dart';
 import 'calc_recomendacao_laudo.dart';
-import 'calc_texto_veredito_laudo.dart';
 import 'calc_percentual_ponta.dart';
 import 'limites_regulagem.dart';
 import 'texto_pontas.dart';
@@ -118,7 +117,6 @@ class DiagnosticoRegulagem {
     required this.piorZona,
     required this.orientacoes,
     required this.planoLaudo,
-    required this.vereditoLaudo,
   });
 
   final LimitesRegulagem limites;
@@ -146,7 +144,6 @@ class DiagnosticoRegulagem {
   final StatusPonta? piorZona;
   final List<OrientacaoDiagnostico> orientacoes;
   final ResultadoRecomendacaoLaudo planoLaudo;
-  final String vereditoLaudo;
 
   String? get avisoMedicao => analiseParcial
       ? avisoMedicaoIncompleta(medidas: medidas, total: totalPontas)
@@ -264,15 +261,6 @@ class DiagnosticoRegulagem {
       areaHa: areaHa,
     );
 
-    final vereditoLaudo = montarVereditoLaudo(
-      plano: planoLaudo,
-      areaHa: areaHa,
-      quantidadeDesgaste: desgaste?.quantidade ?? 0,
-      quantidadeAtencao: atencao?.quantidade ?? 0,
-      rotulosDesgaste: desgaste?.rotulos ?? const [],
-      mediaPercentualAtencao: atencao?.mediaPercentual,
-    );
-
     final recomendacao = _recomendarLegado(
       plano: planoLaudo,
       desgaste: desgaste,
@@ -352,7 +340,6 @@ class DiagnosticoRegulagem {
       piorZona: piorZona,
       orientacoes: orientacoes,
       planoLaudo: planoLaudo,
-      vereditoLaudo: vereditoLaudo,
     );
   }
 }

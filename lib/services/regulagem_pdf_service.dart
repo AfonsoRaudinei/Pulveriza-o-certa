@@ -19,6 +19,7 @@ import '../core/extensions/double_extension.dart';
 import '../core/utils/calculo_utils.dart';
 import '../core/zona_visual.dart';
 import '../domain/calculos/calc_diagnostico_regulagem.dart';
+import '../domain/calculos/calc_diagnostico_recomendacao_laudo.dart';
 import '../domain/calculos/calc_layout_laudo_pdf.dart';
 import '../domain/calculos/calc_texto_analise_economica_laudo.dart';
 import '../domain/calculos/calc_texto_veredito_laudo.dart';
@@ -87,8 +88,6 @@ class RegulagemPdfService {
   static pw.Font? _semiBold;
   static pw.Font? _bold;
 
-  static const _corFundoOrientacao = PdfColor.fromInt(0xFFF5F5F7);
-  static const _corBordaOrientacao = PdfColor.fromInt(0xFFE5E5E7);
   static const _corTituloOrientacao = PdfColor.fromInt(0xFF1D1D1F);
   static const _corDescricaoOrientacao = PdfColor.fromInt(0xFF86868B);
   static const _corTextoRodapeLaudo = PdfColor.fromInt(0xFF86868B);
@@ -126,7 +125,7 @@ class RegulagemPdfService {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.fromLTRB(36, 36, 36, 64),
+        margin: const pw.EdgeInsets.fromLTRB(32, 28, 32, 48),
         theme: pw.ThemeData.withFont(
           base: _regular!,
           bold: _bold!,
@@ -140,36 +139,32 @@ class RegulagemPdfService {
           final chartFont = _regular!.getFont(context);
           return [
             _buildTitle(data),
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 8),
             _buildFichaLabeled(data),
             if (diagnostico.avisoMedicao != null) ...[
               pw.SizedBox(height: 8),
               _avisoIncompleta(diagnostico),
             ],
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 8),
             _buildMachineSummary(data),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 8),
             _buildStatusIndicators(diagnostico, data),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 8),
             ..._buildPontasTable(data, percentuais),
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 8),
             _buildLegendaMarcadores(),
-            pw.NewPage(),
+            pw.SizedBox(height: 8),
             ..._buildCharts(data, chartFont),
-            _buildOrientacoesLaudo(diagnostico),
-            pw.SizedBox(height: 14),
             _buildAnaliseEconomicaLaudo(diagnostico),
-            pw.SizedBox(height: 14),
-            pw.Inseparable(
-              child: _buildBlocoRecomendacaoLaudo(diagnostico),
-            ),
+            pw.SizedBox(height: 8),
+            _buildDiagnosticoRecomendacaoLaudo(diagnostico),
             if (fotosWidget != null) ...[
-              pw.SizedBox(height: 16),
+              pw.SizedBox(height: 8),
               fotosWidget,
             ],
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 8),
             _buildComoCalculamos(diagnostico),
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 8),
             _buildAssinaturaProfissional(data),
           ];
         },
@@ -430,7 +425,6 @@ class RegulagemPdfService {
         _secaoTitulo(
           titulo: 'Parâmetros da regulagem',
           subtitulo: SubtitulosLaudoPdf.parametros,
-          corBarra: corMarcaCabecalhoLaudo(data.configuracoes),
         ),
         pw.SizedBox(height: 8),
         pw.Column(
@@ -495,7 +489,6 @@ class RegulagemPdfService {
         _secaoTitulo(
           titulo: 'Resumo das zonas',
           subtitulo: SubtitulosLaudoPdf.zonas,
-          corBarra: corMarcaCabecalhoLaudo(data.configuracoes),
         ),
         pw.SizedBox(height: 8),
         pw.Row(
@@ -566,14 +559,13 @@ class RegulagemPdfService {
   static pw.Widget _secaoTitulo({
     required String titulo,
     String? subtitulo,
-    Color? corBarra,
   }) {
-    final tituloCol = pw.Column(
+    return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
           titulo,
-          style: pw.TextStyle(font: _bold, fontSize: 15),
+          style: pw.TextStyle(font: _semiBold, fontSize: 13),
         ),
         if (subtitulo != null) ...[
           pw.SizedBox(height: 2),
@@ -581,24 +573,11 @@ class RegulagemPdfService {
             subtitulo,
             style: pw.TextStyle(
               font: _regular,
-              fontSize: 9,
+              fontSize: 8.5,
               color: _pdfColor(AppColors.textSecondary),
             ),
           ),
         ],
-      ],
-    );
-    if (corBarra == null) return tituloCol;
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Container(
-          width: 3,
-          height: 34,
-          color: _pdfColor(corBarra),
-        ),
-        pw.SizedBox(width: 8),
-        pw.Expanded(child: tituloCol),
       ],
     );
   }
@@ -628,7 +607,6 @@ class RegulagemPdfService {
       _secaoTitulo(
         titulo: 'Medições das pontas',
         subtitulo: SubtitulosLaudoPdf.tabela,
-        corBarra: corMarcaCabecalhoLaudo(data.configuracoes),
       ),
       pw.SizedBox(height: 8),
       pw.Table(
@@ -796,92 +774,8 @@ class RegulagemPdfService {
     );
   }
 
-  static pw.Widget _buildOrientacoesLaudo(DiagnosticoRegulagem d) {
-    if (d.orientacoes.isEmpty) return pw.SizedBox();
-
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _secaoTitulo(titulo: 'Orientações'),
-        pw.SizedBox(height: 8),
-        for (final o in d.orientacoes) ...[
-          pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.all(10),
-            margin: const pw.EdgeInsets.only(bottom: 6),
-            decoration: pw.BoxDecoration(
-              color: _corFundoOrientacao,
-              borderRadius: pw.BorderRadius.circular(6),
-              border: pw.Border.all(color: _corBordaOrientacao, width: 0.5),
-            ),
-            child: pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                PdfMarcadorZona.widget(o.status, size: 11),
-                pw.SizedBox(width: 8),
-                pw.Expanded(
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        textoQuantidadePontas(o.quantidade, o.status),
-                        style: pw.TextStyle(
-                          font: _semiBold,
-                          fontSize: 10,
-                          color: _corTituloOrientacao,
-                        ),
-                      ),
-                      pw.SizedBox(height: 2),
-                      pw.Text(
-                        _textoOrientacaoPdf(o, d.atencao),
-                        style: pw.TextStyle(
-                          font: _regular,
-                          fontSize: 9,
-                          color: _corDescricaoOrientacao,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  static String _textoOrientacaoPdf(
-    OrientacaoDiagnostico o,
-    ZonaDiagnostico? atencao,
-  ) {
-    final perda = o.perdaRs != null && o.perdaRs! > 0
-        ? formatarMoedaLaudo(o.perdaRs!)
-        : null;
-    String? excesso;
-    if (o.status == StatusPonta.atencao && atencao?.mediaPercentual != null) {
-      final exc = atencao!.mediaPercentual! - 100;
-      if (exc > 0) {
-        excesso = LaudoNumeroFormat.decimal(exc, casas: 1);
-      }
-    }
-    return mensagemOrientacaoLaudo(
-      o.status,
-      desperdicioDefensivo: perda,
-      excessoMedioPercentual: excesso,
-    );
-  }
-
-  static pw.Widget _buildBlocoRecomendacaoLaudo(DiagnosticoRegulagem d) {
-    final plano = d.planoLaudo;
-    final oQueFazer = montarOQueFazerLaudo(
-      plano: plano,
-      desgaste: d.desgaste,
-      entupida: d.entupida,
-      atencao: d.atencao,
-    );
-    final comparativo = montarComparativoLaudo(plano);
-    final motivo = montarFraseMotivoTrocaLaudo(plano);
+  static pw.Widget _buildDiagnosticoRecomendacaoLaudo(DiagnosticoRegulagem d) {
+    final vm = montarDiagnosticoRecomendacaoLaudo(d);
     final dados = montarDadosCalculoLaudo(
       manejoRS: d.manejoRS,
       manejoPorPonta: d.manejoPorPonta,
@@ -889,55 +783,81 @@ class RegulagemPdfService {
       areaHa: d.areaHa,
     );
     final divisor = _pdfColor(AppColors.border);
+    final corFundoTitulo = _pdfColor(AppColors.surfaceAlt);
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        _secaoTitulo(titulo: 'Recomendação'),
-        pw.SizedBox(height: 8),
-        pw.Text(
-          d.vereditoLaudo,
-          style: pw.TextStyle(
-            font: _semiBold,
-            fontSize: 12,
-            color: _pdfColor(AppColors.textPrimary),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: pw.BoxDecoration(
+            color: corFundoTitulo,
+            borderRadius: pw.BorderRadius.circular(8),
+            border:
+                pw.Border.all(color: _pdfColor(AppColors.border), width: 0.5),
+          ),
+          child: pw.Text(
+            'Diagnóstico e Recomendação',
+            style: pw.TextStyle(font: _semiBold, fontSize: 13),
           ),
         ),
-        pw.SizedBox(height: 14),
-        pw.Text(
-          'O que fazer',
-          style: pw.TextStyle(font: _semiBold, fontSize: 11),
-        ),
-        pw.SizedBox(height: 6),
-        for (var i = 0; i < oQueFazer.length; i++) ...[
-          _linhaOQueFazer(oQueFazer[i]),
-          if (i < oQueFazer.length - 1)
-            pw.Container(
-              height: 0.5,
-              margin: const pw.EdgeInsets.symmetric(vertical: 6),
-              color: divisor,
-            ),
+        pw.SizedBox(height: 8),
+        for (final linha in vm.linhasPorZona) ...[
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              PdfMarcadorZona.widget(linha.status, size: 11),
+              pw.SizedBox(width: 6),
+              pw.Expanded(
+                child: pw.RichText(
+                  text: pw.TextSpan(
+                    children: [
+                      for (final t in linha.trechos)
+                        pw.TextSpan(
+                          text: t.texto,
+                          style: pw.TextStyle(
+                            font: t.negrito ? _semiBold : _regular,
+                            fontSize: 10,
+                            height: 1.35,
+                            color: _pdfColor(AppColors.textPrimary),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 6),
         ],
-        if (comparativo != null) ...[
-          pw.SizedBox(height: 14),
-          _buildComparativoLaudo(comparativo),
-        ],
-        if (motivo != null) ...[
-          pw.SizedBox(height: 10),
+        if (vm.textoBridging != null) ...[
           pw.Text(
-            motivo,
+            vm.textoBridging!,
             style: pw.TextStyle(
               font: _regular,
-              fontSize: 9.5,
+              fontSize: 10,
+              height: 1.35,
               color: _pdfColor(AppColors.textPrimary),
             ),
           ),
+          pw.SizedBox(height: 6),
         ],
-        pw.SizedBox(height: 14),
-        pw.Container(
-          height: 0.5,
-          color: divisor,
+        pw.Text(
+          vm.textoRecomendacaoFinal,
+          style: pw.TextStyle(
+            font: _regular,
+            fontSize: 10,
+            height: 1.35,
+            color: _pdfColor(AppColors.textPrimary),
+          ),
         ),
+        if (vm.comparativo != null) ...[
+          pw.SizedBox(height: 8),
+          _buildComparativoLaudo(vm.comparativo!),
+        ],
+        pw.SizedBox(height: 8),
+        pw.Container(height: 0.5, color: divisor),
         pw.SizedBox(height: 8),
         pw.Text(
           'Dados usados no cálculo',
@@ -952,47 +872,6 @@ class RegulagemPdfService {
         _dadoCalculoLinha('Manejo por ponta', dados.manejoPorPonta),
         _dadoCalculoLinha('Preço do bico', dados.precoBico),
         _dadoCalculoLinha('Área', dados.area),
-      ],
-    );
-  }
-
-  static pw.Widget _linhaOQueFazer(ItemOQueFazerLaudo item) {
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        PdfMarcadorZona.widget(item.marcador, size: 11),
-        pw.SizedBox(width: 6),
-        pw.Expanded(
-          child: pw.RichText(
-            text: pw.TextSpan(
-              children: [
-                pw.TextSpan(
-                  text: '${item.verbo} ',
-                  style: pw.TextStyle(font: _semiBold, fontSize: 10),
-                ),
-                if (!item.todosOsBicos && item.rotulos.isNotEmpty)
-                  pw.TextSpan(
-                    text: '${rotulosPontasLinha(item.rotulos)} ',
-                    style: pw.TextStyle(font: _regular, fontSize: 10),
-                  )
-                else if (item.todosOsBicos)
-                  pw.TextSpan(
-                    text: 'todos os bicos ',
-                    style: pw.TextStyle(font: _regular, fontSize: 10),
-                  ),
-                if (item.complemento != null && item.complemento!.isNotEmpty)
-                  pw.TextSpan(
-                    text: '— ${item.complemento}',
-                    style: pw.TextStyle(
-                      font: _regular,
-                      fontSize: 10,
-                      color: _pdfColor(AppColors.textSecondary),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -1119,7 +998,7 @@ class RegulagemPdfService {
   }
 
   static double _alturaGraficoVazaoPdf(int totalPontas) =>
-      totalPontas <= 10 ? 150.0 : 200.0;
+      totalPontas <= 10 ? 118.0 : 160.0;
 
   static List<pw.Widget> _buildCharts(
       RegulagemPdfData data, PdfFont chartFont) {
@@ -1135,10 +1014,9 @@ class RegulagemPdfService {
       medicoes: data.medicoes,
       ladoConferencia: data.ladoConferenciaPontas,
     );
-    final pageWidth = PdfPageFormat.a4.width - 72;
+    final pageWidth = PdfPageFormat.a4.width - 64;
     final widgets = <pw.Widget>[];
     final alturaGrafico = _alturaGraficoVazaoPdf(data.medicoes.length);
-    final corBarra = corMarcaCabecalhoLaudo(data.configuracoes);
 
     for (var i = 0; i < blocos.length; i++) {
       final bloco = blocos[i];
@@ -1172,7 +1050,6 @@ class RegulagemPdfService {
                 subtitulo: i == 0
                     ? '${SubtitulosLaudoPdf.grafico} ${subtituloGraficoVazao(escalaGlobal)}'
                     : null,
-                corBarra: i == 0 ? corBarra : null,
               ),
               pw.SizedBox(height: 8),
               pw.SizedBox(
@@ -1199,7 +1076,7 @@ class RegulagemPdfService {
                 pw.SizedBox(height: 6),
                 _buildChartLegenda(escalaGlobal),
               ],
-              pw.SizedBox(height: 16),
+              pw.SizedBox(height: 8),
             ],
           ),
         ),
@@ -1386,9 +1263,8 @@ class RegulagemPdfService {
       final pctTexto = mostrarSimboloPercentual
           ? LaudoNumeroFormat.percentual(percentual, casas: 1)
           : LaudoNumeroFormat.decimal(percentual, casas: 1);
-      final yRotulo = subiu
-          ? base + altura + 3
-          : max(base - fontSize - 2, bottomPad);
+      final yRotulo =
+          subiu ? base + altura + 3 : max(base - fontSize - 2, bottomPad);
       _paintChartLabel(
         canvas,
         font,
