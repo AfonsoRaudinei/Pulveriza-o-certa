@@ -737,3 +737,33 @@ Disco apenas — IPA 197 em `build/ios/ipa/pontaverde.ipa`, payload validado, **
 
 Disco apenas — IPA 198 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
 
+## Build 199 — 2026-09-26 12:37 -03
+
+- Versão solicitada: `1.0.0+199` (também em `pubspec.yaml`)
+- Motivo: novo **ícone do app** flat iOS (`assets/ios_flat_no_shine.png` → `assets/app_icon.png`, `flutter_launcher_icons`, LaunchImage 96/192/288); laudo PDF (análise econômica em parágrafo único, rodapé **SoloForte**, ficha com **Cultura** Soja/Milho), campo Cultura no contexto da regulagem e demais entregas da branch `cursor/laudo-pdf-cultura-soloforte`.
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 199 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (7 pods: Flutter, file_picker, image_picker_ios, printing, share_plus, shared_preferences_foundation, url_launcher_ios)
+- Validação de pré-build: `flutter test --reporter compact` — `All tests passed!` (172 testes); `flutter analyze lib/ test/` — 41 avisos/warnings (sem errors)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (172.5 MB)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (22.0 MB / 23019375 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `199`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `image_picker_ios`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation`, `url_launcher_ios` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`, `Signed Time=26 Sep 2026 at 12:37`
+- Upload TestFlight: não enviado
+
+### Status
+
+Disco apenas — IPA 199 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
+
