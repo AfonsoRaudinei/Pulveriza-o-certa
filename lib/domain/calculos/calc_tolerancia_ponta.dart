@@ -1,19 +1,23 @@
-import '../../models/configuracoes.dart';
+/// Legado de relatórios antigos (tolerância mín/máx). Não usado na classificação do laudo.
+const double toleranciaMinLegado = 100.5;
+const double toleranciaMaxLegado = 104.99;
 
 ({bool entreTolerancias, bool acimaToleranciaMin}) verificarTolerancia({
   required double percentual,
-  required Configuracoes configuracoes,
+  double toleranciaMin = toleranciaMinLegado,
+  double toleranciaMax = toleranciaMaxLegado,
 }) {
-  final acima = percentual >= configuracoes.toleranciaMin;
+  final acima = percentual >= toleranciaMin;
   return (
-    entreTolerancias: acima && percentual <= configuracoes.toleranciaMax,
+    entreTolerancias: acima && percentual <= toleranciaMax,
     acimaToleranciaMin: acima,
   );
 }
 
 ({int entreTolerancias, int acimaToleranciaMin}) agregarTolerancia({
   required Iterable<double> percentuais,
-  required Configuracoes configuracoes,
+  double toleranciaMin = toleranciaMinLegado,
+  double toleranciaMax = toleranciaMaxLegado,
 }) {
   var entre = 0;
   var acima = 0;
@@ -21,7 +25,8 @@ import '../../models/configuracoes.dart';
   for (final percentual in percentuais) {
     final tolerancia = verificarTolerancia(
       percentual: percentual,
-      configuracoes: configuracoes,
+      toleranciaMin: toleranciaMin,
+      toleranciaMax: toleranciaMax,
     );
     if (tolerancia.entreTolerancias) entre++;
     if (tolerancia.acimaToleranciaMin) acima++;

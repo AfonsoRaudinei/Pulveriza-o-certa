@@ -5,7 +5,7 @@ import '../../../models/regulagem.dart';
 import '../../../services/regulagem_pdf_service.dart';
 import '../../../theme.dart';
 import 'exportar_pdf_button.dart';
-import 'pontas_table.dart';
+import 'pontas_analise_section.dart';
 
 class RegulagemAnaliseBlock extends StatelessWidget {
   const RegulagemAnaliseBlock({
@@ -29,7 +29,7 @@ class RegulagemAnaliseBlock extends StatelessWidget {
   final double area;
   final LadoConferenciaPontas ladoConferencia;
   final bool readonly;
-  final RegulagemPdfData Function() buildData;
+  final Future<RegulagemPdfData> Function() buildData;
 
   @override
   Widget build(BuildContext context) {

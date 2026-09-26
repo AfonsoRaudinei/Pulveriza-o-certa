@@ -33,29 +33,24 @@ class CalcUtils {
     return calculos.classificarPonta(
       valorMedido: valorMedido,
       litroMinIdeal: litroMinIdeal,
-      configuracoes: configuracoes,
+      limites: calculos.limitesDeConfig(
+        limiteIrregular: configuracoes.limiteIrregular,
+        limiteDesgaste: configuracoes.limiteDesgaste,
+      ),
     );
   }
 
   static ({bool entreTolerancias, bool acimaToleranciaMin})
       verificarTolerancia({
     required double percentual,
-    required Configuracoes configuracoes,
   }) {
-    return calculos.verificarTolerancia(
-      percentual: percentual,
-      configuracoes: configuracoes,
-    );
+    return calculos.verificarTolerancia(percentual: percentual);
   }
 
   static ({int entreTolerancias, int acimaToleranciaMin}) agregarTolerancia({
     required Iterable<double> percentuais,
-    required Configuracoes configuracoes,
   }) {
-    return calculos.agregarTolerancia(
-      percentuais: percentuais,
-      configuracoes: configuracoes,
-    );
+    return calculos.agregarTolerancia(percentuais: percentuais);
   }
 
   static double calcularPerdaEstimada({

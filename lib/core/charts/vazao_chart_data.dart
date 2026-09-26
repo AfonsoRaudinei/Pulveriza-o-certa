@@ -1,6 +1,8 @@
 import 'dart:math' show max, min;
 
+import '../../domain/calculos/texto_pontas.dart';
 import '../../models/regulagem.dart';
+import '../formatters/laudo_numero_format.dart';
 import '../utils/calculo_utils.dart';
 
 /// Uma ponta preparada para o gráfico de vazão.
@@ -48,6 +50,12 @@ class VazaoChartData {
   /// desse alcance a barra é cortada na borda e o rótulo mantém o valor real.
   static const alcanceMaximo = 60.0;
 
+  /// Quanto os dados podem puxar o eixo além de cada limite configurado.
+  static const folgaExtremos = 25.0;
+
+  static const margemMinima = 3.0;
+  static const margemFator = 0.12;
+
   factory VazaoChartData.from({
     required List<PontaMedicao> medicoes,
     required double litroMinIdeal,
@@ -78,9 +86,23 @@ class VazaoChartData {
       superior = max(superior, percentual);
     }
 
-    final margem = max(3.0, (superior - inferior) * 0.12);
-    final maxPercent = superior + margem;
-    final minPercent = max(inferior - margem, maxPercent - alcanceMaximo);
+    inferior = max(inferior, limiteIrregular - folgaExtremos);
+    superior = min(superior, limiteDesgaste + folgaExtremos);
+
+    final margem = max(margemMinima, (superior - inferior) * margemFator);
+    var maxPercent = superior + margem;
+    var minPercent = inferior - margem;
+
+    final refBaixo = min(limiteIrregular, 100.0);
+    final refAlto = max(limiteDesgaste, 100.0);
+    if (minPercent > refBaixo - margem) {
+      minPercent = refBaixo - margem;
+    }
+    if (maxPercent < refAlto + margem) {
+      maxPercent = refAlto + margem;
+    }
+
+    minPercent = max(minPercent, maxPercent - alcanceMaximo);
 
     return VazaoChartData._(
       pontas: pontas,
@@ -109,41 +131,77 @@ class VazaoChartData {
 
   bool get temPendente => pontas.any((ponta) => !ponta.medida);
 
-  /// Status que aparecem na legenda, na ordem ideal → entupido → desgaste.
+  /// Status que aparecem na legenda, na ordem Entupida → Ideal → Atenção → Desgaste.
   List<StatusPonta> get statusMedidos {
     const ordem = [
-      StatusPonta.ideal,
       StatusPonta.irregular,
+      StatusPonta.ideal,
+      StatusPonta.atencao,
       StatusPonta.desgaste,
     ];
     return [
       for (final status in ordem)
-        if (pontas.any((ponta) => ponta.medida && ponta.status == status))
+        if (_zonaNaLegenda(status) &&
+            pontas.any((ponta) => ponta.medida && ponta.status == status))
           status,
     ];
+  }
+
+  bool _zonaNaLegenda(StatusPonta status) {
+    if (status == StatusPonta.ideal && limiteIrregular >= 100) return false;
+    if (status == StatusPonta.atencao && limiteDesgaste <= 100) return false;
+    return true;
   }
 
   /// Percentual limitado à janela do eixo, para desenhar a barra.
   double percentualNoEixo(double percentual) =>
       percentual.clamp(minPercent, maxPercent);
+
+  /// Fatia de pontas com a mesma escala vertical de [escalaReferencia] (PDF).
+  factory VazaoChartData.fatiaComEscala({
+    required List<PontaMedicao> medicoes,
+    required double litroMinIdeal,
+    required double limiteIrregular,
+    required double limiteDesgaste,
+    required VazaoChartData escalaReferencia,
+  }) {
+    final local = VazaoChartData.from(
+      medicoes: medicoes,
+      litroMinIdeal: litroMinIdeal,
+      limiteIrregular: limiteIrregular,
+      limiteDesgaste: limiteDesgaste,
+    );
+    return VazaoChartData._(
+      pontas: local.pontas,
+      litroMinIdeal: litroMinIdeal,
+      limiteIrregular: limiteIrregular,
+      limiteDesgaste: limiteDesgaste,
+      minPercent: escalaReferencia.minPercent,
+      maxPercent: escalaReferencia.maxPercent,
+    );
+  }
 }
 
 /// Rótulo curto de cada status, usado na legenda do gráfico na tela e no PDF.
-String rotuloStatusPonta(StatusPonta status) {
-  return switch (status) {
-    StatusPonta.ideal => 'Ideal',
-    StatusPonta.irregular => 'Entupido',
-    StatusPonta.desgaste => 'Desgaste',
-    StatusPonta.pendente => 'Sem medição',
-  };
-}
+String rotuloStatusPonta(StatusPonta status) => rotuloZona(status);
 
 /// Texto de apoio abaixo do título — o mesmo na tela e no laudo.
 String subtituloGraficoVazao(VazaoChartData data) {
-  final faixa =
-      '${data.limiteIrregular.toStringAsFixed(0)}–${data.limiteDesgaste.toStringAsFixed(0)}%';
-  return 'Cada barra parte do ideal (${data.litroMinIdeal.toStringAsFixed(3)} L/min). '
-      'A faixa verde é o aceitável ($faixa).';
+  final partes = <String>[
+    'Referência do ideal na linha de 100% '
+        '(${LaudoNumeroFormat.litroMin(data.litroMinIdeal)})',
+  ];
+  if (data.limiteIrregular < 100) {
+    partes.add(
+      'faixa verde ${LaudoNumeroFormat.decimal(data.limiteIrregular, casas: 0)}–100%',
+    );
+  }
+  if (data.limiteDesgaste > 100) {
+    partes.add(
+      'faixa laranja 100–${LaudoNumeroFormat.decimal(data.limiteDesgaste, casas: 0)}%',
+    );
+  }
+  return '${partes.join('. ')}.';
 }
 
 /// Geometria compartilhada pela tela e pelo PDF.
@@ -157,12 +215,14 @@ class VazaoChartLayout {
     required this.plotHeight,
     required this.slotWidth,
     required this.barWidth,
+    this.bottomPadPdf = bottomPad,
   });
 
   static const leftPad = 48.0;
-  static const rightPad = 14.0;
-  static const topPad = 28.0;
+  static const rightPad = 72.0;
+  static const topPad = 40.0;
   static const bottomPad = 28.0;
+  static const bottomPadRotuloVertical = 52.0;
   static const maxSlot = 44.0;
   static const minSlot = 32.0;
   static const maxBarWidth = 16.0;
@@ -175,6 +235,7 @@ class VazaoChartLayout {
   final double plotHeight;
   final double slotWidth;
   final double barWidth;
+  final double bottomPadPdf;
 
   double get right => left + plotWidth;
 
@@ -200,9 +261,10 @@ class VazaoChartLayout {
     required int n,
     required double canvasWidth,
     required double canvasHeight,
+    double bottomPadOverride = bottomPad,
   }) {
     final plotW = max(0.0, canvasWidth - leftPad - rightPad);
-    final plotH = max(0.0, canvasHeight - topPad - bottomPad);
+    final plotH = max(0.0, canvasHeight - topPad - bottomPadOverride);
     final slot = n == 0 ? 0.0 : plotW / n;
     return VazaoChartLayout(
       left: leftPad,
@@ -210,6 +272,7 @@ class VazaoChartLayout {
       plotHeight: plotH,
       slotWidth: slot,
       barWidth: min(maxBarWidth, slot * barRatio),
+      bottomPadPdf: bottomPadOverride,
     );
   }
 
@@ -222,6 +285,6 @@ class VazaoChartLayout {
 
   /// PDF: Y cresce para cima a partir da base do canvas.
   double yPdf(double percentual, VazaoChartData data) =>
-      bottomPad +
+      bottomPadPdf +
       ((percentual - data.minPercent) / data.amplitude) * plotHeight;
 }

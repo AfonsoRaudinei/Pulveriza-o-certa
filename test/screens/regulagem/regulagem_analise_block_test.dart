@@ -52,7 +52,7 @@ Future<void> _pumpBlock(
             area: 0,
             ladoConferencia: LadoConferenciaPontas.direita,
             readonly: readonly,
-            buildData: _minimalPdfData,
+            buildData: () async => _minimalPdfData(),
           ),
         ),
       ),

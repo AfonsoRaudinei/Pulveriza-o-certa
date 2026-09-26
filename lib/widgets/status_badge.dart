@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../core/iconografia/zona_icon.dart';
+import '../core/zona_visual.dart';
+import '../domain/calculos/texto_pontas.dart';
 import '../models/regulagem.dart';
 import '../theme.dart';
 
+/// Status com ícone da zona e texto curto, sem selo de fundo.
 class StatusBadge extends StatelessWidget {
   const StatusBadge({super.key, required this.status});
 
@@ -10,56 +14,20 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = _BadgeStyle.fromStatus(status, AppThemeColors.of(context));
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: style.background,
-        borderRadius: BorderRadius.circular(AppRadius.full),
-      ),
-      child: Text(
-        style.label,
-        style: Theme.of(context)
-            .textTheme
-            .labelMedium
-            ?.copyWith(color: style.color),
-      ),
+    final cor = corZona(status);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ZonaIcon(status: status, size: 11, color: cor),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          rotuloZona(status),
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: cor,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ],
     );
-  }
-}
-
-class _BadgeStyle {
-  const _BadgeStyle(this.label, this.background, this.color);
-
-  final String label;
-  final Color background;
-  final Color color;
-
-  factory _BadgeStyle.fromStatus(StatusPonta status, AppThemeColors colors) {
-    return switch (status) {
-      StatusPonta.ideal => _BadgeStyle(
-          '● Ideal',
-          colors.successLight,
-          colors.success,
-        ),
-      StatusPonta.desgaste => _BadgeStyle(
-          '▲ Desgaste',
-          colors.dangerLight,
-          colors.danger,
-        ),
-      StatusPonta.irregular => _BadgeStyle(
-          '▼ Entupido',
-          colors.warningLight,
-          colors.warning,
-        ),
-      StatusPonta.pendente => _BadgeStyle(
-          '○ Pendente',
-          colors.surfaceAlt,
-          colors.textTertiary,
-        ),
-    };
   }
 }

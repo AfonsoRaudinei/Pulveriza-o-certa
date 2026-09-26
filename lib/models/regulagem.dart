@@ -1,11 +1,30 @@
 import 'foto_regulagem.dart';
+import '../domain/calculos/limites_regulagem.dart';
 
 enum TipoOperacao { pulverizador, plantadeira }
 
-enum StatusPonta { pendente, ideal, irregular, desgaste }
+enum StatusPonta { pendente, ideal, irregular, desgaste, atencao }
 
 /// Lado por onde a conferência das pontas começou (1D = direita, 1E = esquerda).
 enum LadoConferenciaPontas { direita, esquerda }
+
+/// Cultura da operação (lista fechada — extensível no mesmo enum).
+enum CulturaCultivo {
+  soja,
+  milho,
+}
+
+extension CulturaCultivoLabels on CulturaCultivo {
+  String get label => switch (this) {
+        CulturaCultivo.soja => 'Soja',
+        CulturaCultivo.milho => 'Milho',
+      };
+
+  static CulturaCultivo? fromJson(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    return CulturaCultivo.values.byName(raw);
+  }
+}
 
 String rotuloPonta(int id, LadoConferenciaPontas lado) {
   final sufixo = lado == LadoConferenciaPontas.direita ? 'D' : 'E';
@@ -77,6 +96,9 @@ class Regulagem {
     this.manejoRS,
     this.precoBicoRS,
     this.areaHa,
+    this.cultura,
+    this.limiteEntupido,
+    this.limiteDesgaste,
     required this.criadoEm,
     required this.atualizadoEm,
   });
@@ -107,8 +129,21 @@ class Regulagem {
   final double? manejoRS;
   final double? precoBicoRS;
   final double? areaHa;
+  final CulturaCultivo? cultura;
+  final double? limiteEntupido;
+  final double? limiteDesgaste;
   final DateTime criadoEm;
   final DateTime atualizadoEm;
+
+  LimitesRegulagem? get limitesSnapshot {
+    final entupido = limiteEntupido;
+    final desgaste = limiteDesgaste;
+    if (entupido == null || desgaste == null) return null;
+    return LimitesRegulagem(
+      limiteEntupido: entupido,
+      limiteDesgaste: desgaste,
+    );
+  }
 
   factory Regulagem.fromJson(Map<String, dynamic> json) {
     return Regulagem(
@@ -146,6 +181,9 @@ class Regulagem {
       manejoRS: (json['manejoRS'] as num?)?.toDouble(),
       precoBicoRS: (json['precoBicoRS'] as num?)?.toDouble(),
       areaHa: (json['areaHa'] as num?)?.toDouble(),
+      cultura: CulturaCultivoLabels.fromJson(json['cultura'] as String?),
+      limiteEntupido: (json['limiteEntupido'] as num?)?.toDouble(),
+      limiteDesgaste: (json['limiteDesgaste'] as num?)?.toDouble(),
       criadoEm: DateTime.parse(json['criadoEm'] as String),
       atualizadoEm: DateTime.parse(json['atualizadoEm'] as String),
     );
@@ -153,6 +191,7 @@ class Regulagem {
 
   Regulagem copyWith({
     List<FotoRegulagem>? fotos,
+    CulturaCultivo? cultura,
   }) {
     return Regulagem(
       id: id,
@@ -181,6 +220,9 @@ class Regulagem {
       manejoRS: manejoRS,
       precoBicoRS: precoBicoRS,
       areaHa: areaHa,
+      cultura: cultura ?? this.cultura,
+      limiteEntupido: limiteEntupido,
+      limiteDesgaste: limiteDesgaste,
       criadoEm: criadoEm,
       atualizadoEm: atualizadoEm,
     );
@@ -214,6 +256,9 @@ class Regulagem {
       'manejoRS': manejoRS,
       'precoBicoRS': precoBicoRS,
       'areaHa': areaHa,
+      if (cultura != null) 'cultura': cultura!.name,
+      'limiteEntupido': limiteEntupido,
+      'limiteDesgaste': limiteDesgaste,
       'criadoEm': criadoEm.toIso8601String(),
       'atualizadoEm': atualizadoEm.toIso8601String(),
     };

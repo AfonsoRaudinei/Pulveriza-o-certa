@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/fotos_regulagem_constants.dart';
 import '../../../models/foto_regulagem.dart';
+import '../../../models/regulagem.dart';
 import '../../../services/fotos_regulagem_service.dart';
 import '../../../theme.dart';
 import 'foto_regulagem_sheet.dart';
@@ -17,6 +18,8 @@ class FotosRegulagemSection extends StatefulWidget {
     required this.readonly,
     required this.onChanged,
     this.fotosService,
+    this.medicoes = const [],
+    this.ladoConferencia = LadoConferenciaPontas.direita,
   });
 
   final String regulagemId;
@@ -24,6 +27,8 @@ class FotosRegulagemSection extends StatefulWidget {
   final bool readonly;
   final ValueChanged<List<FotoRegulagem>> onChanged;
   final FotosRegulagemService? fotosService;
+  final List<PontaMedicao> medicoes;
+  final LadoConferenciaPontas ladoConferencia;
 
   @override
   State<FotosRegulagemSection> createState() => _FotosRegulagemSectionState();
@@ -38,6 +43,14 @@ class _FotosRegulagemSectionState extends State<FotosRegulagemSection> {
   bool get _podeAdicionar =>
       !widget.readonly &&
       widget.fotos.length < FotosRegulagemConstants.maxFotosPorRegulagem;
+
+  Map<int, String> get _pontasRotulo {
+    return {
+      for (final m in widget.medicoes)
+        if (m.valorMedido != null)
+          m.id: rotuloPonta(m.id, widget.ladoConferencia),
+    };
+  }
 
   Future<void> _capturar() async {
     if (!_podeAdicionar || _busy) return;
@@ -63,6 +76,7 @@ class _FotosRegulagemSectionState extends State<FotosRegulagemSection> {
         foto: foto,
         isNew: true,
         readonly: false,
+        pontasRotulo: _pontasRotulo,
         onSave: (atualizada) {
           widget.onChanged([...widget.fotos, atualizada]);
         },
@@ -102,6 +116,7 @@ class _FotosRegulagemSectionState extends State<FotosRegulagemSection> {
       foto: foto,
       isNew: false,
       readonly: widget.readonly,
+      pontasRotulo: _pontasRotulo,
       onSave: widget.readonly
           ? null
           : (atualizada) {

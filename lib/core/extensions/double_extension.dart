@@ -6,10 +6,14 @@ extension DoubleExtension on double {
   }
 
   String toPercent({int casas = 1}) {
-    return '${toStringAsFixed(casas)}%';
+    return NumberFormat.decimalPatternDigits(
+      locale: 'pt_BR',
+      decimalDigits: casas,
+    ).format(this) +
+        '%';
   }
 
   String toLitroMin() {
-    return '${toStringAsFixed(3)} L/min';
+    return '${NumberFormat.decimalPatternDigits(locale: 'pt_BR', decimalDigits: 3).format(this)} L/min';
   }
 }

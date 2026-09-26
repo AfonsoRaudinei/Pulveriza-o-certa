@@ -3,8 +3,12 @@ import 'dart:math' show max, min;
 import 'package:flutter/material.dart';
 
 import '../../../core/charts/vazao_chart_data.dart';
+import '../../../core/formatters/laudo_numero_format.dart';
+import '../../../core/iconografia/zona_icon.dart';
+import '../../../core/zona_visual.dart';
 import '../../../models/regulagem.dart';
 import '../../../theme.dart';
+import '../../../widgets/secao_laudo_titulo.dart';
 
 /// Gráfico "Vazão por ponta".
 ///
@@ -39,51 +43,36 @@ class GraficoVazaoPontas extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Vazão por ponta', style: theme.textTheme.headlineSmall),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          subtituloGraficoVazao(data),
-          style: theme.textTheme.bodySmall,
+        SecaoLaudoTitulo(
+          titulo: 'Vazão por ponta',
+          subtitulo: subtituloGraficoVazao(data),
         ),
         const SizedBox(height: AppSpacing.md),
-        Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(color: colors.border),
-          ),
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            AppSpacing.md,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: RepaintBoundary(
-                  child: SizedBox(
-                    width: larguraGrafico,
-                    height: _alturaCanvas,
-                    child: CustomPaint(
-                      painter: _GraficoVazaoPainter(
-                        data: data,
-                        colors: colors,
-                        ladoConferencia: ladoConferencia,
-                        estiloBase: theme.textTheme.labelSmall ??
-                            const TextStyle(fontFamily: 'Inter'),
-                      ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: RepaintBoundary(
+                child: SizedBox(
+                  width: larguraGrafico,
+                  height: _alturaCanvas,
+                  child: CustomPaint(
+                    painter: _GraficoVazaoPainter(
+                      data: data,
+                      colors: colors,
+                      ladoConferencia: ladoConferencia,
+                      estiloBase: theme.textTheme.labelSmall ??
+                          const TextStyle(fontFamily: 'Inter'),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              _Legenda(data: data),
-            ],
-          ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _Legenda(data: data),
+          ],
         ),
       ],
     );
@@ -97,96 +86,56 @@ class _Legenda extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.xs,
       children: [
         for (final status in data.statusMedidos)
           _LegendaItem(
-            color: corDoStatus(status, colors),
-            fundo: _fundoDaLegenda(status, colors),
+            status: status,
             label: rotuloStatusPonta(status),
           ),
         if (data.temPendente)
           _LegendaItem(
-            color: colors.textTertiary,
-            fundo: colors.surfaceAlt,
+            status: StatusPonta.pendente,
             label: rotuloStatusPonta(StatusPonta.pendente),
-            vazado: true,
           ),
       ],
     );
   }
 }
 
-Color _fundoDaLegenda(StatusPonta status, AppThemeColors colors) {
-  return switch (status) {
-    StatusPonta.ideal => colors.successLight,
-    StatusPonta.irregular => colors.warningLight,
-    StatusPonta.desgaste => colors.dangerLight,
-    StatusPonta.pendente => colors.surfaceAlt,
-  };
+/// Cor da barra de cada status.
+Color corDoStatus(StatusPonta status, AppThemeColors colors) {
+  return corZona(status);
 }
 
 class _LegendaItem extends StatelessWidget {
   const _LegendaItem({
-    required this.color,
-    required this.fundo,
+    required this.status,
     required this.label,
-    this.vazado = false,
   });
 
-  final Color color;
-  final Color fundo;
+  final StatusPonta status;
   final String label;
-  final bool vazado;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: fundo,
-        borderRadius: BorderRadius.circular(AppRadius.full),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(
-              color: vazado ? null : color,
-              borderRadius: BorderRadius.circular(2),
-              border: vazado ? Border.all(color: color, width: 1.5) : null,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppThemeColors.of(context).textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ZonaIcon(status: status, size: 11),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppThemeColors.of(context).textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+      ],
     );
   }
-}
-
-/// Cor da barra/legenda de cada status.
-Color corDoStatus(StatusPonta status, AppThemeColors colors) {
-  return switch (status) {
-    StatusPonta.ideal => colors.success,
-    StatusPonta.irregular => colors.warning,
-    StatusPonta.desgaste => colors.danger,
-    StatusPonta.pendente => colors.textTertiary,
-  };
 }
 
 class _GraficoVazaoPainter extends CustomPainter {
@@ -217,25 +166,37 @@ class _GraficoVazaoPainter extends CustomPainter {
     final yEntupido = layout.yFlutter(data.limiteIrregular, data);
     final yDesgaste = layout.yFlutter(data.limiteDesgaste, data);
 
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(layout.left, yDesgaste, layout.right, yEntupido),
-        const Radius.circular(4),
-      ),
-      Paint()..color = colors.success.withValues(alpha: 0.12),
-    );
+    if (data.limiteIrregular < 100) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTRB(layout.left, yIdeal, layout.right, yEntupido),
+          const Radius.circular(4),
+        ),
+        Paint()..color = AppColors.zonaIdeal.withValues(alpha: 0.16),
+      );
+    }
+    if (data.limiteDesgaste > 100) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTRB(layout.left, yDesgaste, layout.right, yIdeal),
+          const Radius.circular(4),
+        ),
+        Paint()..color = AppColors.zonaAtencao.withValues(alpha: 0.14),
+      );
+    }
 
     canvas.drawLine(
       Offset(layout.left, yIdeal),
       Offset(layout.right, yIdeal),
       Paint()
-        ..color = colors.success
+        ..color = colors.textSecondary
         ..strokeWidth = 1.5
         ..strokeCap = StrokeCap.round,
     );
 
     _rotuloEixo(
-        canvas, layout, '100%', yIdeal, colors.success, FontWeight.w600);
+        canvas, layout, '100%', yIdeal, colors.textSecondary, FontWeight.w600);
+    _rotuloIdealReferencia(canvas, layout, yIdeal, colors.textSecondary);
 
     for (var index = 0; index < data.pontas.length; index++) {
       final ponta = data.pontas[index];
@@ -287,17 +248,33 @@ class _GraficoVazaoPainter extends CustomPainter {
 
       if (!layout.mostraRotulosNasBarras) continue;
 
+      final rotuloTop = subiu
+          ? topo - _fontSize * 2 - 6
+          : min(
+              topo + altura + 3, layout.plotBottomFlutter - _fontSize * 2 - 2);
       _texto(
         canvas,
-        '${percentual.toStringAsFixed(0)}%',
+        LaudoNumeroFormat.percentual(percentual, casas: 1),
         centro: centerX,
-        top: subiu
-            ? topo - _fontSize - 5
-            : min(topo + altura + 3, layout.plotBottomFlutter - _fontSize - 3),
+        top: rotuloTop,
         color: cor,
         peso: FontWeight.w600,
       );
     }
+  }
+
+  void _rotuloIdealReferencia(
+    Canvas canvas,
+    VazaoChartLayout layout,
+    double yIdeal,
+    Color color,
+  ) {
+    final texto = LaudoNumeroFormat.rotuloIdealGrafico(data.litroMinIdeal);
+    final painter = _painterDe(texto, color, FontWeight.w500);
+    painter.paint(
+      canvas,
+      Offset(layout.right + 6, yIdeal - painter.height / 2),
+    );
   }
 
   void _rotuloEixo(

@@ -40,7 +40,7 @@ void main() {
     expect(chart.maxPercent, greaterThan(105));
   });
 
-  test('janela do eixo se abre para valores fora da faixa', () {
+  test('janela do eixo se abre para valores fora da faixa, até a folga', () {
     final chart = _chart(const [
       PontaMedicao(id: 1, valorMedido: 1.2, status: StatusPonta.desgaste),
       PontaMedicao(id: 2, valorMedido: 0.85, status: StatusPonta.irregular),
@@ -50,15 +50,34 @@ void main() {
     expect(chart.maxPercent, greaterThan(120));
   });
 
-  test('amplitude respeita o alcance máximo e corta a barra no piso', () {
+  test('extremos dos dados são limitados a 25 pp além dos limites', () {
+    final chart = _chart(
+      const [
+        PontaMedicao(id: 1, valorMedido: 0.95, status: StatusPonta.irregular),
+        PontaMedicao(id: 2, valorMedido: 2.0, status: StatusPonta.desgaste),
+      ],
+      limiteIrregular: 97,
+      limiteDesgaste: 105,
+    );
+
+    expect(chart.maxPercent, closeTo(134.2, 0.01));
+    expect(chart.minPercent, closeTo(90.8, 0.01));
+    expect(chart.minPercent, lessThan(97));
+    expect(chart.maxPercent, greaterThan(105));
+    expect(chart.percentualNoEixo(100), closeTo(100, 0.01));
+    expect(chart.percentualNoEixo(200), chart.maxPercent);
+    expect(chart.pontas[1].percentual, closeTo(200, 0.01));
+  });
+
+  test('ponta quase seca é cortada no piso da janela, não achata o eixo', () {
     final chart = _chart(const [
       PontaMedicao(id: 1, valorMedido: 0.05, status: StatusPonta.irregular),
       PontaMedicao(id: 2, valorMedido: 1.1, status: StatusPonta.desgaste),
     ]);
 
-    expect(chart.amplitude, closeTo(VazaoChartData.alcanceMaximo, 0.01));
     expect(chart.percentualNoEixo(5), chart.minPercent);
     expect(chart.percentualNoEixo(110), closeTo(110, 0.01));
+    expect(chart.minPercent, greaterThanOrEqualTo(92 - 25 - 8));
   });
 
   test('vazio sem ideal ou sem nenhuma medição', () {
@@ -87,17 +106,18 @@ void main() {
     ]);
 
     expect(chart.statusMedidos, [
-      StatusPonta.ideal,
       StatusPonta.irregular,
+      StatusPonta.ideal,
       StatusPonta.desgaste,
     ]);
   });
 
   test('rotuloStatusPonta cobre os quatro status', () {
     expect(rotuloStatusPonta(StatusPonta.ideal), 'Ideal');
-    expect(rotuloStatusPonta(StatusPonta.irregular), 'Entupido');
+    expect(rotuloStatusPonta(StatusPonta.irregular), 'Entupida');
     expect(rotuloStatusPonta(StatusPonta.desgaste), 'Desgaste');
-    expect(rotuloStatusPonta(StatusPonta.pendente), 'Sem medição');
+    expect(rotuloStatusPonta(StatusPonta.atencao), 'Atenção');
+    expect(rotuloStatusPonta(StatusPonta.pendente), 'Pendente');
   });
 
   test('subtituloGraficoVazao descreve ideal e faixa', () {
@@ -106,8 +126,8 @@ void main() {
     ]);
     expect(
       subtituloGraficoVazao(chart),
-      'Cada barra parte do ideal (1.000 L/min). '
-      'A faixa verde é o aceitável (92–105%).',
+      'Referência do ideal na linha de 100% (1,000 L/min). '
+      'faixa verde 92–100%. faixa laranja 100–105%.',
     );
   });
 

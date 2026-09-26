@@ -33,7 +33,35 @@ void main() {
     expect(restaurada.ladoConferenciaPontas, LadoConferenciaPontas.esquerda);
   });
 
-  test('JSON antigo sem campo assume direita', () {
+  test('JSON persiste snapshot dos limites usados no laudo', () {
+    final regulagem = Regulagem(
+      id: 'x',
+      produtor: 'P',
+      fazenda: 'F',
+      maquina: 'M',
+      tipoOperacao: TipoOperacao.pulverizador,
+      dataRegulagem: DateTime(2026, 9, 13),
+      vazaoLha: 90,
+      velocidade: 10,
+      espacamentoCm: 50,
+      numeroPontas: 2,
+      litroMinIdeal: 0.8,
+      medicoes: const [],
+      limiteEntupido: 97,
+      limiteDesgaste: 105,
+      criadoEm: DateTime(2026, 9, 13),
+      atualizadoEm: DateTime(2026, 9, 13),
+    );
+
+    final json = regulagem.toJson();
+    expect(json['limiteEntupido'], 97);
+    expect(json['limiteDesgaste'], 105);
+    final restaurada = Regulagem.fromJson(json);
+    expect(restaurada.limitesSnapshot?.limiteEntupido, 97);
+    expect(restaurada.limitesSnapshot?.limiteDesgaste, 105);
+  });
+
+  test('JSON antigo sem limites não carrega snapshot', () {
     final restaurada = Regulagem.fromJson({
       'id': 'x',
       'produtor': 'P',
@@ -50,5 +78,6 @@ void main() {
       'atualizadoEm': '2026-09-13T00:00:00.000',
     });
     expect(restaurada.ladoConferenciaPontas, LadoConferenciaPontas.direita);
+    expect(restaurada.limitesSnapshot, isNull);
   });
 }

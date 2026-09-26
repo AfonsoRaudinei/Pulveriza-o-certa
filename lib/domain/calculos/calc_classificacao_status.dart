@@ -1,11 +1,11 @@
-import '../../models/configuracoes.dart';
 import '../../models/regulagem.dart';
 import 'calc_percentual_ponta.dart';
+import 'limites_regulagem.dart';
 
 StatusPonta classificarPonta({
   required double? valorMedido,
   required double litroMinIdeal,
-  required Configuracoes configuracoes,
+  required LimitesRegulagem limites,
 }) {
   if (valorMedido == null || litroMinIdeal <= 0) {
     return StatusPonta.pendente;
@@ -16,11 +16,24 @@ StatusPonta classificarPonta({
     valorMedido: valorMedido,
     litroMinIdeal: litroMinIdeal,
   );
-  if (percentual > configuracoes.limiteDesgaste) {
+  if (percentual > limites.limiteDesgaste) {
     return StatusPonta.desgaste;
   }
-  if (percentual < configuracoes.limiteIrregular) {
+  if (percentual < limites.limiteEntupido) {
     return StatusPonta.irregular;
   }
+  if (percentual > 100) {
+    return StatusPonta.atencao;
+  }
   return StatusPonta.ideal;
+}
+
+LimitesRegulagem limitesDeConfig({
+  required double limiteIrregular,
+  required double limiteDesgaste,
+}) {
+  return LimitesRegulagem(
+    limiteEntupido: limiteIrregular,
+    limiteDesgaste: limiteDesgaste,
+  );
 }

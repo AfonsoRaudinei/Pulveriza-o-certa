@@ -1,6 +1,13 @@
 export 'calc_analise_economica.dart';
 export 'calc_classificacao_status.dart';
+export 'calc_diagnostico_regulagem.dart';
 export 'calc_litro_min_ideal.dart';
 export 'calc_percentual_ponta.dart';
+export 'calc_recomendacao_laudo.dart';
+export 'calc_texto_veredito_laudo.dart';
+export 'calc_layout_laudo_pdf.dart';
+export 'calc_texto_analise_economica_laudo.dart';
 export 'calc_perda_zona_atencao.dart';
 export 'calc_tolerancia_ponta.dart';
+export 'limites_regulagem.dart';
+export 'texto_pontas.dart';

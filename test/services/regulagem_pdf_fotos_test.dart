@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:agrocalc/domain/calculos/calc_litro_min_ideal.dart';
 import 'package:agrocalc/models/configuracoes.dart';
 import 'package:agrocalc/models/foto_regulagem.dart';
 import 'package:agrocalc/models/regulagem.dart';
@@ -84,5 +85,51 @@ void main() {
 
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
     expect(bytes.length, greaterThan(1000));
+  });
+
+  test('exporta PDF com 12 fotos e 10 pontas para revisão visual', () async {
+    const regulagemId = 'pdf-12-fotos';
+    final fotos = <FotoRegulagem>[];
+    for (var i = 1; i <= 12; i++) {
+      fotos.add(
+        await criarFoto(
+          regulagemId: regulagemId,
+          titulo: '${i}D',
+          observacao: 'Foto $i da regulagem',
+        ),
+      );
+    }
+    final ideal = calcularLitroMinIdeal(
+      vazaoLha: 80,
+      velocidade: 8,
+      espacamentoCm: 50,
+    );
+    final medicoes = [
+      for (var i = 1; i <= 10; i++)
+        PontaMedicao(id: i, valorMedido: 0.53, status: StatusPonta.ideal),
+    ];
+    final bytes = await RegulagemPdfService.generate(
+      RegulagemPdfData(
+        produtor: 'Produtor Teste',
+        fazenda: 'Fazenda 12 Fotos',
+        maquina: 'Pulverizador',
+        dataRegulagem: DateTime(2026, 9, 23),
+        vazaoLha: 80,
+        velocidade: 8,
+        espacamentoCm: 50,
+        numeroPontas: 10,
+        litroMinIdeal: ideal,
+        medicoes: medicoes,
+        configuracoes: const Configuracoes(),
+        manejo: 600,
+        precoBico: 30,
+        area: 30,
+        fotos: fotos,
+      ),
+      fotosService: fotosService,
+    );
+    final out = File('regulagem_12_fotos_2026-09-23.pdf');
+    await out.writeAsBytes(bytes, flush: true);
+    expect(out.lengthSync(), greaterThan(5000));
   });
 }

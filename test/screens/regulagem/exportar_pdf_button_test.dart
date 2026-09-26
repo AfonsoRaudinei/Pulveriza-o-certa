@@ -36,7 +36,7 @@ void main() {
         theme: AppTheme.light,
         home: Scaffold(
           body: ExportarPdfButton(
-            buildData: () {
+            buildData: () async {
               buildCount++;
               return _minimalPdfData();
             },
@@ -57,7 +57,7 @@ void main() {
         theme: AppTheme.light,
         home: Scaffold(
           body: ExportarPdfButton(
-            buildData: () {
+            buildData: () async {
               buildCount++;
               return _minimalPdfData();
             },

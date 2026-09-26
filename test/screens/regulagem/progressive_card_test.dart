@@ -70,6 +70,58 @@ void main() {
     expect(find.text('corpo-contexto'), findsNothing);
   });
 
+  testWidgets('collapsible false desbloqueada mostra corpo sem ExpansionTile',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ProgressiveCard(
+            index: 4,
+            title: 'Medições das Pontas',
+            locked: false,
+            complete: false,
+            collapsible: false,
+            child: const Text('corpo-pontas'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExpansionTile), findsNothing);
+    expect(find.byIcon(Icons.expand_more), findsNothing);
+    expect(find.text('corpo-pontas'), findsOneWidget);
+
+    await tester.tap(find.text('Medições das Pontas'));
+    await tester.pumpAndSettle();
+    expect(find.text('corpo-pontas'), findsOneWidget);
+  });
+
+  testWidgets('collapsible false bloqueada usa ExpansionTile recolhida',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ProgressiveCard(
+            index: 4,
+            title: 'Medições das Pontas',
+            locked: true,
+            complete: false,
+            collapsible: false,
+            child: const Text('corpo-pontas'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExpansionTile), findsOneWidget);
+    expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+    expect(find.text('corpo-pontas'), findsNothing);
+  });
+
   testWidgets('completar e desbloquear abre a etapa sozinha', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

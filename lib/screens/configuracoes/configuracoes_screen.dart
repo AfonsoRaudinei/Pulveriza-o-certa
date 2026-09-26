@@ -1,15 +1,22 @@
-import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/formatters/digitos_maximo_formatter.dart';
 import '../../models/configuracoes.dart';
+import '../../models/marca_pdf.dart';
 import '../../providers/configuracoes_provider.dart';
+import '../../services/marca_logo_service.dart';
 import '../../providers/regulagens_provider.dart';
 import '../../services/storage_service.dart';
 import '../../theme.dart';
+import '../../core/marca_cabecalho_laudo.dart';
 import '../../widgets/app_button.dart';
+import 'widgets/seletor_cor_marca_dialog.dart';
 
 class ConfiguracoesScreen extends StatefulWidget {
   const ConfiguracoesScreen({super.key});
@@ -21,18 +28,13 @@ class ConfiguracoesScreen extends StatefulWidget {
 class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
   final _nome = TextEditingController();
   final _empresa = TextEditingController();
-  final _desgaste = TextEditingController();
-  final _irregular = TextEditingController();
-  final _tolMin = TextEditingController();
-  final _tolMax = TextEditingController();
+  final _crea = TextEditingController();
   final _nomeFocus = FocusNode();
   final _empresaFocus = FocusNode();
-  final _desgasteFocus = FocusNode();
-  final _irregularFocus = FocusNode();
-  final _tolMinFocus = FocusNode();
-  final _tolMaxFocus = FocusNode();
+  final _creaFocus = FocusNode();
   final _storage = StorageService();
-  Timer? _limitesDebounce;
+  final _marcaLogo = MarcaLogoService();
+  final _imagePicker = ImagePicker();
   ConfiguracoesProvider? _configProvider;
 
   @override
@@ -56,20 +58,13 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
 
   @override
   void dispose() {
-    _limitesDebounce?.cancel();
     _configProvider?.removeListener(_onConfigChanged);
     _nomeFocus.dispose();
     _empresaFocus.dispose();
-    _desgasteFocus.dispose();
-    _irregularFocus.dispose();
-    _tolMinFocus.dispose();
-    _tolMaxFocus.dispose();
+    _creaFocus.dispose();
     _nome.dispose();
     _empresa.dispose();
-    _desgaste.dispose();
-    _irregular.dispose();
-    _tolMin.dispose();
-    _tolMax.dispose();
+    _crea.dispose();
     super.dispose();
   }
 
@@ -83,12 +78,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
         context.read<ConfiguracoesProvider>().configuracoes;
     _syncField(_nome, _nomeFocus, config.nomeConsultor);
     _syncField(_empresa, _empresaFocus, config.empresaNome);
-    _syncField(
-        _desgaste, _desgasteFocus, config.limiteDesgaste.toStringAsFixed(2));
-    _syncField(
-        _irregular, _irregularFocus, config.limiteIrregular.toStringAsFixed(2));
-    _syncField(_tolMin, _tolMinFocus, config.toleranciaMin.toStringAsFixed(2));
-    _syncField(_tolMax, _tolMaxFocus, config.toleranciaMax.toStringAsFixed(2));
+    _syncField(_crea, _creaFocus, config.registroProfissional);
   }
 
   void _syncField(
@@ -99,30 +89,6 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
     if (controller.text == value) return;
     if (focus.hasFocus) return;
     controller.text = value;
-  }
-
-  void _onLimiteChanged() {
-    _limitesDebounce?.cancel();
-    _limitesDebounce = Timer(const Duration(milliseconds: 400), () {
-      unawaited(_persistLimites());
-    });
-  }
-
-  Future<void> _persistLimites() async {
-    if (!mounted) return;
-    final desgaste = _parse(_desgaste.text, 0);
-    final entupido = _parse(_irregular.text, 0);
-    if (desgaste <= 0 || entupido <= 0) return;
-    try {
-      await context.read<ConfiguracoesProvider>().saveLimites(
-            limiteDesgaste: desgaste,
-            limiteIrregular: entupido,
-          );
-    } on StorageException catch (error) {
-      _feedback(error.message, erro: true);
-    } catch (error) {
-      debugPrint('Erro ao salvar limites: $error');
-    }
   }
 
   void _feedback(String mensagem, {bool erro = false}) {
@@ -152,10 +118,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
         atual.copyWith(
           nomeConsultor: _nome.text.trim(),
           empresaNome: _empresa.text.trim(),
-          limiteDesgaste: _parse(_desgaste.text, atual.limiteDesgaste),
-          limiteIrregular: _parse(_irregular.text, atual.limiteIrregular),
-          toleranciaMin: _parse(_tolMin.text, atual.toleranciaMin),
-          toleranciaMax: _parse(_tolMax.text, atual.toleranciaMax),
+          registroProfissional: _crea.text.trim(),
         ),
       );
       _feedback('Configurações salvas.');
@@ -257,10 +220,6 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
     return result ?? false;
   }
 
-  double _parse(String text, double fallback) {
-    return double.tryParse(text.replaceAll(',', '.')) ?? fallback;
-  }
-
   @override
   Widget build(BuildContext context) {
     final tema = context.watch<ConfiguracoesProvider>().configuracoes.tema;
@@ -276,8 +235,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
               _TemaSelector(value: tema, onChanged: _saveTema),
               const _SectionTitle('Perfil'),
               _perfilFields(wide),
-              const _SectionTitle('Limites de Regulagem'),
-              _limitesFields(wide),
+              _marcaLaudoSection(),
               const SizedBox(height: AppSpacing.lg),
               AppButton(label: 'Salvar', onPressed: _save),
               const _SectionTitle('Dados e Backup'),
@@ -297,84 +255,183 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       focusNode: _nomeFocus,
       label: 'Nome do Consultor',
       expand: !wide,
+      textoLivre: true,
+      capitalization: TextCapitalization.words,
     );
     final empresa = _ConfigTextField(
       controller: _empresa,
       focusNode: _empresaFocus,
       label: 'Nome da Empresa',
       expand: !wide,
+      textoLivre: true,
+      capitalization: TextCapitalization.words,
+    );
+    final crea = _ConfigTextField(
+      controller: _crea,
+      focusNode: _creaFocus,
+      label: 'Registro profissional (CREA)',
+      expand: !wide,
+      textoLivre: true,
     );
     if (!wide) {
-      return Column(children: [nome, empresa]);
+      return Column(children: [nome, empresa, crea]);
     }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: nome),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(child: empresa),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: nome),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(child: empresa),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        crea,
       ],
     );
   }
 
-  Widget _limitesFields(bool wide) {
-    final desgaste = _ConfigTextField(
-      controller: _desgaste,
-      focusNode: _desgasteFocus,
-      label: 'Limite desgaste (%)',
-      helper: 'Acima disso o bico fica Desgaste. Salva sozinho.',
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      expand: !wide,
-      onChanged: _onLimiteChanged,
+  Widget _marcaLaudoSection() {
+    final config = context.watch<ConfiguracoesProvider>().configuracoes;
+    final temLogo = config.marcaLogoArquivo.trim().isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Marca no laudo PDF',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Consultor e empresa aparecem no cabeçalho. O ${AppConstants.nomeMarcaRodapePdf} aparece no rodapé.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              _LogoMarcaPreview(
+                marcaLogoArquivo: config.marcaLogoArquivo,
+                marcaLogoService: _marcaLogo,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _escolherLogoMarca,
+                      icon: const Icon(Icons.image_outlined, size: 20),
+                      label: Text(temLogo ? 'Trocar logo' : 'Escolher logo'),
+                    ),
+                    if (temLogo) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      TextButton(
+                        onPressed: _removerLogoMarca,
+                        child: const Text('Remover logo'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Cor do cabeçalho',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _CorMarcaSelector(
+            config: config,
+            onPreset: _salvarCorMarca,
+            onPersonalizada: _abrirCorPersonalizada,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _PreviewCabecalhoLaudo(
+            config: config,
+            marcaLogoService: _marcaLogo,
+          ),
+        ],
+      ),
     );
-    final irregular = _ConfigTextField(
-      controller: _irregular,
-      focusNode: _irregularFocus,
-      label: 'Limite entupido (%)',
-      helper: 'Abaixo disso o bico fica Entupido. Salva sozinho.',
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      expand: !wide,
-      onChanged: _onLimiteChanged,
-    );
-    final tolMin = _ConfigTextField(
-      controller: _tolMin,
-      focusNode: _tolMinFocus,
-      label: 'Tolerância Mínima (%)',
-      helper: 'Início da zona aceitável.',
-      keyboardType: TextInputType.number,
-      expand: !wide,
-    );
-    final tolMax = _ConfigTextField(
-      controller: _tolMax,
-      focusNode: _tolMaxFocus,
-      label: 'Tolerância Máxima (%)',
-      helper: 'Fim da zona aceitável.',
-      keyboardType: TextInputType.number,
-      expand: !wide,
-    );
-    if (!wide) {
-      return Column(children: [irregular, desgaste, tolMin, tolMax]);
+  }
+
+  Future<void> _abrirCorPersonalizada() async {
+    try {
+      final provider = context.read<ConfiguracoesProvider>();
+      final atual = provider.configuracoes;
+      final picked = await showSeletorCorMarcaDialog(
+        context,
+        initial: corMarcaCabecalhoLaudo(atual),
+      );
+      if (picked == null) return;
+      await provider.save(
+        atual.copyWith(
+          corMarcaPdf: CorMarcaPdf.personalizada,
+          corMarcaPersonalizadaArgb: picked.toARGB32(),
+        ),
+      );
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
     }
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: irregular),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(child: desgaste),
-          ],
+  }
+
+  Future<void> _escolherLogoMarca() async {
+    try {
+      final picked = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (picked == null) return;
+      final arquivo = await _marcaLogo.salvarLogo(File(picked.path));
+      final provider = context.read<ConfiguracoesProvider>();
+      await provider.save(
+        provider.configuracoes.copyWith(marcaLogoArquivo: arquivo),
+      );
+      _feedback('Logo salvo para o laudo.');
+    } on StateError catch (error) {
+      _feedback(error.message, erro: true);
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
+    } catch (error) {
+      debugPrint('Erro ao salvar logo: $error');
+      _feedback('Não foi possível salvar o logo.', erro: true);
+    }
+  }
+
+  Future<void> _removerLogoMarca() async {
+    try {
+      await _marcaLogo.removerLogo();
+      final provider = context.read<ConfiguracoesProvider>();
+      await provider.save(
+        provider.configuracoes.copyWith(marcaLogoArquivo: ''),
+      );
+      _feedback('Logo removido.');
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
+    } catch (error) {
+      debugPrint('Erro ao remover logo: $error');
+      _feedback('Não foi possível remover o logo.', erro: true);
+    }
+  }
+
+  Future<void> _salvarCorMarca(CorMarcaPdf cor) async {
+    try {
+      final provider = context.read<ConfiguracoesProvider>();
+      if (provider.configuracoes.corMarcaPdf == cor) return;
+      await provider.save(
+        provider.configuracoes.copyWith(
+          corMarcaPdf: cor,
+          limparCorPersonalizada: true,
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: tolMin),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(child: tolMax),
-          ],
-        ),
-      ],
-    );
+      );
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
+    } catch (error) {
+      debugPrint('Erro ao salvar cor da marca: $error');
+    }
   }
 
   Widget _backupTiles(bool wide) {
@@ -453,6 +510,59 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _PreviewCabecalhoLaudo extends StatelessWidget {
+  const _PreviewCabecalhoLaudo({
+    required this.config,
+    required this.marcaLogoService,
+  });
+
+  final Configuracoes config;
+  final MarcaLogoService marcaLogoService;
+
+  @override
+  Widget build(BuildContext context) {
+    final fundo = corMarcaCabecalhoLaudo(config);
+    final texto = textoSobreCorMarcaLaudo(fundo);
+    final marca = config.textoMarcaCabecalho();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pré-visualização do cabeçalho',
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: fundo,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Row(
+            children: [
+              _LogoMarcaPreview(
+                marcaLogoArquivo: config.marcaLogoArquivo,
+                marcaLogoService: marcaLogoService,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  marca,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: texto,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _ConfigTextField extends StatelessWidget {
   const _ConfigTextField({
     required this.controller,
@@ -462,6 +572,9 @@ class _ConfigTextField extends StatelessWidget {
     this.keyboardType,
     this.expand = true,
     this.onChanged,
+    this.numerico = false,
+    this.textoLivre = false,
+    this.capitalization = TextCapitalization.none,
   });
 
   final TextEditingController controller;
@@ -471,6 +584,9 @@ class _ConfigTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool expand;
   final VoidCallback? onChanged;
+  final bool numerico;
+  final bool textoLivre;
+  final TextCapitalization capitalization;
 
   @override
   Widget build(BuildContext context) {
@@ -478,6 +594,16 @@ class _ConfigTextField extends StatelessWidget {
       controller: controller,
       focusNode: focusNode,
       keyboardType: keyboardType,
+      textCapitalization: capitalization,
+      autocorrect: textoLivre,
+      enableSuggestions: textoLivre,
+      spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
+      inputFormatters: numerico
+          ? [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+              const DigitosMaximoFormatter(),
+            ]
+          : null,
       decoration: InputDecoration(
         labelText: label,
         helperText: helper,
@@ -560,6 +686,133 @@ class _AboutCard extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LogoMarcaPreview extends StatelessWidget {
+  const _LogoMarcaPreview({
+    required this.marcaLogoArquivo,
+    required this.marcaLogoService,
+  });
+
+  final String marcaLogoArquivo;
+  final MarcaLogoService marcaLogoService;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return FutureBuilder<File?>(
+      future: marcaLogoService.arquivoExistente(marcaLogoArquivo),
+      builder: (context, snapshot) {
+        final file = snapshot.data;
+        return Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: colors.surfaceAlt,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: colors.border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          alignment: Alignment.center,
+          child: file != null
+              ? Image.file(file, fit: BoxFit.contain)
+              : Icon(Icons.business_outlined, color: colors.textTertiary),
+        );
+      },
+    );
+  }
+}
+
+class _CorMarcaSelector extends StatelessWidget {
+  const _CorMarcaSelector({
+    required this.config,
+    required this.onPreset,
+    required this.onPersonalizada,
+  });
+
+  final Configuracoes config;
+  final ValueChanged<CorMarcaPdf> onPreset;
+  final VoidCallback onPersonalizada;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.sm,
+      children: [
+        for (final cor in CorMarcaPdf.values)
+          _CorMarcaOption(
+            cor: cor,
+            swatch: cor == CorMarcaPdf.personalizada
+                ? corMarcaCabecalhoLaudo(config)
+                : cor.color,
+            selected: cor == config.corMarcaPdf,
+            onTap: () {
+              if (cor == CorMarcaPdf.personalizada) {
+                onPersonalizada();
+              } else {
+                onPreset(cor);
+              }
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _CorMarcaOption extends StatelessWidget {
+  const _CorMarcaOption({
+    required this.cor,
+    required this.swatch,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final CorMarcaPdf cor;
+  final Color swatch;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Semantics(
+      label: 'Cor ${cor.label}',
+      selected: selected,
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: swatch,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected ? colors.textPrimary : colors.border,
+                    width: selected ? 2 : 1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                cor.label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: selected ? FontWeight.w600 : null,
+                    ),
+              ),
+            ],
+          ),
         ),
       ),
     );

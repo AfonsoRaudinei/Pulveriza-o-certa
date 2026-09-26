@@ -13,6 +13,7 @@ class ProgressiveCard extends StatefulWidget {
     this.summary,
     this.showCompletedMarker = true,
     this.startExpanded = true,
+    this.collapsible = true,
   });
 
   final int index;
@@ -22,8 +23,12 @@ class ProgressiveCard extends StatefulWidget {
   final Widget child;
   final Widget? summary;
   final bool showCompletedMarker;
+
   /// Nova regulagem: etapa ativa abre expandida. Editar existente: recolhida com resumo.
   final bool startExpanded;
+
+  /// Quando false e desbloqueada, corpo fixo sem `ExpansionTile` (ex.: Medições das Pontas).
+  final bool collapsible;
 
   @override
   State<ProgressiveCard> createState() => _ProgressiveCardState();
@@ -45,7 +50,10 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
   @override
   void didUpdateWidget(covariant ProgressiveCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.locked && !widget.locked && widget.startExpanded) {
+    if (widget.collapsible &&
+        oldWidget.locked &&
+        !widget.locked &&
+        widget.startExpanded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_controller.isExpanded) {
           _controller.expand();
@@ -78,6 +86,18 @@ class _ProgressiveCardState extends State<ProgressiveCard> {
         : widget.complete
             ? StepStatus.completed
             : StepStatus.active;
+    final useExpansion = widget.locked || widget.collapsible;
+    if (!useExpansion) {
+      return ProgressiveStepCard(
+        stepNumber: widget.index,
+        title: widget.title,
+        status: status,
+        expandable: false,
+        showCompletedMarker: widget.showCompletedMarker,
+        child: widget.child,
+      );
+    }
+
     final mostrarResumo =
         !widget.locked && !_controller.isExpanded && widget.summary != null;
     return ProgressiveStepCard(

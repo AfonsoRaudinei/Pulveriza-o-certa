@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../../models/foto_regulagem.dart';
+import '../../../models/regulagem.dart';
 import '../../../theme.dart';
 import '../../../widgets/gradient_primary_button.dart';
 
@@ -14,6 +15,7 @@ class FotoRegulagemSheet extends StatefulWidget {
     required this.foto,
     required this.isNew,
     required this.readonly,
+    this.pontasRotulo = const {},
     this.onSave,
     this.onDelete,
   });
@@ -22,6 +24,7 @@ class FotoRegulagemSheet extends StatefulWidget {
   final FotoRegulagem foto;
   final bool isNew;
   final bool readonly;
+  final Map<int, String> pontasRotulo;
   final ValueChanged<FotoRegulagem>? onSave;
   final VoidCallback? onDelete;
 
@@ -31,6 +34,7 @@ class FotoRegulagemSheet extends StatefulWidget {
     required FotoRegulagem foto,
     required bool isNew,
     required bool readonly,
+    Map<int, String> pontasRotulo = const {},
     ValueChanged<FotoRegulagem>? onSave,
     VoidCallback? onDelete,
   }) {
@@ -46,6 +50,7 @@ class FotoRegulagemSheet extends StatefulWidget {
         foto: foto,
         isNew: isNew,
         readonly: readonly,
+        pontasRotulo: pontasRotulo,
         onSave: onSave,
         onDelete: onDelete,
       ),
@@ -59,12 +64,14 @@ class FotoRegulagemSheet extends StatefulWidget {
 class _FotoRegulagemSheetState extends State<FotoRegulagemSheet> {
   late final TextEditingController _titulo;
   late final TextEditingController _observacao;
+  int? _pontaId;
 
   @override
   void initState() {
     super.initState();
     _titulo = TextEditingController(text: widget.foto.titulo ?? '');
     _observacao = TextEditingController(text: widget.foto.observacao ?? '');
+    _pontaId = widget.foto.pontaId;
   }
 
   @override
@@ -75,12 +82,16 @@ class _FotoRegulagemSheetState extends State<FotoRegulagemSheet> {
   }
 
   void _salvar() {
-    final titulo = _titulo.text.trim();
+    var titulo = _titulo.text.trim();
     final observacao = _observacao.text.trim();
+    if (titulo.isEmpty && _pontaId != null) {
+      titulo = widget.pontasRotulo[_pontaId] ?? '';
+    }
     widget.onSave?.call(
       widget.foto.copyWith(
         titulo: titulo.isEmpty ? null : titulo,
         observacao: observacao.isEmpty ? null : observacao,
+        pontaId: _pontaId,
       ),
     );
     Navigator.pop(context);
@@ -115,7 +126,7 @@ class _FotoRegulagemSheetState extends State<FotoRegulagemSheet> {
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.sm),
             child: AspectRatio(
-              aspectRatio: 16 / 9,
+              aspectRatio: 4 / 3,
               child: Image.file(
                 widget.imageFile,
                 fit: BoxFit.cover,
@@ -123,12 +134,38 @@ class _FotoRegulagemSheetState extends State<FotoRegulagemSheet> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          if (widget.pontasRotulo.isNotEmpty) ...[
+            Text('Ponta', style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: AppSpacing.xs),
+            DropdownButtonFormField<int?>(
+              value: _pontaId,
+              decoration: const InputDecoration(isDense: true),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Nenhuma'),
+                ),
+                for (final entry in widget.pontasRotulo.entries)
+                  DropdownMenuItem<int?>(
+                    value: entry.key,
+                    child: Text(entry.value),
+                  ),
+              ],
+              onChanged: widget.readonly
+                  ? null
+                  : (v) => setState(() => _pontaId = v),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
           Text('Título', style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: AppSpacing.xs),
           TextField(
             controller: _titulo,
             enabled: !widget.readonly,
             maxLines: 1,
+            textCapitalization: TextCapitalization.sentences,
+            autocorrect: true,
+            enableSuggestions: true,
             textInputAction: TextInputAction.next,
             decoration: const InputDecoration(
               hintText: 'Opcional',
@@ -143,6 +180,9 @@ class _FotoRegulagemSheetState extends State<FotoRegulagemSheet> {
             enabled: !widget.readonly,
             maxLines: 3,
             minLines: 3,
+            textCapitalization: TextCapitalization.sentences,
+            autocorrect: true,
+            enableSuggestions: true,
             textInputAction: TextInputAction.done,
             decoration: const InputDecoration(
               hintText: 'Opcional',

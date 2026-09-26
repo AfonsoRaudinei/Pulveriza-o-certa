@@ -97,13 +97,13 @@ void main() {
       expect(result, StatusPonta.irregular);
     });
 
-    test('105% exato ainda é ideal', () {
+    test('105% exato é atenção (zona entre 100% e limite desgaste)', () {
       final result = CalcUtils.classificarPonta(
         valorMedido: 2.3625,
         litroMinIdeal: 2.25,
         configuracoes: config,
       );
-      expect(result, StatusPonta.ideal);
+      expect(result, StatusPonta.atencao);
     });
 
     test('acima de 105% é desgaste', () {
@@ -117,12 +117,9 @@ void main() {
   });
 
   group('tolerancia', () {
-    const config = Configuracoes();
-
     test('103% entra entre tolerâncias e acima min', () {
       final result = CalcUtils.verificarTolerancia(
         percentual: 103,
-        configuracoes: config,
       );
       expect(result.entreTolerancias, isTrue);
       expect(result.acimaToleranciaMin, isTrue);
@@ -131,7 +128,6 @@ void main() {
     test('107% só entra acima min', () {
       final result = CalcUtils.verificarTolerancia(
         percentual: 107,
-        configuracoes: config,
       );
       expect(result.entreTolerancias, isFalse);
       expect(result.acimaToleranciaMin, isTrue);
@@ -140,7 +136,6 @@ void main() {
     test('agrega entre tolerâncias e acima min', () {
       final result = CalcUtils.agregarTolerancia(
         percentuais: [88, 100, 101.5, 103, 107],
-        configuracoes: config,
       );
       expect(result.entreTolerancias, 2);
       expect(result.acimaToleranciaMin, 3);

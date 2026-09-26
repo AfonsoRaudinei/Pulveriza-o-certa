@@ -63,6 +63,7 @@ ENTRADAS DO FORMULÁRIO
 | 04 | `calc_tolerancia_ponta.md`       | percentual, tolMin/Max  | entreTolerancias, acimaMIN   | Cards azul e roxo do painel           |
 | 05 | `calc_analise_economica.md`      | percentuais, R$, ha     | perdaTotal, recomendarTroca  | Card laranja/cinza + recomendação     |
 | 06 | `calc_perda_zona_atencao.md`     | percentuais, R$, ha, 105| perda zona, qtd na faixa     | Card Zona de Atenção + linha do PDF   |
+| 07 | `grafico_vazao_pontas_pdf.md`    | %, limites, n pontas    | janela Y + blocos do laudo   | Gráfico tela/PDF (não muda o domínio) |
 
 ---
 

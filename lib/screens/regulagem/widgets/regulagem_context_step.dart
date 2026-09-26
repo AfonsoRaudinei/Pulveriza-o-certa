@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../theme.dart';
+import '../../../models/regulagem.dart';
 import 'regulagem_form_fields.dart';
 
 class ContextStep extends StatelessWidget {
@@ -14,10 +14,12 @@ class ContextStep extends StatelessWidget {
     required this.area,
     required this.manejo,
     required this.precoBico,
+    required this.cultura,
     required this.data,
     required this.readonly,
     required this.onChanged,
     required this.onEconomiaChanged,
+    required this.onCulturaChanged,
     required this.onPickDate,
   });
 
@@ -29,10 +31,12 @@ class ContextStep extends StatelessWidget {
   final TextEditingController area;
   final TextEditingController manejo;
   final TextEditingController precoBico;
+  final CulturaCultivo? cultura;
   final DateTime data;
   final bool readonly;
   final VoidCallback onChanged;
   final VoidCallback onEconomiaChanged;
+  final ValueChanged<CulturaCultivo?> onCulturaChanged;
   final VoidCallback onPickDate;
 
   @override
@@ -89,22 +93,26 @@ class ContextStep extends StatelessWidget {
             decimal: true,
           ),
           right: LabeledField(
-            controller: manejo,
-            label: 'Manejo (R\$)',
-            readonly: readonly,
-            onChanged: onEconomiaChanged,
-            decimal: true,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: LabeledField(
             controller: precoBico,
             label: 'Preço do bico (R\$/un)',
             helper: 'Valor de um bico. Troca completa = preço × nº de pontas.',
             readonly: readonly,
             onChanged: onEconomiaChanged,
             decimal: true,
+          ),
+        ),
+        FieldRow(
+          left: LabeledField(
+            controller: manejo,
+            label: 'Manejo (R\$)',
+            readonly: readonly,
+            onChanged: onEconomiaChanged,
+            decimal: true,
+          ),
+          right: LabeledCulturaField(
+            value: cultura,
+            readonly: readonly,
+            onChanged: onCulturaChanged,
           ),
         ),
       ],

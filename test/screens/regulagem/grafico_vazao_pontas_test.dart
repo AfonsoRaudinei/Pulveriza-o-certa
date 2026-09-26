@@ -43,16 +43,14 @@ void main() {
 
     expect(find.text('Vazão por ponta'), findsOneWidget);
     expect(
-      find.text(
-        'Cada barra parte do ideal (0.825 L/min). '
-        'A faixa verde é o aceitável (92–105%).',
-      ),
+      find.textContaining('Referência do ideal na linha de 100%'),
       findsOneWidget,
     );
+    expect(find.textContaining('0,825 L/min'), findsWidgets);
     expect(find.text('Ideal'), findsOneWidget);
-    expect(find.text('Entupido'), findsOneWidget);
+    expect(find.text('Entupida'), findsOneWidget);
     expect(find.text('Desgaste'), findsOneWidget);
-    expect(find.text('Sem medição'), findsOneWidget);
+    expect(find.text('Pendente'), findsOneWidget);
   });
 
   testWidgets('legenda esconde status ausentes e o item de pendente',
@@ -65,9 +63,9 @@ void main() {
     );
 
     expect(find.text('Ideal'), findsOneWidget);
-    expect(find.text('Entupido'), findsNothing);
+    expect(find.text('Entupida'), findsNothing);
     expect(find.text('Desgaste'), findsNothing);
-    expect(find.text('Sem medição'), findsNothing);
+    expect(find.text('Pendente'), findsNothing);
   });
 
   testWidgets('sem ideal ou sem medições não desenha nada', (tester) async {
@@ -101,8 +99,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-      'ladoConferencia esquerda renderiza sem exceção (shouldRepaint)',
+  testWidgets('ladoConferencia esquerda renderiza sem exceção (shouldRepaint)',
       (tester) async {
     await _pump(
       tester,

@@ -2,9 +2,11 @@ import 'package:agrocalc/models/configuracoes.dart';
 import 'package:agrocalc/models/regulagem.dart';
 import 'package:agrocalc/screens/regulagem/widgets/grafico_vazao_pontas.dart';
 import 'package:agrocalc/screens/regulagem/widgets/medicoes_resumo_card.dart';
+import 'package:agrocalc/screens/regulagem/widgets/pontas_analise_section.dart';
 import 'package:agrocalc/screens/regulagem/widgets/pontas_table.dart';
 import 'package:agrocalc/theme.dart';
 import 'package:agrocalc/widgets/card_zona_atencao.dart';
+import 'package:agrocalc/widgets/progressive_step_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -63,7 +65,72 @@ void main() {
     expect(find.textContaining('2D · Sem medição'), findsOneWidget);
   });
 
-  testWidgets('lista começa fechada; toque na linha abre o campo L/min',
+  testWidgets('card de medições não estica com teclado simulado',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: MediaQuery(
+          data: const MediaQueryData(viewInsets: EdgeInsets.only(bottom: 320)),
+          child: Scaffold(
+            body: ListView(
+              children: [
+                ProgressiveStepCard(
+                  stepNumber: 4,
+                  title: 'Medições das Pontas',
+                  status: StepStatus.active,
+                  expandable: true,
+                  initiallyExpanded: true,
+                  child: PontasTable(
+                    medicoes: medicoes,
+                    ideal: 0.825,
+                    configuracoes: const Configuracoes(),
+                    manejo: 0,
+                    precoBico: 0,
+                    area: 0,
+                    ladoConferencia: LadoConferenciaPontas.direita,
+                    readonly: false,
+                    onMedicaoChanged: (_) {},
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tileBox = tester.getSize(find.byType(ExpansionTile));
+    expect(tileBox.height, lessThan(520));
+  });
+
+  testWidgets('card de medições não contém TextField', (tester) async {
+    await pumpTable(tester);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(PontasTable),
+        matching: find.byType(TextField),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(PontasTable),
+        matching: find.byType(ListView),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('toque na linha abre a folha com L/min medido e o ideal',
       (tester) async {
     await pumpTable(tester);
     await tester.pumpAndSettle();
@@ -75,6 +142,14 @@ void main() {
 
     expect(find.text('2D · L/min medido'), findsOneWidget);
     expect(find.text('Ideal: 0.825 L/min'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(PontasTable),
+        matching: find.byType(TextField),
+      ),
+      findsNothing,
+    );
+    expect(find.byType(TextField), findsOneWidget);
   });
 
   testWidgets('toggle Esquerda renomeia pontas para 1E, 2E…', (tester) async {
@@ -147,20 +222,28 @@ void main() {
     expect(lado, LadoConferenciaPontas.direita);
   });
 
-  testWidgets('passar para a ponta de baixo dispara auto-save', (tester) async {
+  testWidgets('fechar a folha e abrir outra ponta dispara auto-save',
+      (tester) async {
     var moved = 0;
     await pumpTable(tester, onMoved: () => moved++);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('ponta-row-2')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('ponta-row-3')));
+    await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
 
-    expect(moved, greaterThan(0));
+    expect(moved, 1);
+
+    await tester.tap(find.byKey(const ValueKey('ponta-row-3')));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+
+    expect(moved, 2);
   });
 
-  testWidgets('Zona de Atenção aparece abaixo do resumo só na faixa 100–105',
+  testWidgets('Zona de Atenção não aparece no card de medições',
       (tester) async {
     tester.view.physicalSize = const Size(400, 1600);
     tester.view.devicePixelRatio = 1.0;
@@ -194,8 +277,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(CardZonaAtencao), findsOneWidget);
-    expect(find.text('Zona de Atenção'), findsOneWidget);
+    expect(find.byType(CardZonaAtencao), findsNothing);
+    expect(find.text('Zona de Atenção'), findsNothing);
     expect(
       find.descendant(
         of: find.byType(MedicoesResumoCard),
@@ -203,7 +286,6 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Perda por desgaste'), findsNothing);
   });
 
   testWidgets('gráfico não fica dentro da tabela de pontas', (tester) async {
@@ -247,12 +329,56 @@ void main() {
 
     expect(find.byType(GraficoVazaoPontas), findsOneWidget);
     expect(find.text('Vazão por ponta'), findsOneWidget);
-    expect(find.text('Perda por desgaste'), findsOneWidget);
-    expect(find.text('Análise econômica'), findsOneWidget);
-    expect(find.text('Orientações'), findsOneWidget);
+    expect(find.text('O que fazer'), findsOneWidget);
+    expect(find.text('Dados usados no cálculo'), findsOneWidget);
+    expect(find.byType(CardZonaAtencao), findsNothing);
   });
 
-  testWidgets('toque fora do painel fecha a edição e dispara auto-save',
+  testWidgets('folha somente leitura não dispara auto-save', (tester) async {
+    var moved = 0;
+    tester.view.physicalSize = const Size(400, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PontasTable(
+              medicoes: medicoes,
+              ideal: 0.825,
+              configuracoes: const Configuracoes(),
+              manejo: 0,
+              precoBico: 0,
+              area: 0,
+              ladoConferencia: LadoConferenciaPontas.direita,
+              readonly: true,
+              onMedicaoChanged: (_) {},
+              onMovedToNextPonta: () => moved++,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('ponta-row-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2D · L/min medido'), findsOneWidget);
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.enabled, isFalse);
+
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+
+    expect(find.text('L/min medido'), findsNothing);
+    expect(moved, 0);
+  });
+
+  testWidgets('fechar a folha some o campo e dispara auto-save',
       (tester) async {
     var moved = 0;
     await pumpTable(tester, onMoved: () => moved++);
@@ -266,7 +392,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('L/min medido'), findsNothing);
-    expect(moved, greaterThan(0));
+    expect(moved, 1);
   });
 
   testWidgets('ponta com 0 L/min não vira Sem medição', (tester) async {

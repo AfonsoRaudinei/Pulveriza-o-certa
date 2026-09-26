@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/formatters/digitos_maximo_formatter.dart';
+import '../../../models/regulagem.dart';
 import '../../../theme.dart';
 
 class FieldRow extends StatelessWidget {
@@ -88,10 +90,14 @@ class _LabeledFieldState extends State<LabeledField> {
       keyboardType = const TextInputType.numberWithOptions(decimal: true);
       formatters = [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+        const DigitosMaximoFormatter(),
       ];
     } else if (widget.integer) {
       keyboardType = TextInputType.number;
-      formatters = [FilteringTextInputFormatter.digitsOnly];
+      formatters = [
+        FilteringTextInputFormatter.digitsOnly,
+        const DigitosMaximoFormatter(),
+      ];
     } else {
       keyboardType = TextInputType.text;
       formatters = const [];
@@ -123,6 +129,51 @@ class _LabeledFieldState extends State<LabeledField> {
           const SizedBox(height: AppSpacing.xs),
           Text(widget.helper!, style: Theme.of(context).textTheme.bodySmall),
         ],
+      ],
+    );
+  }
+}
+
+class LabeledCulturaField extends StatelessWidget {
+  const LabeledCulturaField({
+    super.key,
+    required this.value,
+    required this.readonly,
+    required this.onChanged,
+  });
+
+  final CulturaCultivo? value;
+  final bool readonly;
+  final ValueChanged<CulturaCultivo?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Cultura', style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: AppSpacing.xs),
+        DropdownButtonFormField<CulturaCultivo>(
+          value: value,
+          isExpanded: true,
+          isDense: true,
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
+            ),
+          ),
+          hint: const Text('Selecione'),
+          items: [
+            for (final cultura in CulturaCultivo.values)
+              DropdownMenuItem(
+                value: cultura,
+                child: Text(cultura.label),
+              ),
+          ],
+          onChanged: readonly ? null : onChanged,
+        ),
       ],
     );
   }

@@ -7,12 +7,14 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/charts/vazao_chart_data.dart' show rotuloStatusPonta;
 import '../../core/utils/calculo_utils.dart';
+import '../../domain/calculos/limites_regulagem.dart';
 import '../../models/configuracoes.dart';
 import '../../models/foto_regulagem.dart';
 import '../../models/regulagem.dart';
 import '../../providers/configuracoes_provider.dart';
 import '../../providers/regulagens_provider.dart';
 import '../../theme.dart';
+import '../../services/marca_logo_service.dart';
 import '../../services/regulagem_pdf_service.dart';
 import 'widgets/etapa_resumo.dart';
 import 'widgets/exportar_pdf_button.dart';
@@ -66,6 +68,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   double _manejo = 0;
   double _precoBico = 0;
   double _area = 0;
+  CulturaCultivo? _cultura;
   List<PontaMedicao> _medicoes = [];
   List<FotoRegulagem> _fotos = [];
   LadoConferenciaPontas _ladoConferenciaPontas = LadoConferenciaPontas.direita;
@@ -130,12 +133,16 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       _medicoes = List<PontaMedicao>.from(regulagem.medicoes);
       _fotos = List<FotoRegulagem>.from(regulagem.fotos);
       _ladoConferenciaPontas = regulagem.ladoConferenciaPontas;
+      _cultura = regulagem.cultura;
     } else {
       _consultor.text =
           context.read<ConfiguracoesProvider>().configuracoes.nomeConsultor;
+      _cultura = CulturaCultivo.soja;
     }
-    final limites = context.read<ConfiguracoesProvider>().configuracoes;
-    _limiteEntupido.text = limites.limiteIrregular.toStringAsFixed(2);
+    final config = context.read<ConfiguracoesProvider>().configuracoes;
+    final snapshot = regulagem?.limitesSnapshot;
+    final limites = snapshot ?? config.limitesRegulagem;
+    _limiteEntupido.text = limites.limiteEntupido.toStringAsFixed(2);
     _limiteDesgaste.text = limites.limiteDesgaste.toStringAsFixed(2);
     _recalculate();
   }
@@ -144,12 +151,18 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     final entupido = _parse(_limiteEntupido.text);
     final desgaste = _parse(_limiteDesgaste.text);
     if (entupido > 0 && desgaste > 0) {
-      _recalculateDebounced(
-        context.read<ConfiguracoesProvider>().configuracoes.copyWith(
-              limiteIrregular: entupido,
-              limiteDesgaste: desgaste,
-            ),
+      final validacao = validarLimitesRegulagem(
+        limiteEntupido: entupido,
+        limiteDesgaste: desgaste,
       );
+      if (validacao.valido) {
+        _recalculateDebounced(
+          context.read<ConfiguracoesProvider>().configuracoes.copyWith(
+                limiteIrregular: entupido,
+                limiteDesgaste: desgaste,
+              ),
+        );
+      }
     }
     _limitesDebounce?.cancel();
     _limitesDebounce = Timer(const Duration(milliseconds: 400), () {
@@ -161,7 +174,22 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     if (!mounted || widget.readonly) return;
     final entupido = _parse(_limiteEntupido.text);
     final desgaste = _parse(_limiteDesgaste.text);
-    if (entupido <= 0 || desgaste <= 0) return;
+    final validacao = validarLimitesRegulagem(
+      limiteEntupido: entupido,
+      limiteDesgaste: desgaste,
+    );
+    if (!validacao.valido) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(validacao.mensagem ?? 'Limites inválidos.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
     try {
       await context.read<ConfiguracoesProvider>().saveLimites(
             limiteIrregular: entupido,
@@ -307,6 +335,9 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       manejoRS: _manejo == 0 ? null : _manejo,
       precoBicoRS: _precoBico == 0 ? null : _precoBico,
       areaHa: _area == 0 ? null : _area,
+      cultura: _cultura,
+      limiteEntupido: _parse(_limiteEntupido.text),
+      limiteDesgaste: _parse(_limiteDesgaste.text),
       criadoEm: _criadoEm!,
       atualizadoEm: now,
     );
@@ -329,6 +360,22 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
 
   Future<void> _persist({required bool closeAfter}) async {
     if (!_etapa1Completa) return;
+    final validacao = validarLimitesRegulagem(
+      limiteEntupido: _parse(_limiteEntupido.text),
+      limiteDesgaste: _parse(_limiteDesgaste.text),
+    );
+    if (!validacao.valido) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(validacao.mensagem ?? 'Limites inválidos.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
     try {
       await context.read<RegulagensProvider>().save(_montarRegulagem());
       if (!mounted) return;
@@ -357,7 +404,8 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   bool get _etapa1Completa {
     return _produtor.text.trim().isNotEmpty &&
         _fazenda.text.trim().isNotEmpty &&
-        _maquina.text.trim().isNotEmpty;
+        _maquina.text.trim().isNotEmpty &&
+        _cultura != null;
   }
 
   bool get _etapa2Completa {
@@ -381,8 +429,9 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
         DateFormat('dd/MM/yyyy', 'pt_BR').format(_data),
       ),
       EtapaResumoLinha('Área (ha)', _areaCtrl.text),
-      EtapaResumoLinha('Manejo (R\$)', _manejoCtrl.text),
       EtapaResumoLinha('Preço do bico (R\$/un)', _precoBicoCtrl.text),
+      EtapaResumoLinha('Manejo (R\$)', _manejoCtrl.text),
+      if (_cultura != null) EtapaResumoLinha('Cultura', _cultura!.label),
     ]);
   }
 
@@ -464,11 +513,16 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     return resumo;
   }
 
-  RegulagemPdfData _pdfData() {
+  Future<RegulagemPdfData> _pdfData() async {
+    final configuracoes = _configParaClassificar();
+    final marcaLogoBytes =
+        await MarcaLogoService().lerBytes(configuracoes.marcaLogoArquivo);
+
     return RegulagemPdfData(
       produtor: _produtor.text.trim(),
       fazenda: _fazenda.text.trim(),
       talhao: _talhao.text.trim().isEmpty ? null : _talhao.text.trim(),
+      cultura: _cultura,
       maquina: _maquina.text.trim(),
       consultor: _consultor.text.trim().isEmpty ? null : _consultor.text.trim(),
       dataRegulagem: _data,
@@ -480,11 +534,12 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       litroMinIdeal: _litroMinIdeal,
       medicoes: _medicoes,
       ladoConferenciaPontas: _ladoConferenciaPontas,
-      configuracoes: _configParaClassificar(),
+      configuracoes: configuracoes,
       manejo: _manejo,
       precoBico: _precoBico,
       area: _area,
       fotos: _fotos,
+      marcaLogoBytes: marcaLogoBytes,
     );
   }
 
@@ -564,10 +619,14 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               area: _areaCtrl,
               manejo: _manejoCtrl,
               precoBico: _precoBicoCtrl,
+              cultura: _cultura,
               data: _data,
               readonly: readonly,
               onChanged: _onSummaryFieldChanged,
               onEconomiaChanged: _updateEconomiaDebounced,
+              onCulturaChanged: (value) {
+                setState(() => _cultura = value);
+              },
               onPickDate: _pickDate,
             ),
           ),
@@ -611,6 +670,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             locked: _litroMinIdeal <= 0,
             complete: _medicoes.any((item) => item.valorMedido != null),
             showCompletedMarker: false,
+            collapsible: false,
             startExpanded: startExpanded,
             summary: _resumoPontas(),
             child: PontasTable(
@@ -646,6 +706,8 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               fotos: _fotos,
               readonly: readonly,
               onChanged: _onFotosChanged,
+              medicoes: _medicoes,
+              ladoConferencia: _ladoConferenciaPontas,
             ),
           ),
           if (_litroMinIdeal > 0 && _temMedicao) ...[

@@ -11,7 +11,8 @@ void main() {
     await initializeDateFormatting('pt_BR');
   });
 
-  testWidgets('app inicia na lista de Regulagens sem rota de login', (tester) async {
+  testWidgets('app inicia na lista de Regulagens sem rota de login',
+      (tester) async {
     await tester.pumpWidget(const PontaVerdeApp());
     await tester.pumpAndSettle();
 

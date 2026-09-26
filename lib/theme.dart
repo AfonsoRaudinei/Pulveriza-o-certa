@@ -21,6 +21,14 @@ class AppColors {
   static const iosDashedBorder = Color(0xFFD1D1D6);
   static const iosFocusFill = Color(0xFFF0F9FF);
   static const iosDestructive = Color(0xFFFF3B30);
+  static const zonaIdeal = Color(0xFF34C759);
+  static const zonaAtencao = Color(0xFFFF9500);
+  static const zonaDesgaste = Color(0xFFFF3B30);
+  static const zonaEntupida = Color(0xFF007AFF);
+  static const zonaIdealLight = Color(0xFFD8F5E3);
+  static const zonaAtencaoLight = Color(0xFFFFF1D6);
+  static const zonaDesgasteLight = Color(0xFFFFE5E3);
+  static const zonaEntupidaLight = Color(0xFFE5F1FF);
   static const success = Color(0xFF10B981);
   static const successLight = Color(0xFFD1FAE5);
   static const warning = Color(0xFFF59E0B);

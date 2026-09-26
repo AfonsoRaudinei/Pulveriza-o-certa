@@ -14,7 +14,7 @@ class ExportarPdfButton extends StatefulWidget {
   });
 
   /// Monta [RegulagemPdfData] só no momento da exportação (evita trabalho no build).
-  final RegulagemPdfData Function() buildData;
+  final Future<RegulagemPdfData> Function() buildData;
   final ExportarPdfButtonVariant variant;
 
   @override
@@ -28,7 +28,7 @@ class _ExportarPdfButtonState extends State<ExportarPdfButton> {
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      final data = widget.buildData();
+      final data = await widget.buildData();
       final bytes = await RegulagemPdfService.generate(data);
       final filename = RegulagemPdfService.suggestedFilename(data);
       await Printing.sharePdf(bytes: bytes, filename: filename);

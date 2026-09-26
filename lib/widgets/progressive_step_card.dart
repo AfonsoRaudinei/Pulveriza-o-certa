@@ -141,7 +141,10 @@ class _ExpandableBody extends StatelessWidget {
     final mostrarMarcador = locked || !complete || showCompletedMarker;
 
     return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      data: Theme.of(context).copyWith(
+        dividerColor: Colors.transparent,
+        canvasColor: colors.surface,
+      ),
       child: ExpansionTile(
         key: PageStorageKey<String>('pv-expansion-step-$stepNumber'),
         controller: expansionController,
@@ -171,10 +174,17 @@ class _ExpandableBody extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall,
                   )),
         children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [child],
+          Align(
+            alignment: Alignment.topCenter,
+            heightFactor: 1,
+            child: Material(
+              color: colors.surface,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [child],
+              ),
+            ),
           ),
         ],
       ),
