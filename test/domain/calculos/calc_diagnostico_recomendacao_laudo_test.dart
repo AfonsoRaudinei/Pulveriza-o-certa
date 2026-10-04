@@ -44,7 +44,7 @@ DiagnosticoRegulagem _nova4({double precoBico = 30}) {
 }
 
 void main() {
-  test('Nova4 troca completa — frase-ponte e ordem das zonas', () {
+  test('Nova4 troca completa — ordem das zonas e textos curtos', () {
     final d = _nova4(precoBico: 30);
     final vm = montarDiagnosticoRecomendacaoLaudo(d);
 
@@ -55,21 +55,24 @@ void main() {
     expect(vm.linhasPorZona[2].status, StatusPonta.atencao);
     expect(vm.linhasPorZona[3].status, StatusPonta.ideal);
 
-    expect(vm.textoBridging, isNotNull);
-    expect(vm.textoBridging, contains('Atenção'));
-    expect(vm.textoBridging, contains('R\$ 446,63'));
-    expect(vm.textoBridging, contains('R\$ 300,00'));
-
+    expect(vm.textoBridging, isNull);
+    expect(vm.comparativo, isNull);
     expect(vm.textoRecomendacaoFinal, contains('troca completa'));
-    expect(vm.comparativo, isNotNull);
+
+    final desgaste = vm.linhasPorZona.first;
+    expect(
+      desgaste.trechos.any((t) => t.texto.contains('substituir;')),
+      isTrue,
+    );
+
+    final ideal = vm.linhasPorZona[3];
+    expect(ideal.trechos.any((t) => t.texto.contains('sem ação necessária')),
+        isTrue);
+    expect(ideal.trechos.any((t) => t.texto.contains('—')), isFalse);
 
     final atencao = vm.linhasPorZona[2];
     expect(
-      atencao.trechos.firstWhere((t) => t.negrito).texto,
-      'Atenção',
-    );
-    expect(
-      atencao.trechos.any((t) => t.texto.contains('Acompanhar')),
+      atencao.trechos.any((t) => t.texto.contains('acompanhar; trocar se persistir')),
       isTrue,
     );
   });

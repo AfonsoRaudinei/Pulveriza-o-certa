@@ -14,9 +14,9 @@ Use este checklist após cada release que altere Configurações ou o gerador de
 ## Laudo (10 pontas, 30 ha, sem fotos)
 
 - [ ] Arquivo: `Laudo_Regulagem_<produtor_ou_fazenda>_<AAAA-MM-DD>.pdf`.
-- [ ] Página 2: Diagnóstico e Recomendação (zonas + ponte se aplicável + recomendação + comparativo), Dados usados.
+- [ ] Página 2: Diagnóstico e Recomendação → Fotos → Dados usados no cálculo → Como calculamos.
 - [ ] Total exibido = soma das parcelas (ex.: R$ 446,63).
-- [ ] “Como calculamos” com cm ÷ 100 e regra da troca completa.
+- [ ] “Como calculamos” com fórmula resumida (espaçamento em m) e regra da troca completa.
 - [ ] Sem payback / apl. no corpo; “perda” só na linha metodológica.
 - [ ] **2 páginas** quando possível (10 pontas, sem fotos).
 - [ ] Rodapé: logo + SoloForte + página + data; Author do PDF = SoloForte.

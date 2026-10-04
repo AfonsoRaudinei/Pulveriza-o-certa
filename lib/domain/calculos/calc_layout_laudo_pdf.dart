@@ -256,15 +256,15 @@ List<String> montarLinhasComoCalculamosLaudo({
 }) {
   final linhas = <String>[
     'Vazão ideal (L/min) = vazão (L/ha) × velocidade (km/h) × '
-        '(espaçamento entre bicos em cm ÷ 100) ÷ 600 — o app grava o espaçamento em cm e converte para metros na fórmula.',
-    'Perda da ponta = excesso% × manejo por ponta × área (só % > 100, por aplicação).',
-    'Troca completa: se houver ao menos uma ponta em desgaste e o custo de trocar todos os bicos '
-        '(preço do bico × nº de pontas) for menor que o desperdício de defensivo por aplicação '
-        '(soma desgaste + atenção); caso contrário, troca ponta a ponta só no desgaste.',
+        'espaçamento (m) ÷ 600.',
+    'Perda da ponta = % excedente × manejo por ponta × área (só acima de 100%).',
+    'Troca completa: recomendada quando o custo de trocar todos os bicos é menor '
+        'que o desperdício total (Atenção + Desgaste); caso contrário, troca-se só '
+        'as pontas em desgaste.',
   ];
   if (uniformidade != null) {
     linhas.add(
-      'Uniformidade (informativo): média ${LaudoNumeroFormat.percentual(uniformidade.media)}, '
+      'Uniformidade: média ${LaudoNumeroFormat.percentual(uniformidade.media)}, '
       'desvio ${LaudoNumeroFormat.decimal(uniformidade.desvioPadrao)} pp, '
       'CV ${LaudoNumeroFormat.percentual(uniformidade.cvPercentual)}.',
     );

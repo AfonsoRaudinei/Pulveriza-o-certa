@@ -1,5 +1,4 @@
 import '../../models/regulagem.dart';
-import 'calc_analise_economica.dart';
 import 'calc_diagnostico_regulagem.dart';
 import 'calc_layout_laudo_pdf.dart';
 import 'calc_recomendacao_laudo.dart';
@@ -45,7 +44,6 @@ class DiagnosticoRecomendacaoLaudo {
 DiagnosticoRecomendacaoLaudo montarDiagnosticoRecomendacaoLaudo(
   DiagnosticoRegulagem d,
 ) {
-  final plano = d.planoLaudo;
   final linhas = <LinhaZonaDiagnosticoRecomendacaoLaudo>[];
 
   for (final o in d.orientacoes) {
@@ -59,9 +57,9 @@ DiagnosticoRecomendacaoLaudo montarDiagnosticoRecomendacaoLaudo(
 
   return DiagnosticoRecomendacaoLaudo(
     linhasPorZona: linhas,
-    textoBridging: _montarFrasePonte(d),
+    textoBridging: null,
     textoRecomendacaoFinal: _montarRecomendacaoFinal(d),
-    comparativo: montarComparativoLaudo(plano),
+    comparativo: null,
   );
 }
 
@@ -69,59 +67,43 @@ List<TrechoDiagnosticoRecomendacaoLaudo> _trechosLinhaZona(
   OrientacaoDiagnostico o,
   ZonaDiagnostico? atencao,
 ) {
+  final rotulo = rotuloZona(o.status);
+
+  if (o.status == StatusPonta.ideal) {
+    return [
+      TrechoDiagnosticoRecomendacaoLaudo(texto: rotulo, negrito: true),
+      TrechoDiagnosticoRecomendacaoLaudo(
+        texto: ' (${o.quantidade}): sem ação necessária.',
+      ),
+    ];
+  }
+
   final ids = juntarRotulosPontas(o.rotulos);
   final sufixoIds = ids.isEmpty ? '' : ' — $ids';
-  final acao = _textoAcaoZona(o, atencao);
+  final acao = _acaoCurtaZona(o);
 
   return [
-    TrechoDiagnosticoRecomendacaoLaudo(
-      texto: rotuloZona(o.status),
-      negrito: true,
-    ),
+    TrechoDiagnosticoRecomendacaoLaudo(texto: rotulo, negrito: true),
     TrechoDiagnosticoRecomendacaoLaudo(
       texto: ' (${o.quantidade}$sufixoIds): $acao',
     ),
   ];
 }
 
-String _textoAcaoZona(
-  OrientacaoDiagnostico o,
-  ZonaDiagnostico? atencao,
-) {
-  final perda = o.perdaRs != null && o.perdaRs! > 0
-      ? formatarMoedaLaudo(o.perdaRs!)
-      : null;
-  String? excesso;
-  if (o.status == StatusPonta.atencao && atencao?.mediaPercentual != null) {
-    final exc = atencao!.mediaPercentual! - 100;
-    if (exc > 0) {
-      excesso = exc.toStringAsFixed(1).replaceAll('.', ',');
-    }
-  }
-  return mensagemOrientacaoLaudo(
-    o.status,
-    desperdicioDefensivo: perda,
-    excessoMedioPercentual: excesso,
-  );
-}
-
-String? _montarFrasePonte(DiagnosticoRegulagem d) {
-  final qAtencao = d.atencao?.quantidade ?? 0;
-  if (qAtencao <= 0 || !d.dadosEconomicosCompletos) return null;
-
-  final recomendar = recomendarTrocaCompleta(
-    perdaEstimadaTotal: d.planoLaudo.exibicao.total,
-    custoTrocaTotal: d.custoTrocaCompleta,
-  );
-  if (!recomendar) return null;
-
-  final perda = formatarMoedaLaudo(d.planoLaudo.exibicao.total);
-  final custo = formatarMoedaLaudo(d.custoTrocaCompleta);
-
-  return 'Mesmo pontas em Atenção podendo ser só acompanhadas isoladamente, '
-      'a perda somada de Atenção e Desgaste ($perda) já ultrapassa o custo de '
-      'trocar todos os bicos ($custo) — por isso a recomendação final é a '
-      'troca completa.';
+String _acaoCurtaZona(OrientacaoDiagnostico o) {
+  return switch (o.status) {
+    StatusPonta.desgaste => () {
+        final perda = o.perdaRs != null && o.perdaRs! > 0
+            ? formatarMoedaLaudo(o.perdaRs!)
+            : null;
+        if (perda == null) return 'substituir.';
+        return 'substituir; $perda de desperdício por aplicação.';
+      }(),
+    StatusPonta.irregular => 'limpar e testar novamente.',
+    StatusPonta.atencao => 'acompanhar; trocar se persistir.',
+    StatusPonta.ideal => 'sem ação necessária.',
+    StatusPonta.pendente => '',
+  };
 }
 
 String _montarRecomendacaoFinal(DiagnosticoRegulagem d) {

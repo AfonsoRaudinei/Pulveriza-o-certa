@@ -163,6 +163,8 @@ class RegulagemPdfService {
               fotosWidget,
             ],
             pw.SizedBox(height: 8),
+            _buildDadosCalculoLaudo(diagnostico),
+            pw.SizedBox(height: 8),
             _buildComoCalculamos(diagnostico),
             pw.SizedBox(height: 8),
             _buildAssinaturaProfissional(data),
@@ -592,6 +594,9 @@ class RegulagemPdfService {
     );
   }
 
+  /// Largura mínima da coluna # (ex.: 20D, 22D) sem quebra de linha.
+  static const _larguraColunaRotuloPonta = 46.0;
+
   /// Título e tabela em widgets separados para a tabela poder quebrar entre páginas.
   static List<pw.Widget> _buildPontasTable(
     RegulagemPdfData data,
@@ -617,17 +622,17 @@ class RegulagemPdfService {
               pw.BorderSide(color: _pdfColor(AppColors.border), width: 0.5),
         ),
         columnWidths: {
-          0: const pw.FixedColumnWidth(28),
-          1: const pw.FlexColumnWidth(2),
-          2: const pw.FlexColumnWidth(2),
-          3: const pw.FixedColumnWidth(40),
-          4: const pw.FlexColumnWidth(2.5),
+          0: const pw.FixedColumnWidth(_larguraColunaRotuloPonta),
+          1: const pw.FlexColumnWidth(3),
+          2: const pw.FlexColumnWidth(2.5),
+          3: const pw.FixedColumnWidth(38),
+          4: const pw.FlexColumnWidth(3),
         },
         children: [
           pw.TableRow(
             repeat: true,
             children: [
-              _tableHeaderCell('#', headerStyle),
+              _tableHeaderCellRotulo('#', headerStyle),
               _tableHeaderCell('Medido (L/min)', headerStyle),
               _tableHeaderCell('Ideal', headerStyle),
               _tableHeaderCell('%', headerStyle, align: pw.TextAlign.right),
@@ -673,7 +678,7 @@ class RegulagemPdfService {
 
     return pw.TableRow(
       children: [
-        _tableCell(rotuloPonta(ponta.id, lado)),
+        _tableCellRotuloPonta(rotuloPonta(ponta.id, lado)),
         _tableCell(medido),
         _tableCell(LaudoNumeroFormat.decimal(ideal, casas: 3)),
         _tableCellDestaque(
@@ -715,6 +720,33 @@ class RegulagemPdfService {
     );
   }
 
+  static pw.Widget _tableHeaderCellRotulo(
+    String text,
+    pw.TextStyle style,
+  ) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(
+        text,
+        style: style,
+        softWrap: false,
+        maxLines: 1,
+      ),
+    );
+  }
+
+  static pw.Widget _tableCellRotuloPonta(String rotulo) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(
+        rotulo,
+        style: pw.TextStyle(font: _regular, fontSize: 9),
+        softWrap: false,
+        maxLines: 1,
+      ),
+    );
+  }
+
   static pw.Widget _tableCell(String text,
       {pw.TextAlign align = pw.TextAlign.left}) {
     return pw.Padding(
@@ -742,47 +774,99 @@ class RegulagemPdfService {
     );
   }
 
-  static const _larguraColGasta = 72.0;
-  static const _larguraColPerda = 88.0;
-
   static pw.Widget _buildAnaliseEconomicaLaudo(DiagnosticoRegulagem d) {
-    final trechos = montarAnaliseEconomicaLaudo(d);
-    if (trechos.isEmpty) return pw.SizedBox();
+    final blocos = montarBlocosAnaliseEconomicaLaudo(d);
+    if (blocos.mensagemIncompleta != null) {
+      return pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _secaoTitulo(titulo: 'Análise econômica'),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            blocos.mensagemIncompleta!,
+            style: pw.TextStyle(
+              font: _regular,
+              fontSize: 10,
+              height: 1.4,
+              color: _pdfColor(AppColors.textPrimary),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final corDestaque = blocos.perdaTotal > 0
+        ? _pdfColor(AppColors.iosDestructive)
+        : _pdfColor(AppColors.zonaIdeal);
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         _secaoTitulo(titulo: 'Análise econômica'),
         pw.SizedBox(height: 8),
-        pw.RichText(
-          text: pw.TextSpan(
+        pw.Text(
+          blocos.destaquePerda,
+          style: pw.TextStyle(
+            font: _semiBold,
+            fontSize: 12,
+            height: 1.35,
+            color: corDestaque,
+          ),
+        ),
+        pw.SizedBox(height: 6),
+        for (final linha in blocos.bullets) ...[
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              for (final trecho in trechos)
-                pw.TextSpan(
-                  text: trecho.texto,
+              pw.Text(
+                '• ',
+                style: pw.TextStyle(
+                  font: _regular,
+                  fontSize: 10,
+                  height: 1.4,
+                  color: _pdfColor(AppColors.textPrimary),
+                ),
+              ),
+              pw.Expanded(
+                child: pw.Text(
+                  linha,
                   style: pw.TextStyle(
-                    font: trecho.negrito ? _semiBold : _regular,
+                    font: _regular,
                     fontSize: 10,
                     height: 1.4,
                     color: _pdfColor(AppColors.textPrimary),
                   ),
                 ),
+              ),
             ],
           ),
-        ),
+          pw.SizedBox(height: 4),
+        ],
+        if (blocos.fechamento.isNotEmpty) ...[
+          pw.SizedBox(height: 4),
+          pw.RichText(
+            text: pw.TextSpan(
+              children: [
+                for (final trecho in blocos.fechamento)
+                  pw.TextSpan(
+                    text: trecho.texto,
+                    style: pw.TextStyle(
+                      font: trecho.negrito ? _semiBold : _regular,
+                      fontSize: 10,
+                      height: 1.4,
+                      color: _pdfColor(AppColors.textPrimary),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 
   static pw.Widget _buildDiagnosticoRecomendacaoLaudo(DiagnosticoRegulagem d) {
     final vm = montarDiagnosticoRecomendacaoLaudo(d);
-    final dados = montarDadosCalculoLaudo(
-      manejoRS: d.manejoRS,
-      manejoPorPonta: d.manejoPorPonta,
-      precoBicoRS: d.precoBicoRS,
-      areaHa: d.areaHa,
-    );
-    final divisor = _pdfColor(AppColors.border);
     final corFundoTitulo = _pdfColor(AppColors.surfaceAlt);
 
     return pw.Column(
@@ -831,33 +915,31 @@ class RegulagemPdfService {
           ),
           pw.SizedBox(height: 6),
         ],
-        if (vm.textoBridging != null) ...[
-          pw.Text(
-            vm.textoBridging!,
-            style: pw.TextStyle(
-              font: _regular,
-              fontSize: 10,
-              height: 1.35,
-              color: _pdfColor(AppColors.textPrimary),
-            ),
-          ),
-          pw.SizedBox(height: 6),
-        ],
         pw.Text(
           vm.textoRecomendacaoFinal,
           style: pw.TextStyle(
-            font: _regular,
+            font: _semiBold,
             fontSize: 10,
             height: 1.35,
             color: _pdfColor(AppColors.textPrimary),
           ),
         ),
-        if (vm.comparativo != null) ...[
-          pw.SizedBox(height: 8),
-          _buildComparativoLaudo(vm.comparativo!),
-        ],
-        pw.SizedBox(height: 8),
-        pw.Container(height: 0.5, color: divisor),
+      ],
+    );
+  }
+
+  static pw.Widget _buildDadosCalculoLaudo(DiagnosticoRegulagem d) {
+    final dados = montarDadosCalculoLaudo(
+      manejoRS: d.manejoRS,
+      manejoPorPonta: d.manejoPorPonta,
+      precoBicoRS: d.precoBicoRS,
+      areaHa: d.areaHa,
+    );
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Container(height: 0.5, color: _pdfColor(AppColors.border)),
         pw.SizedBox(height: 8),
         pw.Text(
           'Dados usados no cálculo',
@@ -872,99 +954,6 @@ class RegulagemPdfService {
         _dadoCalculoLinha('Manejo por ponta', dados.manejoPorPonta),
         _dadoCalculoLinha('Preço do bico', dados.precoBico),
         _dadoCalculoLinha('Área', dados.area),
-      ],
-    );
-  }
-
-  static pw.Widget _buildComparativoLaudo(ComparativoLaudo c) {
-    final headerStyle = pw.TextStyle(
-      font: _regular,
-      fontSize: 8.5,
-      color: _pdfColor(AppColors.textSecondary),
-    );
-    final corPerda = _pdfColor(AppColors.zonaDesgaste);
-
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Row(
-          children: [
-            pw.Expanded(child: pw.SizedBox()),
-            pw.SizedBox(
-              width: _larguraColGasta,
-              child: pw.Text(
-                'Você gasta',
-                style: headerStyle,
-                textAlign: pw.TextAlign.right,
-              ),
-            ),
-            pw.SizedBox(width: 8),
-            pw.SizedBox(
-              width: _larguraColPerda,
-              child: pw.Text(
-                'Continua perdendo por aplicação',
-                style: headerStyle,
-                textAlign: pw.TextAlign.right,
-              ),
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 4),
-        _linhaComparativo(c.naoFazer, corPerda: corPerda),
-        pw.Container(
-          height: 0.5,
-          margin: const pw.EdgeInsets.symmetric(vertical: 5),
-          color: _pdfColor(AppColors.border),
-        ),
-        _linhaComparativo(c.seguir, corPerda: corPerda),
-        pw.SizedBox(height: 4),
-        pw.Text(
-          c.rodape,
-          style: pw.TextStyle(
-            font: _regular,
-            fontSize: 8,
-            color: _pdfColor(AppColors.textTertiary),
-          ),
-        ),
-      ],
-    );
-  }
-
-  static pw.Widget _linhaComparativo(
-    LinhaComparativoLaudo linha, {
-    required PdfColor corPerda,
-  }) {
-    final destaque = linha.valorPerdaDestaque > 0;
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Expanded(
-          child: pw.Text(
-            linha.titulo,
-            style: pw.TextStyle(font: _regular, fontSize: 10),
-          ),
-        ),
-        pw.SizedBox(
-          width: _larguraColGasta,
-          child: pw.Text(
-            linha.voceGasta,
-            style: pw.TextStyle(font: _semiBold, fontSize: 10),
-            textAlign: pw.TextAlign.right,
-          ),
-        ),
-        pw.SizedBox(width: 8),
-        pw.SizedBox(
-          width: _larguraColPerda,
-          child: pw.Text(
-            linha.continuaPerdendo,
-            style: pw.TextStyle(
-              font: destaque ? _semiBold : _regular,
-              fontSize: 10,
-              color: destaque ? corPerda : _pdfColor(AppColors.textPrimary),
-            ),
-            textAlign: pw.TextAlign.right,
-          ),
-        ),
       ],
     );
   }

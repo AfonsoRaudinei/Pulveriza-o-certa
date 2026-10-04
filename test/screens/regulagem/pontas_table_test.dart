@@ -329,7 +329,7 @@ void main() {
 
     expect(find.byType(GraficoVazaoPontas), findsOneWidget);
     expect(find.text('Vazão por ponta'), findsOneWidget);
-    expect(find.text('O que fazer'), findsOneWidget);
+    expect(find.text('Diagnóstico e Recomendação'), findsOneWidget);
     expect(find.text('Dados usados no cálculo'), findsOneWidget);
     expect(find.byType(CardZonaAtencao), findsNothing);
   });

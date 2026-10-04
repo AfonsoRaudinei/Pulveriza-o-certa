@@ -94,12 +94,13 @@ void main() {
     expect(legado[1].$2?.$1, 'Máquina');
   });
 
-  test('Como calculamos — cm na fórmula e troca completa', () {
+  test('Como calculamos — fórmula resumida e troca completa', () {
     final linhas = montarLinhasComoCalculamosLaudo();
-    expect(linhas.first, contains('cm ÷ 100'));
-    expect(linhas.first, isNot(contains('espaçamento (m)')));
-    expect(linhas[2], contains('ao menos uma ponta em desgaste'));
-    expect(linhas[2], contains('preço do bico'));
+    expect(linhas.first, contains('espaçamento (m)'));
+    expect(linhas.first, isNot(contains('cm ÷ 100')));
+    expect(linhas[1], contains('só acima de 100%'));
+    expect(linhas[2], contains('desperdício total (Atenção + Desgaste)'));
+    expect(linhas[2], contains('pontas em desgaste'));
   });
 
   test('Nova4 unitária — motivo não troca tudo', () {
