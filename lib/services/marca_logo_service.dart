@@ -40,9 +40,14 @@ class MarcaLogoService {
   /// Comprime, grava e retorna o nome do arquivo para [Configuracoes.marcaLogoArquivo].
   Future<String> salvarLogo(File original) async {
     final bytes = await _comprimir(original);
+    await gravarBytes(bytes);
+    return nomeArquivo;
+  }
+
+  /// Grava bytes já comprimidos (ex.: restauração de backup).
+  Future<void> gravarBytes(List<int> bytes) async {
     final destino = await _arquivoLogo();
     await destino.writeAsBytes(bytes);
-    return nomeArquivo;
   }
 
   Future<void> removerLogo() async {

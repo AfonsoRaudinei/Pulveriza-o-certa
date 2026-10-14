@@ -193,12 +193,12 @@ String subtituloGraficoVazao(VazaoChartData data) {
   ];
   if (data.limiteIrregular < 100) {
     partes.add(
-      'faixa verde ${LaudoNumeroFormat.decimal(data.limiteIrregular, casas: 0)}–100%',
+      'Faixa verde ${LaudoNumeroFormat.decimal(data.limiteIrregular, casas: 0)}–100%',
     );
   }
   if (data.limiteDesgaste > 100) {
     partes.add(
-      'faixa laranja 100–${LaudoNumeroFormat.decimal(data.limiteDesgaste, casas: 0)}%',
+      'Faixa laranja 100–${LaudoNumeroFormat.decimal(data.limiteDesgaste, casas: 0)}%',
     );
   }
   return '${partes.join('. ')}.';

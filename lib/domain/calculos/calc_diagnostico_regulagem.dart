@@ -111,6 +111,8 @@ class DiagnosticoRegulagem {
     required this.precoBicoRS,
     required this.areaHa,
     required this.dadosEconomicosCompletos,
+    required this.numeroAplicacoes,
+    this.tipoPonta,
     required this.recomendacao,
     required this.uniformidade,
     required this.acaoNecessaria,
@@ -138,6 +140,8 @@ class DiagnosticoRegulagem {
   final double precoBicoRS;
   final double areaHa;
   final bool dadosEconomicosCompletos;
+  final int numeroAplicacoes;
+  final TipoPontaBico? tipoPonta;
   final RecomendacaoDiagnostico recomendacao;
   final UniformidadeDiagnostico? uniformidade;
   final String acaoNecessaria;
@@ -164,7 +168,10 @@ class DiagnosticoRegulagem {
     required double manejoRS,
     required double precoBicoRS,
     required double areaHa,
+    int? numeroAplicacoes,
+    TipoPontaBico? tipoPonta,
   }) {
+    final aplicacoes = numeroAplicacoesEfetivo(numeroAplicacoes);
     final totalPontas = medicoes.length;
     final classificadas = <PontaClassificada>[];
     for (final item in medicoes) {
@@ -259,6 +266,7 @@ class DiagnosticoRegulagem {
       numeroPontas: totalPontas,
       manejoRS: manejoRS,
       areaHa: areaHa,
+      numeroAplicacoes: aplicacoes,
     );
 
     final recomendacao = _recomendarLegado(
@@ -334,6 +342,8 @@ class DiagnosticoRegulagem {
       precoBicoRS: precoBicoRS,
       areaHa: areaHa,
       dadosEconomicosCompletos: dadosCompletos,
+      numeroAplicacoes: aplicacoes,
+      tipoPonta: tipoPonta,
       recomendacao: recomendacao,
       uniformidade: _uniformidade(classificadas),
       acaoNecessaria: acaoNecessaria,

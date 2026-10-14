@@ -1,12 +1,10 @@
 /// Subtítulos explicativos das seções do laudo (E1).
 class SubtitulosLaudoPdf {
   static const parametros =
-      'Dados informados na regulagem, base do cálculo da vazão ideal.';
-  static const zonas =
-      'Como cada ponta é classificada, comparando a vazão medida com a ideal.';
-  static const tabela =
-      'Vazão medida em cada ponta e seu percentual em relação ao ideal.';
+      'Valores usados para calcular a vazão ideal de cada ponta.';
+  static const zonas = 'Quantas pontas caíram em cada faixa.';
+  static const tabela = 'Vazão de cada ponta comparada com o ideal.';
   static const grafico =
-      'Cada barra mostra quanto a ponta se afasta do ideal (linha de 100%).';
+      'Barras acima de 100% gastam mais calda; abaixo, aplicam menos.';
   static const fotos = 'Registros feitos durante a regulagem.';
 }

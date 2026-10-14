@@ -30,6 +30,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Usada para fotografar a imagem de fundo do cabeçalho do laudo PDF.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Usada para escolher o logo e a imagem de fundo do laudo PDF.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

@@ -121,7 +121,10 @@ class _SeletorCorMarcaDialogState extends State<_SeletorCorMarcaDialog> {
           child: const Text('Cancelar'),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(context, _color),
+          onPressed: () {
+            _applyHex(_hex.text);
+            Navigator.pop(context, _color);
+          },
           child: const Text('Usar cor'),
         ),
       ],

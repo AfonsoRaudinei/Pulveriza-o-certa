@@ -827,3 +827,150 @@ Disco apenas — IPA 200 em `build/ios/ipa/pontaverde.ipa`, payload validado, **
 
 Disco apenas — IPA 201 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
 
+## Build 202 — 2026-10-04 12:33 -03
+
+- Versão solicitada: `1.0.0+202` (também em `pubspec.yaml`)
+- Motivo: perda estimada passa a ser **na safra** (tipo de ponta + número de aplicações), laudo PDF alinhado a esse cálculo, nova **Calculadora de Manejo** (custos persistidos localmente; preenchimento assistido de Manejo (R$)).
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 202 --export-options-plist=ios/ExportOptions.plist`
+- Validação de pré-build: `flutter test --reporter compact` — `All tests passed!` (183 testes); `flutter analyze` — 49 avisos/warnings/info (sem errors; pré-existentes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (165 MB)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (23.0 MB / 23039070 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `202`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `image_picker_ios`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation`, `url_launcher_ios` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`, `Signed Time=4 Oct 2026 at 12:33:04`
+- Upload TestFlight: não enviado nesta sessão
+
+### Status
+
+Disco apenas — IPA 202 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
+
+## Build 203 — 2026-10-04 15:13 -03
+
+- Versão solicitada: `1.0.0+203` (também em `pubspec.yaml`)
+- Motivo: **Calculadora de Manejo** — sanfona por produto (título/resumo/total no cabeçalho) e melhor comportamento do teclado (scroll com inset, dismiss ao arrastar, foco expande item e rola para o campo, sequência Produto → Dose → Valor).
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 203 --export-options-plist=ios/ExportOptions.plist`
+- Validação de pré-build: `flutter test --reporter compact` — `All tests passed!` (183 testes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (165 MB)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (23.2 MB / 23048544 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `203`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `image_picker_ios`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation`, `url_launcher_ios` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`, `Signed Time=4 Oct 2026 at 15:13:06`
+- Upload TestFlight: não enviado nesta sessão
+
+### Status
+
+Disco apenas — IPA 203 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
+
+## Build 204 — 2026-10-04 16:27 -03
+
+- Versão solicitada: `1.0.0+204` (também em `pubspec.yaml`)
+- Motivo: **Calculadora de Manejo** — confirmação antes de remover produto; visual refinado (cards de aplicação, sanfona numerada, badge de total); regras de produto documentadas em `🍎 APPLE —.md`.
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 204 --export-options-plist=ios/ExportOptions.plist`
+- Validação de pré-build: `flutter test --reporter compact` — `All tests passed!` (183 testes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (165 MB)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (23.2 MB / 23057412 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `204`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `image_picker_ios`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation`, `url_launcher_ios` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`, `Signed Time=4 Oct 2026 at 16:27:24`
+- Upload TestFlight: não enviado nesta sessão
+
+### Status
+
+Disco apenas — IPA 204 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
+
+## Build 205 — 2026-10-04 19:12 -03
+
+- Versão solicitada: `1.0.0+205` (também em `pubspec.yaml`)
+- Motivo: laudo PDF — revisão de copy (tom mais humano em subtítulos, zonas, análise econômica, diagnóstico e **Como calculamos**); tabela **Medições das pontas** com status classificado e coluna `%` fixa (50 pt, `softWrap: false`); **Diagnóstico e Recomendação** sem caixa cinza, ritmo de linha e espaçamento ajustados.
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 205 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (7 pods: Flutter, file_picker, image_picker_ios, printing, share_plus, shared_preferences_foundation, url_launcher_ios)
+- Validação de pré-build: `flutter test --reporter compact` — `All tests passed!` (183 testes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (165 MB)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (23.2 MB / 23051641 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `205`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `image_picker_ios`, `objective_c`, `printing`, `share_plus`, `shared_preferences_foundation`, `url_launcher_ios` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`, `Signed Time=4 Oct 2026 at 19:12:10`
+- Upload TestFlight: não enviado nesta sessão
+
+### Status
+
+Disco apenas — IPA 205 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
+
+## Build 206 — 2026-10-13 22:22 -03
+
+- Versão solicitada: `1.0.0+206` (também em `pubspec.yaml`)
+- Motivo: correção do bug intermitente de **tela cinza** após exportar/compartilhar o laudo PDF na **Editar Regulagem** — share via `share_plus` (arquivo temporário + `Share.shareXFiles`) no lugar de `Printing.sharePdf`; `WidgetsBindingObserver` para repaint ao voltar do background; remoção do `RepaintBoundary` no bloco de análise; dependência `printing` removida do app (geração PDF continua com pacote `pdf`).
+- Bundle ID: `com.pontaverde.app`
+- Team ID: `BA2BU25B78`
+- Comando usado:
+  `flutter build ipa --release --build-name 1.0.0 --build-number 206 --export-options-plist=ios/ExportOptions.plist`
+- Preparação: `flutter clean` + `flutter pub get` + `rm -rf ios/Pods ios/Podfile.lock "ios/Pods/Local Podspecs"` + `(cd ios && pod install)` (6 pods: Flutter, file_picker, image_picker_ios, share_plus, shared_preferences_foundation, url_launcher_ios)
+- Validação de pré-build: `flutter test --reporter compact` — `All tests passed!` (184 testes); `flutter analyze lib/ test/` — 48 avisos/warnings/info (sem errors; pré-existentes)
+- Resultado do archive: `build/ios/archive/Runner.xcarchive` (170.8 MB / 163 MB no disco)
+- Resultado do IPA: **entregue** — `build/ios/ipa/pontaverde.ipa` (23.1 MB / 22944671 bytes)
+- Inspeção: `./tool/inspecionar_ipa.sh` — passou
+- Validação do IPA (`Payload/Runner.app`):
+  - `CFBundleShortVersionString`: `1.0.0`
+  - `CFBundleVersion`: `206`
+  - `CFBundleIdentifier`: `com.pontaverde.app`
+  - `CFBundleDisplayName`: `Ponta Verde`
+  - `MinimumOSVersion`: `15.0`
+  - `ITSAppUsesNonExemptEncryption`: `false`
+  - `*UsageDescription`: nenhuma
+  - `PrivacyInfo.xcprivacy`: presente
+  - Frameworks: `App`, `Flutter`, `file_picker`, `image_picker_ios`, `objective_c`, `share_plus`, `shared_preferences_foundation`, `url_launcher_ios` — ausência confirmada de `DKImagePickerController` / `SDWebImage` / `SwiftyGif` / `printing`
+  - Assinatura / TeamIdentifier: `Apple Distribution: RAUDINEI AFONSO SILVA PEREIRA (BA2BU25B78)`, `TeamIdentifier=BA2BU25B78`, `Signed Time=13 Oct 2026 at 22:22:08`
+- Upload TestFlight: não enviado nesta sessão
+
+### Status
+
+Disco apenas — IPA 206 em `build/ios/ipa/pontaverde.ipa`, payload validado, **não enviado** ao TestFlight. Para enviar: `scripts/upload_testflight.sh <ISSUER_ID>`.
+

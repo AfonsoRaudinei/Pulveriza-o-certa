@@ -98,9 +98,9 @@ void main() {
     final linhas = montarLinhasComoCalculamosLaudo();
     expect(linhas.first, contains('espaçamento (m)'));
     expect(linhas.first, isNot(contains('cm ÷ 100')));
-    expect(linhas[1], contains('só acima de 100%'));
-    expect(linhas[2], contains('desperdício total (Atenção + Desgaste)'));
-    expect(linhas[2], contains('pontas em desgaste'));
+    expect(linhas[1], contains('passa de 100% do ideal'));
+    expect(linhas[2], contains('atenção + desgaste'));
+    expect(linhas[2], contains('troca só as gastas'));
   });
 
   test('Nova4 unitária — motivo não troca tudo', () {

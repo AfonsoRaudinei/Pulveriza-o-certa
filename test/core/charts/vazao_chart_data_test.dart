@@ -127,7 +127,7 @@ void main() {
     expect(
       subtituloGraficoVazao(chart),
       'Referência do ideal na linha de 100% (1,000 L/min). '
-      'faixa verde 92–100%. faixa laranja 100–105%.',
+      'Faixa verde 92–100%. Faixa laranja 100–105%.',
     );
   });
 

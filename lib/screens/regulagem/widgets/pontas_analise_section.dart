@@ -4,6 +4,7 @@ import '../../../core/charts/vazao_chart_data.dart';
 import '../../../domain/calculos/calc_diagnostico_recomendacao_laudo.dart';
 import '../../../domain/calculos/calc_diagnostico_regulagem.dart';
 import '../../../domain/calculos/calc_layout_laudo_pdf.dart';
+import '../../../domain/calculos/calc_texto_analise_economica_laudo.dart';
 import '../../../models/configuracoes.dart';
 import '../../../models/regulagem.dart';
 import '../../../theme.dart';
@@ -20,6 +21,8 @@ class PontasAnaliseSection extends StatefulWidget {
     required this.manejo,
     required this.precoBico,
     required this.area,
+    this.numeroAplicacoes,
+    this.tipoPonta,
     this.ladoConferencia = LadoConferenciaPontas.direita,
   });
 
@@ -29,6 +32,8 @@ class PontasAnaliseSection extends StatefulWidget {
   final double manejo;
   final double precoBico;
   final double area;
+  final int? numeroAplicacoes;
+  final TipoPontaBico? tipoPonta;
   final LadoConferenciaPontas ladoConferencia;
 
   @override
@@ -40,6 +45,7 @@ class _PontasAnaliseSectionState extends State<PontasAnaliseSection> {
   late VazaoChartData _chartData;
   late DiagnosticoRegulagem _diagnostico;
   late DiagnosticoRecomendacaoLaudo _diagnosticoRecomendacao;
+  late BlocosAnaliseEconomicaLaudo _analiseEconomica;
 
   @override
   void initState() {
@@ -60,6 +66,8 @@ class _PontasAnaliseSectionState extends State<PontasAnaliseSection> {
         oldWidget.manejo != widget.manejo ||
         oldWidget.precoBico != widget.precoBico ||
         oldWidget.area != widget.area ||
+        oldWidget.numeroAplicacoes != widget.numeroAplicacoes ||
+        oldWidget.tipoPonta != widget.tipoPonta ||
         oldWidget.ladoConferencia != widget.ladoConferencia ||
         oldWidget.configuracoes.limiteIrregular !=
             widget.configuracoes.limiteIrregular ||
@@ -97,8 +105,11 @@ class _PontasAnaliseSectionState extends State<PontasAnaliseSection> {
       manejoRS: widget.manejo,
       precoBicoRS: widget.precoBico,
       areaHa: widget.area,
+      numeroAplicacoes: widget.numeroAplicacoes,
+      tipoPonta: widget.tipoPonta,
     );
     _diagnosticoRecomendacao = montarDiagnosticoRecomendacaoLaudo(_diagnostico);
+    _analiseEconomica = montarBlocosAnaliseEconomicaLaudo(_diagnostico);
   }
 
   @override
@@ -127,6 +138,8 @@ class _PontasAnaliseSectionState extends State<PontasAnaliseSection> {
           conteudo: _diagnosticoRecomendacao,
         ),
         const SizedBox(height: AppSpacing.xl),
+        _AnaliseEconomicaLaudo(blocos: _analiseEconomica),
+        const SizedBox(height: AppSpacing.xl),
         _DadosCalculoLaudo(diagnostico: _diagnostico),
       ],
     );
@@ -146,6 +159,101 @@ class _AvisoMedicao extends StatelessWidget {
             color: AppColors.zonaAtencao,
             fontWeight: FontWeight.w600,
           ),
+    );
+  }
+}
+
+class _AnaliseEconomicaLaudo extends StatelessWidget {
+  const _AnaliseEconomicaLaudo({required this.blocos});
+
+  final BlocosAnaliseEconomicaLaudo blocos;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (blocos.mensagemIncompleta != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _TituloAnaliseEconomica(),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            blocos.mensagemIncompleta!,
+            style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
+          ),
+        ],
+      );
+    }
+
+    final corDestaque = blocos.perdaTotal > 0
+        ? AppColors.iosDestructive
+        : AppColors.zonaIdeal;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _TituloAnaliseEconomica(),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          blocos.destaquePerda,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            height: 1.35,
+            fontWeight: FontWeight.w700,
+            color: corDestaque,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        for (final linha in blocos.bullets) ...[
+          Text(
+            '• $linha',
+            style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
+        if (blocos.fechamento.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text.rich(
+            TextSpan(
+              children: [
+                for (final t in blocos.fechamento)
+                  TextSpan(
+                    text: t.texto,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      height: 1.35,
+                      fontWeight: t.negrito ? FontWeight.w700 : FontWeight.w400,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _TituloAnaliseEconomica extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Text(
+        'Análise econômica',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
     );
   }
 }
@@ -179,7 +287,7 @@ class _DadosCalculoLaudo extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         _DadoCalculo(
             label: 'Custo do defensivo por ha', value: dados.manejoPorHa),
-        _DadoCalculo(label: 'Manejo por ponta', value: dados.manejoPorPonta),
+        _DadoCalculo(label: 'Produto por ponta', value: dados.manejoPorPonta),
         _DadoCalculo(label: 'Preço do bico', value: dados.precoBico),
         _DadoCalculo(label: 'Área', value: dados.area),
       ],

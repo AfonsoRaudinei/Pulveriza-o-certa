@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/regulagem.dart';
+import '../../../theme.dart';
 import 'regulagem_form_fields.dart';
 
 class ContextStep extends StatelessWidget {
@@ -15,11 +16,15 @@ class ContextStep extends StatelessWidget {
     required this.manejo,
     required this.precoBico,
     required this.cultura,
+    required this.tipoPonta,
+    required this.numeroAplicacoes,
     required this.data,
     required this.readonly,
     required this.onChanged,
     required this.onEconomiaChanged,
     required this.onCulturaChanged,
+    required this.onTipoPontaChanged,
+    this.onSelecionarCustoManejo,
     required this.onPickDate,
   });
 
@@ -31,12 +36,16 @@ class ContextStep extends StatelessWidget {
   final TextEditingController area;
   final TextEditingController manejo;
   final TextEditingController precoBico;
+  final TextEditingController numeroAplicacoes;
   final CulturaCultivo? cultura;
+  final TipoPontaBico? tipoPonta;
   final DateTime data;
   final bool readonly;
   final VoidCallback onChanged;
   final VoidCallback onEconomiaChanged;
   final ValueChanged<CulturaCultivo?> onCulturaChanged;
+  final ValueChanged<TipoPontaBico?> onTipoPontaChanged;
+  final VoidCallback? onSelecionarCustoManejo;
   final VoidCallback onPickDate;
 
   @override
@@ -108,11 +117,34 @@ class ContextStep extends StatelessWidget {
             readonly: readonly,
             onChanged: onEconomiaChanged,
             decimal: true,
+            trailing: readonly || onSelecionarCustoManejo == null
+                ? null
+                : IconButton(
+                    tooltip: 'Usar custo de manejo salvo',
+                    onPressed: onSelecionarCustoManejo,
+                    icon: const Icon(Icons.calculate_outlined),
+                    color: AppColors.iosPrimary,
+                  ),
           ),
           right: LabeledCulturaField(
             value: cultura,
             readonly: readonly,
             onChanged: onCulturaChanged,
+          ),
+        ),
+        FieldRow(
+          left: LabeledTipoPontaField(
+            value: tipoPonta,
+            readonly: readonly,
+            onChanged: onTipoPontaChanged,
+          ),
+          right: LabeledField(
+            controller: numeroAplicacoes,
+            label: 'Nº de aplicações na safra',
+            helper: 'Com esta regulagem e tipo de ponta.',
+            readonly: readonly,
+            onChanged: onEconomiaChanged,
+            integer: true,
           ),
         ),
       ],

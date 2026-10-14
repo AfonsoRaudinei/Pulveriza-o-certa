@@ -102,6 +102,41 @@ void main() {
     expect(filename, 'Laudo_Regulagem_maria_santos_2026-01-02.pdf');
   });
 
+  test('generate PDF com combinações de contato e e-mail no perfil', () async {
+    for (final config in [
+      const Configuracoes(),
+      const Configuracoes(contatoPerfil: '(11) 99999-9999'),
+      const Configuracoes(emailPerfil: 'a@b.com'),
+      const Configuracoes(
+        emailPerfil: 'a@b.com',
+        contatoPerfil: '(11) 99999-9999',
+      ),
+    ]) {
+      final bytes = await RegulagemPdfService.generate(
+        RegulagemPdfData(
+          produtor: 'João',
+          fazenda: 'Fazenda',
+          maquina: 'Pulv',
+          dataRegulagem: DateTime(2026, 3, 15),
+          vazaoLha: 150,
+          velocidade: 12,
+          espacamentoCm: 50,
+          numeroPontas: 2,
+          litroMinIdeal: 1,
+          medicoes: const [
+            PontaMedicao(id: 1, valorMedido: 1, status: StatusPonta.ideal),
+            PontaMedicao(id: 2, valorMedido: 1, status: StatusPonta.ideal),
+          ],
+          configuracoes: config,
+          manejo: 0,
+          precoBico: 0,
+          area: 0,
+        ),
+      );
+      expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+    }
+  });
+
   test('empty talhao and consultor does not throw', () async {
     final bytes = await RegulagemPdfService.generate(
       _sampleData(talhao: null, consultor: null),

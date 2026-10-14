@@ -1,4 +1,5 @@
 import '../../models/regulagem.dart';
+import 'calc_analise_economica.dart';
 import 'calc_diagnostico_regulagem.dart';
 import 'calc_layout_laudo_pdf.dart';
 import 'calc_recomendacao_laudo.dart';
@@ -50,7 +51,7 @@ DiagnosticoRecomendacaoLaudo montarDiagnosticoRecomendacaoLaudo(
     linhas.add(
       LinhaZonaDiagnosticoRecomendacaoLaudo(
         status: o.status,
-        trechos: _trechosLinhaZona(o, d.atencao),
+        trechos: _trechosLinhaZona(o, d),
       ),
     );
   }
@@ -65,22 +66,22 @@ DiagnosticoRecomendacaoLaudo montarDiagnosticoRecomendacaoLaudo(
 
 List<TrechoDiagnosticoRecomendacaoLaudo> _trechosLinhaZona(
   OrientacaoDiagnostico o,
-  ZonaDiagnostico? atencao,
+  DiagnosticoRegulagem d,
 ) {
-  final rotulo = rotuloZona(o.status);
+  final rotulo = rotuloZonaLaudo(o.status, o.quantidade);
 
   if (o.status == StatusPonta.ideal) {
     return [
       TrechoDiagnosticoRecomendacaoLaudo(texto: rotulo, negrito: true),
       TrechoDiagnosticoRecomendacaoLaudo(
-        texto: ' (${o.quantidade}): sem ação necessária.',
+        texto: ' (${o.quantidade}): Nada a fazer.',
       ),
     ];
   }
 
   final ids = juntarRotulosPontas(o.rotulos);
   final sufixoIds = ids.isEmpty ? '' : ' — $ids';
-  final acao = _acaoCurtaZona(o);
+  final acao = _acaoCurtaZona(o, d.numeroAplicacoes, d.tipoPonta);
 
   return [
     TrechoDiagnosticoRecomendacaoLaudo(texto: rotulo, negrito: true),
@@ -90,18 +91,36 @@ List<TrechoDiagnosticoRecomendacaoLaudo> _trechosLinhaZona(
   ];
 }
 
-String _acaoCurtaZona(OrientacaoDiagnostico o) {
+String _acaoCurtaZona(
+  OrientacaoDiagnostico o,
+  int numeroAplicacoes,
+  TipoPontaBico? tipoPonta,
+) {
   return switch (o.status) {
     StatusPonta.desgaste => () {
-        final perda = o.perdaRs != null && o.perdaRs! > 0
-            ? formatarMoedaLaudo(o.perdaRs!)
-            : null;
-        if (perda == null) return 'substituir.';
-        return 'substituir; $perda de desperdício por aplicação.';
+        if (o.perdaRs == null || o.perdaRs! <= 0) return 'Substituir.';
+        final perdaSafra = calcularPerdaSafra(
+          perdaPorAplicacao: o.perdaRs!,
+          numeroAplicacoes: numeroAplicacoes,
+        );
+        final perda = formatarMoedaLaudo(perdaSafra);
+        final apps = numeroAplicacoesEfetivo(numeroAplicacoes);
+        if (apps <= 1 && tipoPonta == null) {
+          return 'Substituir. Desperdício de $perda na safra.';
+        }
+        final tipo = tipoPonta?.label;
+        if (apps <= 1 && tipo != null) {
+          return 'Substituir. Desperdício de $perda na safra (ponta $tipo).';
+        }
+        if (tipo != null) {
+          return 'Substituir. Desperdício de $perda na safra '
+              '($apps aplicações · ponta $tipo).';
+        }
+        return 'Substituir. Desperdício de $perda na safra ($apps aplicações).';
       }(),
-    StatusPonta.irregular => 'limpar e testar novamente.',
-    StatusPonta.atencao => 'acompanhar; trocar se persistir.',
-    StatusPonta.ideal => 'sem ação necessária.',
+    StatusPonta.irregular => 'Limpar e medir de novo.',
+    StatusPonta.atencao => 'Acompanhar. Trocar se o excesso continuar.',
+    StatusPonta.ideal => 'Nada a fazer.',
     StatusPonta.pendente => '',
   };
 }
@@ -113,7 +132,7 @@ String _montarRecomendacaoFinal(DiagnosticoRegulagem d) {
       return 'Recomendação: informe preço do bico, área e manejo para fechar '
           'a análise econômica.';
     case TipoRecomendacaoLaudo.completa:
-      return 'Recomendação: troca completa dos bicos.';
+      return 'Recomendação: trocar todos os bicos.';
     case TipoRecomendacaoLaudo.unitaria:
       final pontas = juntarRotulosPontas(plano.acoes.trocar);
       return pontas.isEmpty

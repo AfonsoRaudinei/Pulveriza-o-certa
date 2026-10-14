@@ -91,8 +91,14 @@ ResultadoRecomendacaoLaudo calcularRecomendacaoLaudo({
   required int numeroPontas,
   required double manejoRS,
   required double areaHa,
+  int numeroAplicacoes = 1,
 }) {
   final prejuizoTotal = prejuizoDesgaste + prejuizoAtencao;
+  final prejuizoSafra =
+      calcularPerdaSafra(
+        perdaPorAplicacao: prejuizoTotal,
+        numeroAplicacoes: numeroAplicacoes,
+      );
   final exibicao = prejuizoLaudoParaExibicao(
     prejuizoDesgaste: prejuizoDesgaste,
     prejuizoAtencao: prejuizoAtencao,
@@ -143,7 +149,10 @@ ResultadoRecomendacaoLaudo calcularRecomendacaoLaudo({
     custoRecomendado = 0;
     residual = prejuizoTotal;
     aplicacoes = null;
-  } else if (custoCompleta < prejuizoTotal) {
+  } else if (recomendarTrocaCompleta(
+    perdaEstimadaTotal: prejuizoSafra,
+    custoTrocaTotal: custoCompleta,
+  )) {
     tipo = TipoRecomendacaoLaudo.completa;
     custoRecomendado = custoCompleta;
     residual = 0;

@@ -9,6 +9,9 @@ class FotosRegulagemConstants {
   /// Nome da pasta de fotos dentro do arquivo .zip de backup.
   static const pastaFotosBackup = 'fotos';
 
+  /// Logo e fundo do cabeçalho do laudo dentro do .zip de backup.
+  static const pastaMarcaBackup = 'marca_perfil';
+
   /// Nome do JSON de dados na raiz do arquivo .zip de backup.
   static const arquivoDadosBackup = 'dados.json';
 }

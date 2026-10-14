@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/configuracoes_provider.dart';
+import 'providers/custos_manejo_provider.dart';
 import 'providers/regulagens_provider.dart';
 import 'routes.dart';
 import 'theme.dart';
@@ -16,6 +17,7 @@ class PontaVerdeApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ConfiguracoesProvider()..load()),
         ChangeNotifierProvider(create: (_) => RegulagensProvider()..load()),
+        ChangeNotifierProvider(create: (_) => CustosManejoProvider()..load()),
       ],
       child: Consumer<ConfiguracoesProvider>(
         builder: (context, configuracoes, _) {

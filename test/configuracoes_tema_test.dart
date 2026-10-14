@@ -72,8 +72,8 @@ void main() {
     await tester.tap(find.text('Configuração'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Salvar'));
-    final context = tester.element(find.text('Salvar'));
+    await tester.ensureVisible(find.text('Salvar perfil'));
+    final context = tester.element(find.text('Salvar perfil'));
     final provider = context.read<ConfiguracoesProvider>();
     await provider.saveLimites(
       limiteDesgaste: 110,
@@ -81,11 +81,37 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Salvar'));
+    await tester.tap(find.text('Salvar perfil'));
     await tester.pumpAndSettle();
 
     expect(provider.configuracoes.limiteDesgaste, 110);
     expect(provider.configuracoes.limiteIrregular, 95);
     expect(provider.configuracoes.tema, TemaApp.dark);
+  });
+
+  testWidgets('trocar tema não apaga texto de perfil não salvo', (tester) async {
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({});
+
+    await tester.pumpWidget(const PontaVerdeApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Configuração'));
+    await tester.pumpAndSettle();
+
+    final nomeField = find.byType(TextField).first;
+    await tester.enterText(nomeField, 'Maria Silva');
+    await tester.pump();
+
+    await tester.tap(find.text('Escuro'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(nomeField).controller?.text, 'Maria Silva');
   });
 }

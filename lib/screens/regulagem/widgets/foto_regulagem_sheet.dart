@@ -41,6 +41,7 @@ class FotoRegulagemSheet extends StatefulWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
@@ -64,6 +65,10 @@ class FotoRegulagemSheet extends StatefulWidget {
 class _FotoRegulagemSheetState extends State<FotoRegulagemSheet> {
   late final TextEditingController _titulo;
   late final TextEditingController _observacao;
+  late final FocusNode _tituloFocus;
+  late final FocusNode _observacaoFocus;
+  final _tituloFieldKey = GlobalKey();
+  final _observacaoFieldKey = GlobalKey();
   int? _pontaId;
 
   @override
@@ -72,13 +77,40 @@ class _FotoRegulagemSheetState extends State<FotoRegulagemSheet> {
     _titulo = TextEditingController(text: widget.foto.titulo ?? '');
     _observacao = TextEditingController(text: widget.foto.observacao ?? '');
     _pontaId = widget.foto.pontaId;
+    _tituloFocus = FocusNode();
+    _observacaoFocus = FocusNode();
+    _tituloFocus.addListener(_onTituloFocus);
+    _observacaoFocus.addListener(_onObservacaoFocus);
   }
 
   @override
   void dispose() {
+    _tituloFocus.removeListener(_onTituloFocus);
+    _observacaoFocus.removeListener(_onObservacaoFocus);
+    _tituloFocus.dispose();
+    _observacaoFocus.dispose();
     _titulo.dispose();
     _observacao.dispose();
     super.dispose();
+  }
+
+  void _onTituloFocus() => _scrollFieldIntoView(_tituloFocus, _tituloFieldKey);
+
+  void _onObservacaoFocus() =>
+      _scrollFieldIntoView(_observacaoFocus, _observacaoFieldKey);
+
+  void _scrollFieldIntoView(FocusNode node, GlobalKey fieldKey) {
+    if (!node.hasFocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = fieldKey.currentContext;
+      if (target == null || !mounted) return;
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        alignment: 0.15,
+      );
+    });
   }
 
   void _salvar() {
@@ -99,129 +131,150 @@ class _FotoRegulagemSheetState extends State<FotoRegulagemSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final media = MediaQuery.of(context);
+    final bottomInset = media.viewInsets.bottom;
+    final maxHeight = media.size.height - media.padding.top - AppSpacing.lg;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.xl,
-        AppSpacing.xl + bottomInset,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: AppColors.iosDashedBorder,
-                borderRadius: BorderRadius.circular(AppRadius.full),
-              ),
-            ),
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight - bottomInset),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.lg,
+            AppSpacing.xl,
+            AppSpacing.xl,
           ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: AspectRatio(
-              aspectRatio: 4 / 3,
-              child: Image.file(
-                widget.imageFile,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          if (widget.pontasRotulo.isNotEmpty) ...[
-            Text('Ponta', style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: AppSpacing.xs),
-            DropdownButtonFormField<int?>(
-              value: _pontaId,
-              decoration: const InputDecoration(isDense: true),
-              items: [
-                const DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text('Nenhuma'),
-                ),
-                for (final entry in widget.pontasRotulo.entries)
-                  DropdownMenuItem<int?>(
-                    value: entry.key,
-                    child: Text(entry.value),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: AppColors.iosDashedBorder,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
+                ),
+              ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: Image.file(
+                    widget.imageFile,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              if (widget.pontasRotulo.isNotEmpty) ...[
+                Text('Ponta', style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(height: AppSpacing.xs),
+                DropdownButtonFormField<int?>(
+                  value: _pontaId,
+                  decoration: const InputDecoration(isDense: true),
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Nenhuma'),
+                    ),
+                    for (final entry in widget.pontasRotulo.entries)
+                      DropdownMenuItem<int?>(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      ),
+                  ],
+                  onChanged: widget.readonly
+                      ? null
+                      : (v) => setState(() => _pontaId = v),
+                ),
+                const SizedBox(height: AppSpacing.md),
               ],
-              onChanged: widget.readonly
-                  ? null
-                  : (v) => setState(() => _pontaId = v),
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
-          Text('Título', style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: AppSpacing.xs),
-          TextField(
-            controller: _titulo,
-            enabled: !widget.readonly,
-            maxLines: 1,
-            textCapitalization: TextCapitalization.sentences,
-            autocorrect: true,
-            enableSuggestions: true,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              hintText: 'Opcional',
-              isDense: true,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text('Observação', style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: AppSpacing.xs),
-          TextField(
-            controller: _observacao,
-            enabled: !widget.readonly,
-            maxLines: 3,
-            minLines: 3,
-            textCapitalization: TextCapitalization.sentences,
-            autocorrect: true,
-            enableSuggestions: true,
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
-              hintText: 'Opcional',
-              alignLabelWithHint: true,
-              isDense: true,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          if (!widget.readonly) ...[
-            GradientPrimaryButton(
-              label: 'Salvar',
-              onPressed: _salvar,
-            ),
-            if (!widget.isNew && widget.onDelete != null) ...[
+              Text('Título', style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: AppSpacing.xs),
+              KeyedSubtree(
+                key: _tituloFieldKey,
+                child: TextField(
+                  controller: _titulo,
+                  focusNode: _tituloFocus,
+                  enabled: !widget.readonly,
+                  maxLines: 1,
+                  textCapitalization: TextCapitalization.sentences,
+                  autocorrect: true,
+                  enableSuggestions: true,
+                  textInputAction: TextInputAction.next,
+                  scrollPadding: const EdgeInsets.only(bottom: 120),
+                  onSubmitted: (_) =>
+                      FocusScope.of(context).requestFocus(_observacaoFocus),
+                  decoration: const InputDecoration(
+                    hintText: 'Opcional',
+                    isDense: true,
+                  ),
+                ),
+              ),
               const SizedBox(height: AppSpacing.md),
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  widget.onDelete?.call();
-                },
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: AppColors.iosDestructive,
-                ),
-                label: const Text(
-                  'Excluir foto',
-                  style: TextStyle(color: AppColors.iosDestructive),
+              Text('Observação', style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: AppSpacing.xs),
+              KeyedSubtree(
+                key: _observacaoFieldKey,
+                child: TextField(
+                  controller: _observacao,
+                  focusNode: _observacaoFocus,
+                  enabled: !widget.readonly,
+                  maxLines: 3,
+                  minLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
+                  autocorrect: true,
+                  enableSuggestions: true,
+                  textInputAction: TextInputAction.done,
+                  scrollPadding: const EdgeInsets.only(bottom: 160),
+                  decoration: const InputDecoration(
+                    hintText: 'Opcional',
+                    alignLabelWithHint: true,
+                    isDense: true,
+                  ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.lg),
+              if (!widget.readonly) ...[
+                GradientPrimaryButton(
+                  label: 'Salvar',
+                  onPressed: _salvar,
+                ),
+                if (!widget.isNew && widget.onDelete != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onDelete?.call();
+                    },
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: AppColors.iosDestructive,
+                    ),
+                    label: const Text(
+                      'Excluir foto',
+                      style: TextStyle(color: AppColors.iosDestructive),
+                    ),
+                  ),
+                ],
+              ] else
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Fechar'),
+                  ),
+                ),
             ],
-          ] else
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Fechar'),
-              ),
-            ),
-        ],
+          ),
+        ),
       ),
     );
   }

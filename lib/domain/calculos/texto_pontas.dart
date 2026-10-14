@@ -23,6 +23,14 @@ String rotuloZona(StatusPonta zona) {
   };
 }
 
+/// Rótulo da zona no laudo, com plural quando a contagem pede.
+String rotuloZonaLaudo(StatusPonta zona, int quantidade) {
+  if (zona == StatusPonta.irregular && quantidade != 1) {
+    return 'Entupidas';
+  }
+  return rotuloZona(zona);
+}
+
 /// Junta rótulos no padrão "5D e 6D" / "3D, 9D e 10D".
 /// Legenda D/E só com os lados usados neste laudo.
 String legendaLadosPontasLaudo({
@@ -101,10 +109,10 @@ String textoAcaoNecessaria({
 String significadoZonaLaudo(StatusPonta zona) {
   return switch (zona) {
     StatusPonta.irregular =>
-      'Vazão abaixo do esperado; em geral obstrução.',
-    StatusPonta.ideal => 'Dentro do esperado.',
-    StatusPonta.atencao => 'Levemente acima; já gera desperdício.',
-    StatusPonta.desgaste => 'Acima do limite; bico gasto.',
+      'Abaixo do ideal; costuma ser entupimento.',
+    StatusPonta.ideal => 'Dentro da faixa.',
+    StatusPonta.atencao => 'Um pouco acima; já desperdiça produto.',
+    StatusPonta.desgaste => 'Acima do limite; o bico já está gasto.',
     StatusPonta.pendente => '',
   };
 }

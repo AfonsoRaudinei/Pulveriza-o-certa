@@ -58,6 +58,12 @@ class LabeledField extends StatefulWidget {
     this.helper,
     this.decimal = false,
     this.integer = false,
+    this.trailing,
+    this.focusNode,
+    this.textInputAction,
+    this.onSubmitted,
+    this.onEditingComplete,
+    this.scrollPadding = const EdgeInsets.all(20),
   });
 
   final TextEditingController controller;
@@ -67,6 +73,12 @@ class LabeledField extends StatefulWidget {
   final VoidCallback onChanged;
   final bool decimal;
   final bool integer;
+  final Widget? trailing;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onEditingComplete;
+  final EdgeInsets scrollPadding;
 
   @override
   State<LabeledField> createState() => _LabeledFieldState();
@@ -109,21 +121,34 @@ class _LabeledFieldState extends State<LabeledField> {
       children: [
         Text(widget.label, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: AppSpacing.xs),
-        TextField(
-          controller: widget.controller,
-          scrollController: _scroll,
-          enabled: !widget.readonly,
-          keyboardType: keyboardType,
-          inputFormatters: formatters,
-          style: Theme.of(context).textTheme.bodyLarge,
-          decoration: const InputDecoration(
-            isDense: true,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.md,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: widget.controller,
+                scrollController: _scroll,
+                focusNode: widget.focusNode,
+                enabled: !widget.readonly,
+                keyboardType: keyboardType,
+                textInputAction: widget.textInputAction,
+                inputFormatters: formatters,
+                scrollPadding: widget.scrollPadding,
+                style: Theme.of(context).textTheme.bodyLarge,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.md,
+                  ),
+                ),
+                onChanged: (_) => widget.onChanged(),
+                onSubmitted: widget.onSubmitted,
+                onEditingComplete: widget.onEditingComplete,
+              ),
             ),
-          ),
-          onChanged: (_) => widget.onChanged(),
+            if (widget.trailing != null) widget.trailing!,
+          ],
         ),
         if (widget.helper != null) ...[
           const SizedBox(height: AppSpacing.xs),
@@ -170,6 +195,51 @@ class LabeledCulturaField extends StatelessWidget {
               DropdownMenuItem(
                 value: cultura,
                 child: Text(cultura.label),
+              ),
+          ],
+          onChanged: readonly ? null : onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+class LabeledTipoPontaField extends StatelessWidget {
+  const LabeledTipoPontaField({
+    super.key,
+    required this.value,
+    required this.readonly,
+    required this.onChanged,
+  });
+
+  final TipoPontaBico? value;
+  final bool readonly;
+  final ValueChanged<TipoPontaBico?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Tipo de ponta', style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: AppSpacing.xs),
+        DropdownButtonFormField<TipoPontaBico>(
+          value: value,
+          isExpanded: true,
+          isDense: true,
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
+            ),
+          ),
+          hint: const Text('Selecione'),
+          items: [
+            for (final tipo in TipoPontaBico.values)
+              DropdownMenuItem(
+                value: tipo,
+                child: Text(tipo.label),
               ),
           ],
           onChanged: readonly ? null : onChanged,

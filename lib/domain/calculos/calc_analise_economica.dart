@@ -48,6 +48,21 @@ bool recomendarTrocaCompleta({
   return perdaEstimadaTotal >= custoTrocaTotal;
 }
 
+/// Registros antigos ou valor inválido → 1 aplicação (comportamento anterior).
+int numeroAplicacoesEfetivo(int? numeroAplicacoes) {
+  if (numeroAplicacoes == null || numeroAplicacoes <= 0) return 1;
+  return numeroAplicacoes;
+}
+
+/// Perda estimada da safra = perda por aplicação × nº de aplicações.
+double calcularPerdaSafra({
+  required double perdaPorAplicacao,
+  int? numeroAplicacoes,
+}) {
+  return perdaPorAplicacao *
+      numeroAplicacoesEfetivo(numeroAplicacoes);
+}
+
 ResultadoEconomico analisarEconomia({
   required Iterable<double> percentuais,
   required double manejoRS,

@@ -257,15 +257,14 @@ List<String> montarLinhasComoCalculamosLaudo({
   final linhas = <String>[
     'Vazão ideal (L/min) = vazão (L/ha) × velocidade (km/h) × '
         'espaçamento (m) ÷ 600.',
-    'Perda da ponta = % excedente × manejo por ponta × área (só acima de 100%).',
-    'Troca completa: recomendada quando o custo de trocar todos os bicos é menor '
-        'que o desperdício total (Atenção + Desgaste); caso contrário, troca-se só '
-        'as pontas em desgaste.',
+    'A ponta só entra na perda quando passa de 100% do ideal.',
+    'Troca o jogo inteiro se isso sai mais barato que o desperdício '
+        '(atenção + desgaste). Senão, troca só as gastas.',
   ];
   if (uniformidade != null) {
     linhas.add(
-      'Uniformidade: média ${LaudoNumeroFormat.percentual(uniformidade.media)}, '
-      'desvio ${LaudoNumeroFormat.decimal(uniformidade.desvioPadrao)} pp, '
+      'Uniformidade: média ${LaudoNumeroFormat.percentual(uniformidade.media)}. '
+      'Variação ${LaudoNumeroFormat.decimal(uniformidade.desvioPadrao)} pontos. '
       'CV ${LaudoNumeroFormat.percentual(uniformidade.cvPercentual)}.',
     );
   }

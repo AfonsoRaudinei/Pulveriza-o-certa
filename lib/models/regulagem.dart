@@ -26,6 +26,39 @@ extension CulturaCultivoLabels on CulturaCultivo {
   }
 }
 
+/// Registros salvos antes do campo [cultura]: Milho ao carregar, sem sobrescrever valor salvo.
+CulturaCultivo? culturaFromStorageJson(Map<String, dynamic> json) {
+  if (!json.containsKey('cultura')) {
+    return CulturaCultivo.milho;
+  }
+  return CulturaCultivoLabels.fromJson(json['cultura'] as String?) ??
+      CulturaCultivo.milho;
+}
+
+/// Tipo de ponta/bico da barra (lista fechada).
+enum TipoPontaBico {
+  conica,
+  lequeSimples,
+  lequeDuplo,
+  jatoDuplo,
+  defletora,
+}
+
+extension TipoPontaBicoLabels on TipoPontaBico {
+  String get label => switch (this) {
+        TipoPontaBico.conica => 'Cônica',
+        TipoPontaBico.lequeSimples => 'Leque Simples',
+        TipoPontaBico.lequeDuplo => 'Leque Duplo',
+        TipoPontaBico.jatoDuplo => 'Jato Duplo',
+        TipoPontaBico.defletora => 'Defletora (Antideriva/AI)',
+      };
+
+  static TipoPontaBico? fromJson(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    return TipoPontaBico.values.byName(raw);
+  }
+}
+
 String rotuloPonta(int id, LadoConferenciaPontas lado) {
   final sufixo = lado == LadoConferenciaPontas.direita ? 'D' : 'E';
   return '$id$sufixo';
@@ -97,6 +130,8 @@ class Regulagem {
     this.precoBicoRS,
     this.areaHa,
     this.cultura,
+    this.tipoPonta,
+    this.numeroAplicacoes,
     this.limiteEntupido,
     this.limiteDesgaste,
     required this.criadoEm,
@@ -130,6 +165,9 @@ class Regulagem {
   final double? precoBicoRS;
   final double? areaHa;
   final CulturaCultivo? cultura;
+  final TipoPontaBico? tipoPonta;
+  /// Aplicações na safra com esta regulagem; registros antigos → null (= 1).
+  final int? numeroAplicacoes;
   final double? limiteEntupido;
   final double? limiteDesgaste;
   final DateTime criadoEm;
@@ -181,7 +219,9 @@ class Regulagem {
       manejoRS: (json['manejoRS'] as num?)?.toDouble(),
       precoBicoRS: (json['precoBicoRS'] as num?)?.toDouble(),
       areaHa: (json['areaHa'] as num?)?.toDouble(),
-      cultura: CulturaCultivoLabels.fromJson(json['cultura'] as String?),
+      cultura: culturaFromStorageJson(json),
+      tipoPonta: TipoPontaBicoLabels.fromJson(json['tipoPonta'] as String?),
+      numeroAplicacoes: json['numeroAplicacoes'] as int?,
       limiteEntupido: (json['limiteEntupido'] as num?)?.toDouble(),
       limiteDesgaste: (json['limiteDesgaste'] as num?)?.toDouble(),
       criadoEm: DateTime.parse(json['criadoEm'] as String),
@@ -192,6 +232,8 @@ class Regulagem {
   Regulagem copyWith({
     List<FotoRegulagem>? fotos,
     CulturaCultivo? cultura,
+    TipoPontaBico? tipoPonta,
+    int? numeroAplicacoes,
   }) {
     return Regulagem(
       id: id,
@@ -221,6 +263,8 @@ class Regulagem {
       precoBicoRS: precoBicoRS,
       areaHa: areaHa,
       cultura: cultura ?? this.cultura,
+      tipoPonta: tipoPonta ?? this.tipoPonta,
+      numeroAplicacoes: numeroAplicacoes ?? this.numeroAplicacoes,
       limiteEntupido: limiteEntupido,
       limiteDesgaste: limiteDesgaste,
       criadoEm: criadoEm,
@@ -257,6 +301,8 @@ class Regulagem {
       'precoBicoRS': precoBicoRS,
       'areaHa': areaHa,
       if (cultura != null) 'cultura': cultura!.name,
+      if (tipoPonta != null) 'tipoPonta': tipoPonta!.name,
+      if (numeroAplicacoes != null) 'numeroAplicacoes': numeroAplicacoes,
       'limiteEntupido': limiteEntupido,
       'limiteDesgaste': limiteDesgaste,
       'criadoEm': criadoEm.toIso8601String(),

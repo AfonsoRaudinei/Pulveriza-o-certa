@@ -57,23 +57,39 @@ void main() {
 
     expect(vm.textoBridging, isNull);
     expect(vm.comparativo, isNull);
-    expect(vm.textoRecomendacaoFinal, contains('troca completa'));
+    expect(vm.textoRecomendacaoFinal, contains('trocar todos os bicos'));
 
     final desgaste = vm.linhasPorZona.first;
     expect(
-      desgaste.trechos.any((t) => t.texto.contains('substituir;')),
+      desgaste.trechos.any((t) => t.texto.contains('Substituir.')),
       isTrue,
+    );
+    expect(
+      desgaste.trechos.any((t) => t.texto.contains('desperdício na safra') ||
+          t.texto.contains('Desperdício de')),
+      isTrue,
+    );
+    expect(
+      desgaste.trechos.any((t) => t.texto.contains('por aplicação')),
+      isFalse,
     );
 
     final ideal = vm.linhasPorZona[3];
-    expect(ideal.trechos.any((t) => t.texto.contains('sem ação necessária')),
-        isTrue);
+    expect(ideal.trechos.any((t) => t.texto.contains('Nada a fazer')), isTrue);
     expect(ideal.trechos.any((t) => t.texto.contains('—')), isFalse);
 
     final atencao = vm.linhasPorZona[2];
     expect(
-      atencao.trechos.any((t) => t.texto.contains('acompanhar; trocar se persistir')),
+      atencao.trechos.any(
+        (t) => t.texto.contains('Acompanhar. Trocar se o excesso continuar.'),
+      ),
       isTrue,
+    );
+
+    final entupida = vm.linhasPorZona[1];
+    expect(
+      entupida.trechos.firstWhere((t) => t.negrito).texto,
+      'Entupidas',
     );
   });
 
@@ -84,5 +100,37 @@ void main() {
     expect(d.planoLaudo.tipo, TipoRecomendacaoLaudo.unitaria);
     expect(vm.textoBridging, isNull);
     expect(vm.textoRecomendacaoFinal, contains('5D e 6D'));
+  });
+
+  test('desgaste cita aplicações e tipo de ponta na safra', () {
+    final ideal = calcularLitroMinIdeal(
+      vazaoLha: 80,
+      velocidade: 8,
+      espacamentoCm: 50,
+    );
+    final d = DiagnosticoRegulagem.calcular(
+      medicoes: [
+        for (var i = 0; i < _medidas.length; i++)
+          PontaMedicao(
+            id: i + 1,
+            valorMedido: _medidas[i],
+            status: StatusPonta.pendente,
+          ),
+      ],
+      litroMinIdeal: ideal,
+      limites: LimitesRegulagem.padrao,
+      lado: LadoConferenciaPontas.direita,
+      manejoRS: 600,
+      precoBicoRS: 30,
+      areaHa: 30,
+      numeroAplicacoes: 8,
+      tipoPonta: TipoPontaBico.conica,
+    );
+    final vm = montarDiagnosticoRecomendacaoLaudo(d);
+    final textoDesgaste = vm.linhasPorZona.first.trechos.map((t) => t.texto).join();
+    expect(textoDesgaste, contains('8 aplicações'));
+    expect(textoDesgaste, contains('ponta Cônica'));
+    expect(textoDesgaste, contains('Desperdício de'));
+    expect(textoDesgaste, contains('na safra'));
   });
 }

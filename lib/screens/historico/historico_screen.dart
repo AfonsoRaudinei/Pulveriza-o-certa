@@ -76,6 +76,14 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.calculate_outlined),
+              title: const Text('Calculadora de Manejo'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.pushNamed(context, Routes.custosManejo);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.settings_outlined),
               title: const Text('Configuração'),
               onTap: () {

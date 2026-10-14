@@ -13,6 +13,7 @@ import '../core/charts/vazao_chart_data.dart';
 import '../core/charts/vazao_chart_pdf_plan.dart';
 import '../core/constants/app_constants.dart';
 import '../core/formatters/laudo_numero_format.dart';
+import '../core/layout_faixa_cabecalho_laudo.dart';
 import '../core/marca_cabecalho_laudo.dart';
 import '../domain/calculos/subtitulos_laudo_pdf.dart';
 import '../core/extensions/double_extension.dart';
@@ -22,10 +23,10 @@ import '../domain/calculos/calc_diagnostico_regulagem.dart';
 import '../domain/calculos/calc_diagnostico_recomendacao_laudo.dart';
 import '../domain/calculos/calc_layout_laudo_pdf.dart';
 import '../domain/calculos/calc_texto_analise_economica_laudo.dart';
-import '../domain/calculos/calc_texto_veredito_laudo.dart';
 import '../domain/calculos/texto_pontas.dart';
 import '../models/configuracoes.dart';
 import '../models/marca_pdf.dart';
+import '../models/tipo_cabecalho_laudo.dart';
 import '../models/foto_regulagem.dart';
 import '../models/regulagem.dart';
 import '../theme.dart';
@@ -54,8 +55,11 @@ class RegulagemPdfData {
     required this.manejo,
     required this.precoBico,
     required this.area,
+    this.numeroAplicacoes,
+    this.tipoPonta,
     this.fotos = const [],
     this.marcaLogoBytes,
+    this.marcaFundoCabecalhoBytes,
   });
 
   final String produtor;
@@ -77,8 +81,11 @@ class RegulagemPdfData {
   final double manejo;
   final double precoBico;
   final double area;
+  final int? numeroAplicacoes;
+  final TipoPontaBico? tipoPonta;
   final List<FotoRegulagem> fotos;
   final Uint8List? marcaLogoBytes;
+  final Uint8List? marcaFundoCabecalhoBytes;
 }
 
 class RegulagemPdfService {
@@ -109,9 +116,11 @@ class RegulagemPdfService {
       manejoRS: data.manejo,
       precoBicoRS: data.precoBico,
       areaHa: data.area,
+      numeroAplicacoes: data.numeroAplicacoes,
+      tipoPonta: data.tipoPonta,
     );
     final percentuais = _percentuaisPorPonta(data);
-    final fotosWidget = await _buildFotosSection(
+    final fotosWidgets = await _buildFotosSectionWidgets(
       data.fotos,
       medicoes: data.medicoes,
       fotosService: fotosService,
@@ -146,27 +155,25 @@ class RegulagemPdfService {
               _avisoIncompleta(diagnostico),
             ],
             pw.SizedBox(height: 8),
-            _buildMachineSummary(data),
-            pw.SizedBox(height: 8),
+            _buildMachineSummary(data, diagnostico),
+            pw.SizedBox(height: 10),
             _buildStatusIndicators(diagnostico, data),
-            pw.SizedBox(height: 8),
-            ..._buildPontasTable(data, percentuais),
+            pw.SizedBox(height: 10),
+            ..._buildPontasTable(data, percentuais, diagnostico),
             pw.SizedBox(height: 8),
             _buildLegendaMarcadores(),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 10),
             ..._buildCharts(data, chartFont),
             _buildAnaliseEconomicaLaudo(diagnostico),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 14),
             _buildDiagnosticoRecomendacaoLaudo(diagnostico),
-            if (fotosWidget != null) ...[
-              pw.SizedBox(height: 8),
-              fotosWidget,
+            if (fotosWidgets.isNotEmpty) ...[
+              pw.SizedBox(height: 12),
+              ...fotosWidgets,
             ],
-            pw.SizedBox(height: 8),
-            _buildDadosCalculoLaudo(diagnostico),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 12),
             _buildComoCalculamos(diagnostico),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 10),
             _buildAssinaturaProfissional(data),
           ];
         },
@@ -202,51 +209,58 @@ class RegulagemPdfService {
     _bold = pw.Font.ttf(boldData);
   }
 
+  static const _overlayImagemCabecalhoPdf = PdfColor.fromInt(0x8A000000);
+
   static pw.Widget _buildTitle(RegulagemPdfData data) {
-    final marca = data.configuracoes.textoMarcaCabecalho();
-    final corFundo = corMarcaCabecalhoLaudo(data.configuracoes);
-    final corTexto = textoSobreCorMarcaLaudo(corFundo);
+    final config = data.configuracoes;
+    final marca = config.textoMarcaCabecalho();
+    final corTexto = textoSobreCabecalhoLaudo(config);
+    final linha = _conteudoLinhaCabecalho(data, marca, corTexto);
+    final padding = pw.EdgeInsets.symmetric(
+      horizontal: LayoutFaixaCabecalhoLaudo.paddingHorizontal,
+      vertical: LayoutFaixaCabecalhoLaudo.paddingVertical,
+    );
+    final raio = pw.BorderRadius.circular(LayoutFaixaCabecalhoLaudo.raioBorda);
+
+    final pw.Widget faixa = switch (config.tipoCabecalhoLaudo) {
+      TipoCabecalhoLaudo.solida => pw.Container(
+          width: double.infinity,
+          padding: padding,
+          decoration: pw.BoxDecoration(
+            color: _pdfColor(corMarcaCabecalhoLaudo(config)),
+            borderRadius: raio,
+          ),
+          child: linha,
+        ),
+      TipoCabecalhoLaudo.gradiente => pw.Container(
+          width: double.infinity,
+          padding: padding,
+          decoration: pw.BoxDecoration(
+            gradient: pw.LinearGradient(
+              begin: pw.Alignment.centerLeft,
+              end: pw.Alignment.centerRight,
+              colors: [
+                _pdfColor(corMarcaGradienteInicioLaudo(config)),
+                _pdfColor(corMarcaGradienteFimLaudo(config)),
+              ],
+            ),
+            borderRadius: raio,
+          ),
+          child: linha,
+        ),
+      TipoCabecalhoLaudo.imagem => _faixaCabecalhoImagem(
+          data: data,
+          linha: linha,
+          config: config,
+          padding: padding,
+          raio: raio,
+        ),
+    };
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: pw.BoxDecoration(
-            color: _pdfColor(corFundo),
-            borderRadius: pw.BorderRadius.circular(6),
-          ),
-          child: pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              if (data.marcaLogoBytes != null)
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(4),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    borderRadius: pw.BorderRadius.circular(4),
-                  ),
-                  child: pw.Image(
-                    pw.MemoryImage(data.marcaLogoBytes!),
-                    height: 24,
-                    fit: pw.BoxFit.contain,
-                  ),
-                ),
-              if (data.marcaLogoBytes != null) pw.SizedBox(width: 8),
-              pw.Expanded(
-                child: pw.Text(
-                  marca,
-                  style: pw.TextStyle(
-                    font: _semiBold,
-                    fontSize: 12,
-                    color: _pdfColor(corTexto),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        faixa,
         pw.SizedBox(height: 8),
         pw.Text(
           'Laudo Técnico — Regulagem de Pulverizador',
@@ -254,6 +268,114 @@ class RegulagemPdfService {
         ),
       ],
     );
+  }
+
+  static pw.Widget _faixaCabecalhoImagem({
+    required RegulagemPdfData data,
+    required pw.Widget linha,
+    required Configuracoes config,
+    required pw.EdgeInsets padding,
+    required pw.BorderRadius raio,
+  }) {
+    final bytes = data.marcaFundoCabecalhoBytes;
+    if (bytes == null || bytes.isEmpty) {
+      return pw.Container(
+        width: double.infinity,
+        padding: padding,
+        decoration: pw.BoxDecoration(
+          color: _pdfColor(corMarcaCabecalhoLaudo(config)),
+          borderRadius: raio,
+        ),
+        child: linha,
+      );
+    }
+
+    final raioPt = LayoutFaixaCabecalhoLaudo.raioBorda;
+    return pw.ClipRRect(
+      horizontalRadius: raioPt,
+      verticalRadius: raioPt,
+      child: pw.Stack(
+        alignment: pw.Alignment.centerLeft,
+        children: [
+          pw.SizedBox(
+            width: double.infinity,
+            height: LayoutFaixaCabecalhoLaudo.alturaFaixaImagem(config),
+            child: pw.Image(
+              pw.MemoryImage(bytes),
+              fit: pw.BoxFit.cover,
+            ),
+          ),
+          pw.Positioned.fill(
+            child: pw.Container(color: _overlayImagemCabecalhoPdf),
+          ),
+          pw.Padding(padding: padding, child: linha),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _conteudoLinhaCabecalho(
+    RegulagemPdfData data,
+    String marca,
+    Color corTexto,
+  ) {
+    final config = data.configuracoes;
+    final linhaContato = config.linhaContatoPerfilLaudo();
+    final corSecundaria = _corTextoSecundarioSobreCabecalhoPdf(corTexto);
+
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        if (data.marcaLogoBytes != null)
+          pw.Container(
+            padding: const pw.EdgeInsets.all(2),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.white,
+              borderRadius: pw.BorderRadius.circular(4),
+            ),
+            child: pw.Image(
+              pw.MemoryImage(data.marcaLogoBytes!),
+              height: 24,
+              fit: pw.BoxFit.contain,
+            ),
+          ),
+        if (data.marcaLogoBytes != null) pw.SizedBox(width: 8),
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Text(
+                marca,
+                style: pw.TextStyle(
+                  font: _semiBold,
+                  fontSize: 12,
+                  color: _pdfColor(corTexto),
+                ),
+              ),
+              if (linhaContato != null) ...[
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  linhaContato,
+                  style: pw.TextStyle(
+                    font: _regular,
+                    fontSize: 9,
+                    color: corSecundaria,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  static PdfColor _corTextoSecundarioSobreCabecalhoPdf(Color corPrimaria) {
+    if (corPrimaria.computeLuminance() > 0.55) {
+      return _corDescricaoOrientacao;
+    }
+    return _pdfColorWithAlpha(corPrimaria, 0.72);
   }
 
   static const _alturaLogoRodape = SoloForteLogoPdfService.alturaExibicaoPt;
@@ -403,9 +525,19 @@ class RegulagemPdfService {
     );
   }
 
-  static pw.Widget _buildMachineSummary(RegulagemPdfData data) {
+  static pw.Widget _buildMachineSummary(
+    RegulagemPdfData data,
+    DiagnosticoRegulagem diagnostico,
+  ) {
+    final dadosCalculo = montarDadosCalculoLaudo(
+      manejoRS: diagnostico.manejoRS,
+      manejoPorPonta: diagnostico.manejoPorPonta,
+      precoBicoRS: diagnostico.precoBicoRS,
+      areaHa: diagnostico.areaHa,
+    );
+
     final items = <(String, String)>[
-      ('Lt/min ideal', LaudoNumeroFormat.litroMin(data.litroMinIdeal)),
+      ('L/min ideal', LaudoNumeroFormat.litroMin(data.litroMinIdeal)),
       ('Vazão', LaudoNumeroFormat.vazaoLha(data.vazaoLha)),
       ('Velocidade', LaudoNumeroFormat.kmh(data.velocidade)),
       ('Espaçamento', LaudoNumeroFormat.cm(data.espacamentoCm)),
@@ -413,6 +545,9 @@ class RegulagemPdfService {
       if (data.pressaoBar != null)
         ('Pressão', LaudoNumeroFormat.bar(data.pressaoBar!)),
       if (data.area > 0) ('Área', LaudoNumeroFormat.hectares(data.area)),
+      ('Custo do defensivo por ha', dadosCalculo.manejoPorHa),
+      ('Produto por ponta', dadosCalculo.manejoPorPonta),
+      ('Preço do bico', dadosCalculo.precoBico),
     ];
 
     const columns = 4;
@@ -540,16 +675,7 @@ class RegulagemPdfService {
           zona.faixa,
           style: pw.TextStyle(
             font: _regular,
-            fontSize: 8,
-            color: _pdfColor(AppColors.textSecondary),
-          ),
-          textAlign: pw.TextAlign.center,
-        ),
-        pw.Text(
-          significadoZonaLaudo(zona.status),
-          style: pw.TextStyle(
-            font: _regular,
-            fontSize: 7.5,
+            fontSize: 8.5,
             color: _pdfColor(AppColors.textSecondary),
           ),
           textAlign: pw.TextAlign.center,
@@ -596,12 +722,17 @@ class RegulagemPdfService {
 
   /// Largura mínima da coluna # (ex.: 20D, 22D) sem quebra de linha.
   static const _larguraColunaRotuloPonta = 46.0;
+  static const _larguraColunaPercentual = 50.0;
 
   /// Título e tabela em widgets separados para a tabela poder quebrar entre páginas.
   static List<pw.Widget> _buildPontasTable(
     RegulagemPdfData data,
     Map<int, double> percentuais,
+    DiagnosticoRegulagem diagnostico,
   ) {
+    final statusPorId = {
+      for (final ponta in diagnostico.pontas) ponta.id: ponta.status,
+    };
     final headerStyle = pw.TextStyle(
       font: _semiBold,
       fontSize: 9,
@@ -625,7 +756,7 @@ class RegulagemPdfService {
           0: const pw.FixedColumnWidth(_larguraColunaRotuloPonta),
           1: const pw.FlexColumnWidth(3),
           2: const pw.FlexColumnWidth(2.5),
-          3: const pw.FixedColumnWidth(38),
+          3: const pw.FixedColumnWidth(_larguraColunaPercentual),
           4: const pw.FlexColumnWidth(3),
         },
         children: [
@@ -635,7 +766,11 @@ class RegulagemPdfService {
               _tableHeaderCellRotulo('#', headerStyle),
               _tableHeaderCell('Medido (L/min)', headerStyle),
               _tableHeaderCell('Ideal', headerStyle),
-              _tableHeaderCell('%', headerStyle, align: pw.TextAlign.right),
+              _tableHeaderCellRotulo(
+                '%',
+                headerStyle,
+                align: pw.TextAlign.right,
+              ),
               _tableHeaderCell('Status', headerStyle),
             ],
           ),
@@ -645,6 +780,10 @@ class RegulagemPdfService {
               data.litroMinIdeal,
               percentuais[ponta.id] ?? 0,
               data.ladoConferenciaPontas,
+              statusPorId[ponta.id] ??
+                  (ponta.valorMedido == null
+                      ? StatusPonta.pendente
+                      : ponta.status),
             ),
         ],
       ),
@@ -668,6 +807,7 @@ class RegulagemPdfService {
     double ideal,
     double percentual,
     LadoConferenciaPontas lado,
+    StatusPonta status,
   ) {
     final medido = ponta.valorMedido == null
         ? '-'
@@ -685,21 +825,21 @@ class RegulagemPdfService {
           pct,
           cor: percentual == 0
               ? _pdfColor(AppColors.textSecondary)
-              : _pdfColor(_statusLabelColor(ponta.status)),
+              : _pdfColor(_statusLabelColor(status)),
           align: pw.TextAlign.right,
         ),
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: pw.Row(
             children: [
-              PdfMarcadorZona.widget(ponta.status, size: 11),
+              PdfMarcadorZona.widget(status, size: 11),
               pw.SizedBox(width: 4),
               pw.Text(
-                rotuloZona(ponta.status),
+                rotuloZona(status),
                 style: pw.TextStyle(
                   font: _semiBold,
                   fontSize: 9,
-                  color: _pdfColor(_statusLabelColor(ponta.status)),
+                  color: _pdfColor(_statusLabelColor(status)),
                 ),
               ),
             ],
@@ -722,13 +862,15 @@ class RegulagemPdfService {
 
   static pw.Widget _tableHeaderCellRotulo(
     String text,
-    pw.TextStyle style,
-  ) {
+    pw.TextStyle style, {
+    pw.TextAlign align = pw.TextAlign.left,
+  }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(6),
       child: pw.Text(
         text,
         style: style,
+        textAlign: align,
         softWrap: false,
         maxLines: 1,
       ),
@@ -770,6 +912,8 @@ class RegulagemPdfService {
         text,
         style: pw.TextStyle(font: _semiBold, fontSize: 9, color: cor),
         textAlign: align,
+        softWrap: false,
+        maxLines: 1,
       ),
     );
   }
@@ -787,7 +931,7 @@ class RegulagemPdfService {
             style: pw.TextStyle(
               font: _regular,
               fontSize: 10,
-              height: 1.4,
+              height: 1.45,
               color: _pdfColor(AppColors.textPrimary),
             ),
           ),
@@ -809,7 +953,7 @@ class RegulagemPdfService {
           style: pw.TextStyle(
             font: _semiBold,
             fontSize: 12,
-            height: 1.35,
+            height: 1.45,
             color: corDestaque,
           ),
         ),
@@ -819,11 +963,11 @@ class RegulagemPdfService {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                '• ',
+                '•  ',
                 style: pw.TextStyle(
                   font: _regular,
                   fontSize: 10,
-                  height: 1.4,
+                  height: 1.45,
                   color: _pdfColor(AppColors.textPrimary),
                 ),
               ),
@@ -833,7 +977,7 @@ class RegulagemPdfService {
                   style: pw.TextStyle(
                     font: _regular,
                     fontSize: 10,
-                    height: 1.4,
+                    height: 1.45,
                     color: _pdfColor(AppColors.textPrimary),
                   ),
                 ),
@@ -853,7 +997,7 @@ class RegulagemPdfService {
                     style: pw.TextStyle(
                       font: trecho.negrito ? _semiBold : _regular,
                       fontSize: 10,
-                      height: 1.4,
+                      height: 1.45,
                       color: _pdfColor(AppColors.textPrimary),
                     ),
                   ),
@@ -867,25 +1011,11 @@ class RegulagemPdfService {
 
   static pw.Widget _buildDiagnosticoRecomendacaoLaudo(DiagnosticoRegulagem d) {
     final vm = montarDiagnosticoRecomendacaoLaudo(d);
-    final corFundoTitulo = _pdfColor(AppColors.surfaceAlt);
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: pw.BoxDecoration(
-            color: corFundoTitulo,
-            borderRadius: pw.BorderRadius.circular(8),
-            border:
-                pw.Border.all(color: _pdfColor(AppColors.border), width: 0.5),
-          ),
-          child: pw.Text(
-            'Diagnóstico e Recomendação',
-            style: pw.TextStyle(font: _semiBold, fontSize: 13),
-          ),
-        ),
+        _secaoTitulo(titulo: 'Diagnóstico e Recomendação'),
         pw.SizedBox(height: 8),
         for (final linha in vm.linhasPorZona) ...[
           pw.Row(
@@ -903,7 +1033,7 @@ class RegulagemPdfService {
                           style: pw.TextStyle(
                             font: t.negrito ? _semiBold : _regular,
                             fontSize: 10,
-                            height: 1.35,
+                            height: 1.45,
                             color: _pdfColor(AppColors.textPrimary),
                           ),
                         ),
@@ -920,69 +1050,11 @@ class RegulagemPdfService {
           style: pw.TextStyle(
             font: _semiBold,
             fontSize: 10,
-            height: 1.35,
+            height: 1.45,
             color: _pdfColor(AppColors.textPrimary),
           ),
         ),
       ],
-    );
-  }
-
-  static pw.Widget _buildDadosCalculoLaudo(DiagnosticoRegulagem d) {
-    final dados = montarDadosCalculoLaudo(
-      manejoRS: d.manejoRS,
-      manejoPorPonta: d.manejoPorPonta,
-      precoBicoRS: d.precoBicoRS,
-      areaHa: d.areaHa,
-    );
-
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Container(height: 0.5, color: _pdfColor(AppColors.border)),
-        pw.SizedBox(height: 8),
-        pw.Text(
-          'Dados usados no cálculo',
-          style: pw.TextStyle(
-            font: _regular,
-            fontSize: 9,
-            color: _pdfColor(AppColors.textSecondary),
-          ),
-        ),
-        pw.SizedBox(height: 4),
-        _dadoCalculoLinha('Custo do defensivo por ha', dados.manejoPorHa),
-        _dadoCalculoLinha('Manejo por ponta', dados.manejoPorPonta),
-        _dadoCalculoLinha('Preço do bico', dados.precoBico),
-        _dadoCalculoLinha('Área', dados.area),
-      ],
-    );
-  }
-
-  static pw.Widget _dadoCalculoLinha(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 2),
-      child: pw.Row(
-        children: [
-          pw.Expanded(
-            child: pw.Text(
-              label,
-              style: pw.TextStyle(
-                font: _regular,
-                fontSize: 9,
-                color: _pdfColor(AppColors.textSecondary),
-              ),
-            ),
-          ),
-          pw.Text(
-            value,
-            style: pw.TextStyle(
-              font: _regular,
-              fontSize: 9,
-              color: _pdfColor(AppColors.textSecondary),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1357,12 +1429,14 @@ class RegulagemPdfService {
       ..drawString(font, fontSize, text, centerX - metrics.width / 2, y);
   }
 
-  static Future<pw.Widget?> _buildFotosSection(
+  /// Widgets soltos para o [pw.MultiPage] paginar linha a linha e permitir que
+  /// o conteúdo seguinte (ex.: Como calculamos) preencha o restante da página.
+  static Future<List<pw.Widget>> _buildFotosSectionWidgets(
     List<FotoRegulagem> fotos, {
     required List<PontaMedicao> medicoes,
     FotosRegulagemService? fotosService,
   }) async {
-    if (fotos.isEmpty) return null;
+    if (fotos.isEmpty) return const [];
 
     final service = fotosService ?? FotosRegulagemService();
     final itens = <({FotoRegulagem foto, Uint8List bytes})>[];
@@ -1371,44 +1445,67 @@ class RegulagemPdfService {
       if (!await file.exists()) continue;
       itens.add((foto: foto, bytes: await file.readAsBytes()));
     }
-    if (itens.isEmpty) return null;
+    if (itens.isEmpty) return const [];
 
-    final rows = <pw.Widget>[];
+    final widgets = <pw.Widget>[
+      _secaoTitulo(
+        titulo: 'Fotos da Regulagem',
+        subtitulo: SubtitulosLaudoPdf.fotos,
+      ),
+      pw.SizedBox(height: 8),
+    ];
+
     for (var i = 0; i < itens.length; i += 2) {
-      rows.add(
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Expanded(
-              child: _buildFotoCelula(itens[i], medicoes: medicoes),
-            ),
-            if (i + 1 < itens.length) ...[
-              pw.SizedBox(width: 12),
-              pw.Expanded(
-                child: _buildFotoCelula(itens[i + 1], medicoes: medicoes),
-              ),
-            ] else
-              pw.Spacer(),
-          ],
+      widgets.add(
+        _buildFotoGridRow(
+          left: itens[i],
+          right: i + 1 < itens.length ? itens[i + 1] : null,
+          medicoes: medicoes,
         ),
       );
       if (i + 2 < itens.length) {
-        rows.add(pw.SizedBox(height: 12));
+        widgets.add(pw.SizedBox(height: 12));
       }
     }
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _secaoTitulo(
-          titulo: 'Fotos da Regulagem',
-          subtitulo: SubtitulosLaudoPdf.fotos,
-        ),
-        pw.SizedBox(height: 8),
-        ...rows,
-      ],
+    return widgets;
+  }
+
+  static const _fotoGridGap = 12.0;
+
+  static pw.Widget _buildFotoGridRow({
+    required ({FotoRegulagem foto, Uint8List bytes}) left,
+    required ({FotoRegulagem foto, Uint8List bytes})? right,
+    required List<PontaMedicao> medicoes,
+  }) {
+    return pw.LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints?.maxWidth ??
+            (PdfPageFormat.a4.width - 32 - 32);
+        final colWidth = (totalWidth - _fotoGridGap) / 2;
+
+        return pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.SizedBox(
+              width: colWidth,
+              child: _buildFotoCelula(left, medicoes: medicoes),
+            ),
+            if (right != null) ...[
+              pw.SizedBox(width: _fotoGridGap),
+              pw.SizedBox(
+                width: colWidth,
+                child: _buildFotoCelula(right, medicoes: medicoes),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
+
+  /// Largura ÷ altura do quadro da foto no laudo (retrato, alinhado ao celular).
+  static const _fotoLaudoAspectRatio = 3 / 4;
 
   static pw.Widget _buildFotoCelula(
     ({FotoRegulagem foto, Uint8List bytes}) item, {
@@ -1457,11 +1554,15 @@ class RegulagemPdfService {
         pw.ClipRRect(
           horizontalRadius: 6,
           verticalRadius: 6,
-          child: pw.SizedBox(
-            height: 140,
-            child: pw.Image(
-              pw.MemoryImage(item.bytes),
-              fit: pw.BoxFit.cover,
+          child: pw.AspectRatio(
+            aspectRatio: _fotoLaudoAspectRatio,
+            child: pw.Container(
+              alignment: pw.Alignment.center,
+              color: _pdfColor(AppColors.surfaceAlt),
+              child: pw.Image(
+                pw.MemoryImage(item.bytes),
+                fit: pw.BoxFit.contain,
+              ),
             ),
           ),
         ),
@@ -1571,6 +1672,7 @@ class RegulagemPdfService {
               style: pw.TextStyle(
                 font: _regular,
                 fontSize: 9,
+                height: 1.45,
                 color: _pdfColor(AppColors.textSecondary),
               ),
             ),

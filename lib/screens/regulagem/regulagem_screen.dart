@@ -14,6 +14,8 @@ import '../../models/regulagem.dart';
 import '../../providers/configuracoes_provider.dart';
 import '../../providers/regulagens_provider.dart';
 import '../../theme.dart';
+import '../custo_manejo/selecionar_custo_manejo_sheet.dart';
+import '../../services/marca_fundo_cabecalho_service.dart';
 import '../../services/marca_logo_service.dart';
 import '../../services/regulagem_pdf_service.dart';
 import 'widgets/etapa_resumo.dart';
@@ -40,7 +42,8 @@ class RegulagemScreen extends StatefulWidget {
   State<RegulagemScreen> createState() => _RegulagemScreenState();
 }
 
-class _RegulagemScreenState extends State<RegulagemScreen> {
+class _RegulagemScreenState extends State<RegulagemScreen>
+    with WidgetsBindingObserver {
   final _produtor = TextEditingController();
   final _fazenda = TextEditingController();
   final _talhao = TextEditingController();
@@ -54,14 +57,14 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   final _manejoCtrl = TextEditingController();
   final _precoBicoCtrl = TextEditingController();
   final _areaCtrl = TextEditingController();
+  final _numeroAplicacoesCtrl = TextEditingController();
   final _limiteEntupido = TextEditingController();
   final _limiteDesgaste = TextEditingController();
   Timer? _limitesDebounce;
   Timer? _recalculateDebounce;
   Timer? _economiaDebounce;
   Configuracoes? _recalculateConfigOverride;
-  String? _resumoPontasCacheKey;
-  Widget? _resumoPontasCache;
+  bool _repaintAfterShare = false;
 
   DateTime _data = DateTime.now();
   double _litroMinIdeal = 0;
@@ -69,6 +72,8 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   double _precoBico = 0;
   double _area = 0;
   CulturaCultivo? _cultura;
+  TipoPontaBico? _tipoPonta;
+  int? _numeroAplicacoes;
   List<PontaMedicao> _medicoes = [];
   List<FotoRegulagem> _fotos = [];
   LadoConferenciaPontas _ladoConferenciaPontas = LadoConferenciaPontas.direita;
@@ -79,13 +84,35 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _id = widget.regulagem?.id ?? const Uuid().v4();
     _criadoEm = widget.regulagem?.criadoEm;
     WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _repaintAfterShare) {
+      _repaintAfterShare = false;
+      _scheduleRepaintAfterForeground();
+    }
+  }
+
+  void _markShareFlowStarted() => _repaintAfterShare = true;
+
+  void _scheduleRepaintAfterForeground() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    });
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _produtor.dispose();
     _fazenda.dispose();
     _talhao.dispose();
@@ -99,6 +126,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     _manejoCtrl.dispose();
     _precoBicoCtrl.dispose();
     _areaCtrl.dispose();
+    _numeroAplicacoesCtrl.dispose();
     _limiteEntupido.dispose();
     _limiteDesgaste.dispose();
     _limitesDebounce?.cancel();
@@ -134,6 +162,11 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       _fotos = List<FotoRegulagem>.from(regulagem.fotos);
       _ladoConferenciaPontas = regulagem.ladoConferenciaPontas;
       _cultura = regulagem.cultura;
+      _tipoPonta = regulagem.tipoPonta;
+      _numeroAplicacoes = regulagem.numeroAplicacoes;
+      _numeroAplicacoesCtrl.text = regulagem.numeroAplicacoes == null
+          ? ''
+          : '${regulagem.numeroAplicacoes}';
     } else {
       _consultor.text =
           context.read<ConfiguracoesProvider>().configuracoes.nomeConsultor;
@@ -302,7 +335,30 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     _manejo = _parse(_manejoCtrl.text);
     _precoBico = _parse(_precoBicoCtrl.text);
     _area = _parse(_areaCtrl.text);
+    final appsRaw = _numeroAplicacoesCtrl.text.trim();
+    _numeroAplicacoes =
+        appsRaw.isEmpty ? null : int.tryParse(appsRaw);
     setState(() {});
+  }
+
+  int? get _numeroAplicacoesParaCalculo {
+    if (_numeroAplicacoes != null && _numeroAplicacoes! > 0) {
+      return _numeroAplicacoes;
+    }
+    return null;
+  }
+
+  String? _validarCamposEconomiaSafra() {
+    if (_manejo <= 0) return null;
+    final apps = _numeroAplicacoesParaCalculo;
+    if (apps == null || apps <= 0) {
+      return 'Informe o número de aplicações na safra (mín. 1) quando '
+          'houver manejo (R\$).';
+    }
+    if (_tipoPonta == null) {
+      return 'Selecione o tipo de ponta quando houver manejo (R\$).';
+    }
+    return null;
   }
 
   Regulagem _montarRegulagem() {
@@ -336,6 +392,8 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       precoBicoRS: _precoBico == 0 ? null : _precoBico,
       areaHa: _area == 0 ? null : _area,
       cultura: _cultura,
+      tipoPonta: _tipoPonta,
+      numeroAplicacoes: _numeroAplicacoesParaCalculo,
       limiteEntupido: _parse(_limiteEntupido.text),
       limiteDesgaste: _parse(_limiteDesgaste.text),
       criadoEm: _criadoEm!,
@@ -360,6 +418,20 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
 
   Future<void> _persist({required bool closeAfter}) async {
     if (!_etapa1Completa) return;
+    _updateEconomiaFromControllers();
+    final erroEconomia = _validarCamposEconomiaSafra();
+    if (erroEconomia != null) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(erroEconomia),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
     final validacao = validarLimitesRegulagem(
       limiteEntupido: _parse(_limiteEntupido.text),
       limiteDesgaste: _parse(_limiteDesgaste.text),
@@ -432,6 +504,13 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       EtapaResumoLinha('Preço do bico (R\$/un)', _precoBicoCtrl.text),
       EtapaResumoLinha('Manejo (R\$)', _manejoCtrl.text),
       if (_cultura != null) EtapaResumoLinha('Cultura', _cultura!.label),
+      if (_tipoPonta != null)
+        EtapaResumoLinha('Tipo de ponta', _tipoPonta!.label),
+      if (_numeroAplicacoesCtrl.text.trim().isNotEmpty)
+        EtapaResumoLinha(
+          'Nº de aplicações na safra',
+          _numeroAplicacoesCtrl.text,
+        ),
     ]);
   }
 
@@ -479,23 +558,8 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
     return EtapaResumo(linhas: linhas);
   }
 
-  String _resumoPontasKey() {
-    final buffer = StringBuffer(
-      '$_litroMinIdeal|${_ladoConferenciaPontas.name}|',
-    );
-    for (final ponta in _medicoes) {
-      buffer.write(
-        '${ponta.id}:${ponta.valorMedido}:${ponta.status.name};',
-      );
-    }
-    return buffer.toString();
-  }
-
   Widget? _resumoPontas() {
-    final key = _resumoPontasKey();
-    if (key == _resumoPontasCacheKey) return _resumoPontasCache;
-
-    final resumo = EtapaResumo.ouNulo([
+    return EtapaResumo.ouNulo([
       for (final ponta in _medicoes)
         if (ponta.valorMedido != null)
           EtapaResumoLinha(
@@ -508,15 +572,16 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             '${rotuloStatusPonta(ponta.status)}',
           ),
     ]);
-    _resumoPontasCacheKey = key;
-    _resumoPontasCache = resumo;
-    return resumo;
   }
 
   Future<RegulagemPdfData> _pdfData() async {
     final configuracoes = _configParaClassificar();
     final marcaLogoBytes =
         await MarcaLogoService().lerBytes(configuracoes.marcaLogoArquivo);
+    final marcaFundoCabecalhoBytes =
+        await MarcaFundoCabecalhoService().lerBytes(
+      configuracoes.marcaFundoCabecalhoArquivo,
+    );
 
     return RegulagemPdfData(
       produtor: _produtor.text.trim(),
@@ -538,8 +603,11 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
       manejo: _manejo,
       precoBico: _precoBico,
       area: _area,
+      numeroAplicacoes: _numeroAplicacoesParaCalculo,
+      tipoPonta: _tipoPonta,
       fotos: _fotos,
       marcaLogoBytes: marcaLogoBytes,
+      marcaFundoCabecalhoBytes: marcaFundoCabecalhoBytes,
     );
   }
 
@@ -559,6 +627,14 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
   String _value(double? value) {
     if (value == null || value == 0) return '';
     return value.toStringAsFixed(2);
+  }
+
+  Future<void> _aplicarCustoManejoSalvo() async {
+    if (widget.readonly) return;
+    final total = await mostrarSelecaoCustoManejo(context);
+    if (total == null || !mounted) return;
+    _manejoCtrl.text = total.toStringAsFixed(2);
+    _updateEconomiaFromControllers();
   }
 
   Future<void> _pickDate() async {
@@ -591,6 +667,7 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
             ExportarPdfButton(
               buildData: _pdfData,
               variant: ExportarPdfButtonVariant.icon,
+              onShareFlowStarted: _markShareFlowStarted,
             ),
           if (!readonly)
             TextButton(
@@ -620,6 +697,8 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               manejo: _manejoCtrl,
               precoBico: _precoBicoCtrl,
               cultura: _cultura,
+              tipoPonta: _tipoPonta,
+              numeroAplicacoes: _numeroAplicacoesCtrl,
               data: _data,
               readonly: readonly,
               onChanged: _onSummaryFieldChanged,
@@ -627,6 +706,12 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               onCulturaChanged: (value) {
                 setState(() => _cultura = value);
               },
+              onTipoPontaChanged: (value) {
+                setState(() => _tipoPonta = value);
+                _updateEconomiaDebounced();
+              },
+              onSelecionarCustoManejo:
+                  readonly ? null : _aplicarCustoManejoSalvo,
               onPickDate: _pickDate,
             ),
           ),
@@ -719,9 +804,12 @@ class _RegulagemScreenState extends State<RegulagemScreen> {
               manejo: _manejo,
               precoBico: _precoBico,
               area: _area,
+              numeroAplicacoes: _numeroAplicacoesParaCalculo,
+              tipoPonta: _tipoPonta,
               ladoConferencia: _ladoConferenciaPontas,
               readonly: readonly,
               buildData: _pdfData,
+              onShareFlowStarted: _markShareFlowStarted,
             ),
           ],
         ],

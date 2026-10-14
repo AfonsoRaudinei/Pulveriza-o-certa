@@ -31,8 +31,10 @@ void main() {
     required String regulagemId,
     String? titulo,
     String? observacao,
+    int width = 400,
+    int height = 300,
   }) async {
-    final image = img.Image(width: 400, height: 300);
+    final image = img.Image(width: width, height: height);
     img.fill(image, color: img.ColorRgb8(30, 120, 200));
     final png = File('${tempDir.path}/origem.png');
     await png.writeAsBytes(img.encodePng(image));
@@ -80,11 +82,67 @@ void main() {
     expect(bytes.length, greaterThan(1000));
   });
 
+  test('PDF com fotos em proporções variadas gera sem erro', () async {
+    const regulagemId = 'pdf-fotos-aspectos';
+    final fotos = <FotoRegulagem>[
+      await criarFoto(
+        regulagemId: regulagemId,
+        titulo: 'Quadrada',
+        width: 400,
+        height: 400,
+      ),
+      await criarFoto(
+        regulagemId: regulagemId,
+        titulo: '3:4',
+        width: 300,
+        height: 400,
+      ),
+      await criarFoto(
+        regulagemId: regulagemId,
+        titulo: '9:16',
+        width: 360,
+        height: 640,
+      ),
+    ];
+
+    final bytes = await RegulagemPdfService.generate(
+      pdfComFotos(fotos),
+      fotosService: fotosService,
+    );
+
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+    expect(bytes.length, greaterThan(1000));
+  });
+
   test('PDF omite seção de fotos quando lista está vazia', () async {
     final bytes = await RegulagemPdfService.generate(pdfComFotos(const []));
 
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
     expect(bytes.length, greaterThan(1000));
+  });
+
+  test('PDF gera com 1 a 5 fotos (grid 2 colunas, última linha ímpar)', () async {
+    for (var n = 1; n <= 5; n++) {
+      const regulagemId = 'pdf-fotos-count';
+      final fotos = <FotoRegulagem>[];
+      for (var i = 1; i <= n; i++) {
+        fotos.add(
+          await criarFoto(
+            regulagemId: '$regulagemId-$n',
+            titulo: '${i}D',
+            observacao: 'Foto $i',
+          ),
+        );
+      }
+
+      final bytes = await RegulagemPdfService.generate(
+        pdfComFotos(fotos),
+        fotosService: fotosService,
+      );
+
+      expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+      expect(bytes.length, greaterThan(1000));
+    }
   });
 
   test('exporta PDF com 12 fotos e 10 pontas para revisão visual', () async {

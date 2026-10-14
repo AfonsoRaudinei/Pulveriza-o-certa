@@ -13,9 +13,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/app_constants.dart';
 import '../core/constants/fotos_regulagem_constants.dart';
 import '../models/configuracoes.dart';
+import '../models/custo_manejo.dart';
 import '../models/foto_regulagem.dart';
 import '../models/regulagem.dart';
 import 'fotos_regulagem_service.dart';
+import 'marca_fundo_cabecalho_service.dart';
+import 'marca_logo_service.dart';
 
 /// Erro de leitura/gravação do armazenamento local, com mensagem apresentável
 /// ao usuário.
@@ -27,10 +30,18 @@ class StorageException implements Exception {
 }
 
 class StorageService {
-  StorageService({FotosRegulagemService? fotosService})
-      : _fotosService = fotosService ?? FotosRegulagemService();
+  StorageService({
+    FotosRegulagemService? fotosService,
+    MarcaLogoService? marcaLogoService,
+    MarcaFundoCabecalhoService? marcaFundoCabecalhoService,
+  })  : _fotosService = fotosService ?? FotosRegulagemService(),
+        _marcaLogoService = marcaLogoService ?? MarcaLogoService(),
+        _marcaFundoCabecalhoService =
+            marcaFundoCabecalhoService ?? MarcaFundoCabecalhoService();
 
   final FotosRegulagemService _fotosService;
+  final MarcaLogoService _marcaLogoService;
+  final MarcaFundoCabecalhoService _marcaFundoCabecalhoService;
 
   /// Lê a lista de regulagens do disco.
   ///
@@ -143,9 +154,12 @@ class StorageService {
   Future<void> clearAll() async {
     try {
       await _fotosService.removerTodas();
+      await _marcaLogoService.removerLogo();
+      await _marcaFundoCabecalhoService.removerFundo();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(AppConstants.regulagensKey);
       await prefs.remove(AppConstants.configuracoesKey);
+      await prefs.remove(AppConstants.custosManejoKey);
       // Chaves legadas de protótipos removidos.
       await prefs.remove('agro_ordens_aplicacao');
       await prefs.remove('agro_cadastros');
@@ -203,6 +217,8 @@ class StorageService {
         }
       }
 
+      await _adicionarMarcaPerfilAoZip(archive, backup['configuracoes'] as Map<String, dynamic>);
+
       final zipBytes = ZipEncoder().encode(archive);
 
       final dir = await getTemporaryDirectory();
@@ -252,6 +268,7 @@ class StorageService {
       regulagens: parsed.regulagens,
       configuracoes: parsed.configuracoes,
       fotosPorArquivo: const {},
+      marcaPorArquivo: const {},
       substituirFotosLocais: false,
     );
   }
@@ -270,12 +287,18 @@ class StorageService {
     final parsed = _parseBackupPayload(raw);
 
     final fotosPorArquivo = <String, List<int>>{};
+    final marcaPorArquivo = <String, List<int>>{};
     for (final entry in archive.files) {
-      if (entry.isFile &&
-          _caminhoRelativoNoZip(entry.name)
-              .startsWith('${FotosRegulagemConstants.pastaFotosBackup}/')) {
-        final nome = _caminhoRelativoNoZip(entry.name).split('/').last;
+      if (!entry.isFile) continue;
+      final relativo = _caminhoRelativoNoZip(entry.name);
+      if (relativo.startsWith('${FotosRegulagemConstants.pastaFotosBackup}/')) {
+        final nome = relativo.split('/').last;
         fotosPorArquivo[nome] = entry.content as List<int>;
+        continue;
+      }
+      if (relativo.startsWith('${FotosRegulagemConstants.pastaMarcaBackup}/')) {
+        final nome = relativo.split('/').last;
+        marcaPorArquivo[nome] = entry.content as List<int>;
       }
     }
 
@@ -283,6 +306,7 @@ class StorageService {
       regulagens: parsed.regulagens,
       configuracoes: parsed.configuracoes,
       fotosPorArquivo: fotosPorArquivo,
+      marcaPorArquivo: marcaPorArquivo,
       substituirFotosLocais: true,
     );
   }
@@ -320,15 +344,73 @@ class StorageService {
     }
   }
 
+  Future<void> _adicionarMarcaPerfilAoZip(
+    Archive archive,
+    Map<String, dynamic> configuracoesJson,
+  ) async {
+    final config = Configuracoes.fromJson(configuracoesJson);
+    if (config.marcaLogoArquivo.trim().isNotEmpty) {
+      final bytes = await _marcaLogoService.lerBytes(config.marcaLogoArquivo);
+      if (bytes != null) {
+        archive.addFile(
+          ArchiveFile(
+            '${FotosRegulagemConstants.pastaMarcaBackup}/${MarcaLogoService.nomeArquivo}',
+            bytes.length,
+            bytes,
+          ),
+        );
+      }
+    }
+    if (config.marcaFundoCabecalhoArquivo.trim().isNotEmpty) {
+      final bytes = await _marcaFundoCabecalhoService.lerBytes(
+        config.marcaFundoCabecalhoArquivo,
+      );
+      if (bytes != null) {
+        archive.addFile(
+          ArchiveFile(
+            '${FotosRegulagemConstants.pastaMarcaBackup}/${MarcaFundoCabecalhoService.nomeArquivo}',
+            bytes.length,
+            bytes,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _restaurarMarcaPerfilDoBackup(
+    Map<String, List<int>> marcaPorArquivo, {
+    required bool substituirArquivosLocais,
+  }) async {
+    if (substituirArquivosLocais) {
+      await _marcaLogoService.removerLogo();
+      await _marcaFundoCabecalhoService.removerFundo();
+    }
+
+    final logoBytes = marcaPorArquivo[MarcaLogoService.nomeArquivo];
+    if (logoBytes != null) {
+      await _marcaLogoService.gravarBytes(logoBytes);
+    }
+
+    final fundoBytes = marcaPorArquivo[MarcaFundoCabecalhoService.nomeArquivo];
+    if (fundoBytes != null) {
+      await _marcaFundoCabecalhoService.gravarBytes(fundoBytes);
+    }
+  }
+
   Future<void> _persistBackupImport({
     required List<Regulagem> regulagens,
     required Configuracoes configuracoes,
     required Map<String, List<int>> fotosPorArquivo,
+    required Map<String, List<int>> marcaPorArquivo,
     required bool substituirFotosLocais,
   }) async {
     if (substituirFotosLocais) {
       await _fotosService.removerTodas();
     }
+    await _restaurarMarcaPerfilDoBackup(
+      marcaPorArquivo,
+      substituirArquivosLocais: substituirFotosLocais,
+    );
 
     final regulagensImportadas = <Regulagem>[];
     for (final regulagem in regulagens) {
@@ -380,5 +462,57 @@ class StorageService {
 
   String _caminhoRelativoNoZip(String caminho) {
     return caminho.replaceAll('\\', '/');
+  }
+
+  Future<List<CustoManejo>> getCustosManejo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(AppConstants.custosManejoKey);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final data = jsonDecode(raw) as List<dynamic>;
+      final itens = data
+          .map((item) => CustoManejo.fromJson(item as Map<String, dynamic>))
+          .toList();
+      itens.sort((a, b) => a.nome.toLowerCase().compareTo(b.nome.toLowerCase()));
+      return itens;
+    } catch (error) {
+      debugPrint('Custos de manejo corrompidos: $error');
+      return [];
+    }
+  }
+
+  Future<void> saveCustoManejo(CustoManejo custo) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lista = await getCustosManejo();
+      final index = lista.indexWhere((item) => item.id == custo.id);
+      if (index >= 0) {
+        lista[index] = custo;
+      } else {
+        lista.add(custo);
+      }
+      await prefs.setString(
+        AppConstants.custosManejoKey,
+        jsonEncode(lista.map((item) => item.toJson()).toList()),
+      );
+    } catch (error) {
+      debugPrint('Erro ao salvar custo de manejo: $error');
+      throw const StorageException('Não foi possível salvar o custo de manejo.');
+    }
+  }
+
+  Future<void> deleteCustoManejo(String id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lista = await getCustosManejo();
+      lista.removeWhere((item) => item.id == id);
+      await prefs.setString(
+        AppConstants.custosManejoKey,
+        jsonEncode(lista.map((item) => item.toJson()).toList()),
+      );
+    } catch (error) {
+      debugPrint('Erro ao excluir custo de manejo: $error');
+      throw const StorageException('Não foi possível excluir o custo de manejo.');
+    }
   }
 }

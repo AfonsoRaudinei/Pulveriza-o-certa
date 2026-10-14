@@ -9,14 +9,19 @@ import '../../core/constants/app_constants.dart';
 import '../../core/formatters/digitos_maximo_formatter.dart';
 import '../../models/configuracoes.dart';
 import '../../models/marca_pdf.dart';
+import '../../models/tipo_cabecalho_laudo.dart';
 import '../../providers/configuracoes_provider.dart';
+import '../../services/marca_fundo_cabecalho_service.dart';
 import '../../services/marca_logo_service.dart';
 import '../../providers/regulagens_provider.dart';
 import '../../services/storage_service.dart';
 import '../../theme.dart';
+import '../../core/layout_faixa_cabecalho_laudo.dart';
 import '../../core/marca_cabecalho_laudo.dart';
 import '../../widgets/app_button.dart';
 import 'widgets/seletor_cor_marca_dialog.dart';
+
+enum _AlvoCorMarca { solida, gradienteInicio, gradienteFim }
 
 class ConfiguracoesScreen extends StatefulWidget {
   const ConfiguracoesScreen({super.key});
@@ -28,20 +33,27 @@ class ConfiguracoesScreen extends StatefulWidget {
 class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
   final _nome = TextEditingController();
   final _empresa = TextEditingController();
+  final _contato = TextEditingController();
+  final _email = TextEditingController();
   final _crea = TextEditingController();
   final _nomeFocus = FocusNode();
   final _empresaFocus = FocusNode();
+  final _contatoFocus = FocusNode();
+  final _emailFocus = FocusNode();
   final _creaFocus = FocusNode();
   final _storage = StorageService();
   final _marcaLogo = MarcaLogoService();
+  final _marcaFundoCabecalho = MarcaFundoCabecalhoService();
   final _imagePicker = ImagePicker();
   ConfiguracoesProvider? _configProvider;
+  int _logoPreviewEpoch = 0;
+  int _fundoPreviewEpoch = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _syncFromProvider();
+      if (mounted) _syncFromProvider(forcePerfil: true);
     });
   }
 
@@ -61,24 +73,53 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
     _configProvider?.removeListener(_onConfigChanged);
     _nomeFocus.dispose();
     _empresaFocus.dispose();
+    _contatoFocus.dispose();
+    _emailFocus.dispose();
     _creaFocus.dispose();
     _nome.dispose();
     _empresa.dispose();
+    _contato.dispose();
+    _email.dispose();
     _crea.dispose();
     super.dispose();
   }
 
   void _onConfigChanged() {
     if (!mounted) return;
-    _syncFromProvider();
+    _syncFromProvider(forcePerfil: false);
   }
 
-  void _syncFromProvider() {
-    final config = _configProvider?.configuracoes ??
+  Configuracoes _configAtual() {
+    return _configProvider?.configuracoes ??
         context.read<ConfiguracoesProvider>().configuracoes;
-    _syncField(_nome, _nomeFocus, config.nomeConsultor);
-    _syncField(_empresa, _empresaFocus, config.empresaNome);
-    _syncField(_crea, _creaFocus, config.registroProfissional);
+  }
+
+  bool _perfilDivergeDoSalvo() {
+    final config = _configAtual();
+    return _nome.text.trim() != config.nomeConsultor.trim() ||
+        _empresa.text.trim() != config.empresaNome.trim() ||
+        _contato.text.trim() != config.contatoPerfil.trim() ||
+        _email.text.trim() != config.emailPerfil.trim() ||
+        _crea.text.trim() != config.registroProfissional.trim();
+  }
+
+  void _syncFromProvider({required bool forcePerfil}) {
+    final config = _configAtual();
+    if (forcePerfil || !_perfilDivergeDoSalvo()) {
+      _syncField(_nome, _nomeFocus, config.nomeConsultor);
+      _syncField(_empresa, _empresaFocus, config.empresaNome);
+      _syncField(_contato, _contatoFocus, config.contatoPerfil);
+      _syncField(_email, _emailFocus, config.emailPerfil);
+      _syncField(_crea, _creaFocus, config.registroProfissional);
+    }
+  }
+
+  void _bumpLogoPreview() {
+    setState(() => _logoPreviewEpoch++);
+  }
+
+  void _bumpFundoPreview() {
+    setState(() => _fundoPreviewEpoch++);
   }
 
   void _syncField(
@@ -111,6 +152,11 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
   }
 
   Future<void> _save() async {
+    final email = _email.text.trim();
+    if (!Configuracoes.emailPerfilValido(email)) {
+      _feedback('Informe um e-mail válido ou deixe o campo em branco.', erro: true);
+      return;
+    }
     try {
       final provider = context.read<ConfiguracoesProvider>();
       final atual = provider.configuracoes;
@@ -118,6 +164,8 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
         atual.copyWith(
           nomeConsultor: _nome.text.trim(),
           empresaNome: _empresa.text.trim(),
+          contatoPerfil: _contato.text.trim(),
+          emailPerfil: email,
           registroProfissional: _crea.text.trim(),
         ),
       );
@@ -167,7 +215,9 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       if (!mounted) return;
       await configuracoesProvider.load();
       await regulagensProvider.load();
-      _syncFromProvider();
+      _syncFromProvider(forcePerfil: true);
+      _bumpLogoPreview();
+      _bumpFundoPreview();
       _feedback('Backup importado com sucesso.');
     } on StorageException catch (error) {
       _feedback(error.message, erro: true);
@@ -191,7 +241,9 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       if (!mounted) return;
       await configuracoesProvider.load();
       await regulagensProvider.load();
-      _syncFromProvider();
+      _syncFromProvider(forcePerfil: true);
+      _bumpLogoPreview();
+      _bumpFundoPreview();
       _feedback('Todos os dados foram apagados.');
     } on StorageException catch (error) {
       _feedback(error.message, erro: true);
@@ -235,9 +287,9 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
               _TemaSelector(value: tema, onChanged: _saveTema),
               const _SectionTitle('Perfil'),
               _perfilFields(wide),
+              const SizedBox(height: AppSpacing.sm),
+              AppButton(label: 'Salvar perfil', onPressed: _save),
               _marcaLaudoSection(),
-              const SizedBox(height: AppSpacing.lg),
-              AppButton(label: 'Salvar', onPressed: _save),
               const _SectionTitle('Dados e Backup'),
               _backupTiles(wide),
               const _SectionTitle('Sobre'),
@@ -266,6 +318,23 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       textoLivre: true,
       capitalization: TextCapitalization.words,
     );
+    final contato = _ConfigTextField(
+      controller: _contato,
+      focusNode: _contatoFocus,
+      label: 'Contato',
+      expand: !wide,
+      textoLivre: true,
+      keyboardType: TextInputType.phone,
+    );
+    final email = _ConfigTextField(
+      controller: _email,
+      focusNode: _emailFocus,
+      label: 'E-mail',
+      expand: !wide,
+      textoLivre: true,
+      keyboardType: TextInputType.emailAddress,
+      autocorrect: false,
+    );
     final crea = _ConfigTextField(
       controller: _crea,
       focusNode: _creaFocus,
@@ -274,7 +343,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       textoLivre: true,
     );
     if (!wide) {
-      return Column(children: [nome, empresa, crea]);
+      return Column(children: [nome, empresa, contato, email, crea]);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -285,6 +354,15 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
             Expanded(child: nome),
             const SizedBox(width: AppSpacing.md),
             Expanded(child: empresa),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: contato),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(child: email),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
@@ -317,6 +395,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
               _LogoMarcaPreview(
                 marcaLogoArquivo: config.marcaLogoArquivo,
                 marcaLogoService: _marcaLogo,
+                imageCacheEpoch: _logoPreviewEpoch,
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -346,38 +425,216 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
             style: Theme.of(context).textTheme.labelLarge,
           ),
           const SizedBox(height: AppSpacing.sm),
-          _CorMarcaSelector(
-            config: config,
-            onPreset: _salvarCorMarca,
-            onPersonalizada: _abrirCorPersonalizada,
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<TipoCabecalhoLaudo>(
+              showSelectedIcon: false,
+              segments: [
+                for (final tipo in TipoCabecalhoLaudo.values)
+                  ButtonSegment(
+                    value: tipo,
+                    label: Text(tipo.label),
+                  ),
+              ],
+              selected: {config.tipoCabecalhoLaudo},
+              onSelectionChanged: (selected) =>
+                  _salvarTipoCabecalho(selected.first),
+            ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          if (config.tipoCabecalhoLaudo == TipoCabecalhoLaudo.solida) ...[
+            _CorMarcaSelector(
+              selected: config.corMarcaPdf,
+              swatchPersonalizada: corMarcaCabecalhoLaudo(config),
+              onPreset: _salvarCorMarca,
+              onPersonalizada: () => _abrirCorPersonalizada(_AlvoCorMarca.solida),
+            ),
+          ],
+          if (config.tipoCabecalhoLaudo == TipoCabecalhoLaudo.gradiente) ...[
+            Text(
+              'Cor inicial',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _CorMarcaSelector(
+              selected: config.corMarcaGradienteInicioPdf,
+              swatchPersonalizada: corMarcaGradienteInicioLaudo(config),
+              onPreset: (cor) => _salvarCorGradienteInicio(cor),
+              onPersonalizada: () =>
+                  _abrirCorPersonalizada(_AlvoCorMarca.gradienteInicio),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Cor final',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _CorMarcaSelector(
+              selected: config.corMarcaGradienteFimPdf,
+              swatchPersonalizada: corMarcaGradienteFimLaudo(config),
+              onPreset: (cor) => _salvarCorGradienteFim(cor),
+              onPersonalizada: () =>
+                  _abrirCorPersonalizada(_AlvoCorMarca.gradienteFim),
+            ),
+          ],
+          if (config.tipoCabecalhoLaudo == TipoCabecalhoLaudo.imagem) ...[
+            Text(
+              'Imagem de fundo',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _escolherFundoCabecalho(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library_outlined, size: 20),
+                    label: const Text('Galeria'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _escolherFundoCabecalho(ImageSource.camera),
+                    icon: const Icon(Icons.photo_camera_outlined, size: 20),
+                    label: const Text('Câmera'),
+                  ),
+                ),
+              ],
+            ),
+            if (config.marcaFundoCabecalhoArquivo.trim().isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(
+                onPressed: _removerFundoCabecalho,
+                child: const Text('Remover imagem de fundo'),
+              ),
+            ],
+          ],
           const SizedBox(height: AppSpacing.md),
           _PreviewCabecalhoLaudo(
             config: config,
             marcaLogoService: _marcaLogo,
+            marcaFundoService: _marcaFundoCabecalho,
+            logoCacheEpoch: _logoPreviewEpoch,
+            fundoCacheEpoch: _fundoPreviewEpoch,
           ),
         ],
       ),
     );
   }
 
-  Future<void> _abrirCorPersonalizada() async {
+  Future<void> _abrirCorPersonalizada(_AlvoCorMarca alvo) async {
     try {
       final provider = context.read<ConfiguracoesProvider>();
       final atual = provider.configuracoes;
-      final picked = await showSeletorCorMarcaDialog(
-        context,
-        initial: corMarcaCabecalhoLaudo(atual),
-      );
+      final initial = switch (alvo) {
+        _AlvoCorMarca.solida => corMarcaCabecalhoLaudo(atual),
+        _AlvoCorMarca.gradienteInicio => corMarcaGradienteInicioLaudo(atual),
+        _AlvoCorMarca.gradienteFim => corMarcaGradienteFimLaudo(atual),
+      };
+      final picked = await showSeletorCorMarcaDialog(context, initial: initial);
       if (picked == null) return;
+      final argb = picked.toARGB32();
       await provider.save(
-        atual.copyWith(
-          corMarcaPdf: CorMarcaPdf.personalizada,
-          corMarcaPersonalizadaArgb: picked.toARGB32(),
+        switch (alvo) {
+          _AlvoCorMarca.solida => atual.copyWith(
+              corMarcaPdf: CorMarcaPdf.personalizada,
+              corMarcaPersonalizadaArgb: argb,
+            ),
+          _AlvoCorMarca.gradienteInicio => atual.copyWith(
+              corMarcaGradienteInicioPdf: CorMarcaPdf.personalizada,
+              corMarcaGradienteInicioArgb: argb,
+            ),
+          _AlvoCorMarca.gradienteFim => atual.copyWith(
+              corMarcaGradienteFimPdf: CorMarcaPdf.personalizada,
+              corMarcaGradienteFimArgb: argb,
+            ),
+        },
+      );
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
+    }
+  }
+
+  Future<void> _salvarTipoCabecalho(TipoCabecalhoLaudo tipo) async {
+    try {
+      final provider = context.read<ConfiguracoesProvider>();
+      if (provider.configuracoes.tipoCabecalhoLaudo == tipo) return;
+      await provider.save(
+        provider.configuracoes.copyWith(tipoCabecalhoLaudo: tipo),
+      );
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
+    }
+  }
+
+  Future<void> _salvarCorGradienteInicio(CorMarcaPdf cor) async {
+    try {
+      final provider = context.read<ConfiguracoesProvider>();
+      if (provider.configuracoes.corMarcaGradienteInicioPdf == cor) return;
+      await provider.save(
+        provider.configuracoes.copyWith(
+          corMarcaGradienteInicioPdf: cor,
+          limparGradienteInicioArgb: true,
         ),
       );
     } on StorageException catch (error) {
       _feedback(error.message, erro: true);
+    }
+  }
+
+  Future<void> _salvarCorGradienteFim(CorMarcaPdf cor) async {
+    try {
+      final provider = context.read<ConfiguracoesProvider>();
+      if (provider.configuracoes.corMarcaGradienteFimPdf == cor) return;
+      await provider.save(
+        provider.configuracoes.copyWith(
+          corMarcaGradienteFimPdf: cor,
+          limparGradienteFimArgb: true,
+        ),
+      );
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
+    }
+  }
+
+  Future<void> _escolherFundoCabecalho(ImageSource source) async {
+    try {
+      final picked = await _imagePicker.pickImage(source: source);
+      if (picked == null || !mounted) return;
+      final arquivo =
+          await _marcaFundoCabecalho.salvarFundo(File(picked.path));
+      if (!mounted) return;
+      final provider = context.read<ConfiguracoesProvider>();
+      await provider.save(
+        provider.configuracoes.copyWith(marcaFundoCabecalhoArquivo: arquivo),
+      );
+      _bumpFundoPreview();
+      _feedback('Imagem de fundo salva para o laudo.');
+    } on StateError catch (error) {
+      _feedback(error.message, erro: true);
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
+    } catch (error) {
+      debugPrint('Erro ao salvar fundo do cabeçalho: $error');
+      _feedback('Não foi possível salvar a imagem de fundo.', erro: true);
+    }
+  }
+
+  Future<void> _removerFundoCabecalho() async {
+    try {
+      await _marcaFundoCabecalho.removerFundo();
+      final provider = context.read<ConfiguracoesProvider>();
+      await provider.save(
+        provider.configuracoes.copyWith(marcaFundoCabecalhoArquivo: ''),
+      );
+      _bumpFundoPreview();
+      _feedback('Imagem de fundo removida.');
+    } on StorageException catch (error) {
+      _feedback(error.message, erro: true);
+    } catch (error) {
+      debugPrint('Erro ao remover fundo do cabeçalho: $error');
+      _feedback('Não foi possível remover a imagem de fundo.', erro: true);
     }
   }
 
@@ -390,6 +647,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       await provider.save(
         provider.configuracoes.copyWith(marcaLogoArquivo: arquivo),
       );
+      _bumpLogoPreview();
       _feedback('Logo salvo para o laudo.');
     } on StateError catch (error) {
       _feedback(error.message, erro: true);
@@ -408,6 +666,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       await provider.save(
         provider.configuracoes.copyWith(marcaLogoArquivo: ''),
       );
+      _bumpLogoPreview();
       _feedback('Logo removido.');
     } on StorageException catch (error) {
       _feedback(error.message, erro: true);
@@ -514,16 +773,114 @@ class _PreviewCabecalhoLaudo extends StatelessWidget {
   const _PreviewCabecalhoLaudo({
     required this.config,
     required this.marcaLogoService,
+    required this.marcaFundoService,
+    required this.logoCacheEpoch,
+    required this.fundoCacheEpoch,
   });
 
   final Configuracoes config;
   final MarcaLogoService marcaLogoService;
+  final MarcaFundoCabecalhoService marcaFundoService;
+  final int logoCacheEpoch;
+  final int fundoCacheEpoch;
 
   @override
   Widget build(BuildContext context) {
-    final fundo = corMarcaCabecalhoLaudo(config);
-    final texto = textoSobreCorMarcaLaudo(fundo);
+    final texto = textoSobreCabecalhoLaudo(config);
     final marca = config.textoMarcaCabecalho();
+    final modoImagem = config.tipoCabecalhoLaudo == TipoCabecalhoLaudo.imagem;
+    final temArquivoFundo =
+        config.marcaFundoCabecalhoArquivo.trim().isNotEmpty;
+
+    Widget linhaCabecalho() {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _LogoMarcaPreview(
+            marcaLogoArquivo: config.marcaLogoArquivo,
+            marcaLogoService: marcaLogoService,
+            modo: _LogoMarcaPreviewModo.cabecalhoLaudo,
+            imageCacheEpoch: logoCacheEpoch,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _TextoMarcaCabecalhoPreview(
+              marca: marca,
+              linhaContato: config.linhaContatoPerfilLaudo(),
+              corPrimaria: texto,
+              corSecundaria: textoSecundarioSobreCabecalhoLaudo(config),
+            ),
+          ),
+        ],
+      );
+    }
+
+    Widget faixaCorOuGradiente() {
+      return Container(
+        width: double.infinity,
+        padding: LayoutFaixaCabecalhoLaudo.padding(),
+        decoration: decoracaoFaixaCabecalhoLaudo(config),
+        child: linhaCabecalho(),
+      );
+    }
+
+    Widget faixaImagem(File? arquivoFundo) {
+      final padding = LayoutFaixaCabecalhoLaudo.padding();
+      final raio = LayoutFaixaCabecalhoLaudo.borderRadius();
+
+      if (arquivoFundo == null || !temArquivoFundo) {
+        return Container(
+          width: double.infinity,
+          padding: padding,
+          decoration: decoracaoFaixaCabecalhoLaudo(config),
+          child: linhaCabecalho(),
+        );
+      }
+
+      return ClipRRect(
+        borderRadius: raio,
+        child: SizedBox(
+          width: double.infinity,
+          height: LayoutFaixaCabecalhoLaudo.alturaFaixaImagem(config),
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              Positioned.fill(
+                child: Image(
+                  key: ValueKey('fundo-$fundoCacheEpoch-${arquivoFundo.path}'),
+                  image: FileImage(arquivoFundo),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const Positioned.fill(
+                child: ColoredBox(color: overlayImagemCabecalhoLaudo),
+              ),
+              Padding(
+                padding: padding,
+                child: linhaCabecalho(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget faixa() {
+      if (modoImagem && temArquivoFundo) {
+        return FutureBuilder<File?>(
+          future: marcaFundoService.arquivoExistente(
+            config.marcaFundoCabecalhoArquivo,
+          ),
+          builder: (context, snapshot) =>
+              faixaImagem(snapshot.data),
+        );
+      }
+      if (modoImagem) {
+        return faixaImagem(null);
+      }
+      return faixaCorOuGradiente();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -532,32 +889,49 @@ class _PreviewCabecalhoLaudo extends StatelessWidget {
           style: Theme.of(context).textTheme.labelLarge,
         ),
         const SizedBox(height: AppSpacing.sm),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: fundo,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          child: Row(
-            children: [
-              _LogoMarcaPreview(
-                marcaLogoArquivo: config.marcaLogoArquivo,
-                marcaLogoService: marcaLogoService,
+        faixa(),
+      ],
+    );
+  }
+}
+
+class _TextoMarcaCabecalhoPreview extends StatelessWidget {
+  const _TextoMarcaCabecalhoPreview({
+    required this.marca,
+    required this.linhaContato,
+    required this.corPrimaria,
+    required this.corSecundaria,
+  });
+
+  final String marca;
+  final String? linhaContato;
+  final Color corPrimaria;
+  final Color corSecundaria;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          marca,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: corPrimaria,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  marca,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: texto,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-            ],
-          ),
         ),
+        if (linhaContato != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            linhaContato!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: corSecundaria,
+                  fontSize: 11,
+                  height: 1.2,
+                ),
+          ),
+        ],
       ],
     );
   }
@@ -574,6 +948,7 @@ class _ConfigTextField extends StatelessWidget {
     this.onChanged,
     this.numerico = false,
     this.textoLivre = false,
+    this.autocorrect = true,
     this.capitalization = TextCapitalization.none,
   });
 
@@ -586,6 +961,7 @@ class _ConfigTextField extends StatelessWidget {
   final VoidCallback? onChanged;
   final bool numerico;
   final bool textoLivre;
+  final bool autocorrect;
   final TextCapitalization capitalization;
 
   @override
@@ -595,8 +971,8 @@ class _ConfigTextField extends StatelessWidget {
       focusNode: focusNode,
       keyboardType: keyboardType,
       textCapitalization: capitalization,
-      autocorrect: textoLivre,
-      enableSuggestions: textoLivre,
+      autocorrect: textoLivre && autocorrect,
+      enableSuggestions: textoLivre && autocorrect,
       spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
       inputFormatters: numerico
           ? [
@@ -692,14 +1068,24 @@ class _AboutCard extends StatelessWidget {
   }
 }
 
+enum _LogoMarcaPreviewModo { miniatura, cabecalhoLaudo }
+
+/// Alinhado ao chip da logo em [RegulagemPdfService._conteudoLinhaCabecalho].
+const double _logoMarcaAlturaCabecalhoLaudo = 24;
+const double _logoMarcaPaddingChip = 2;
+
 class _LogoMarcaPreview extends StatelessWidget {
   const _LogoMarcaPreview({
     required this.marcaLogoArquivo,
     required this.marcaLogoService,
+    this.modo = _LogoMarcaPreviewModo.miniatura,
+    this.imageCacheEpoch = 0,
   });
 
   final String marcaLogoArquivo;
   final MarcaLogoService marcaLogoService;
+  final _LogoMarcaPreviewModo modo;
+  final int imageCacheEpoch;
 
   @override
   Widget build(BuildContext context) {
@@ -708,33 +1094,86 @@ class _LogoMarcaPreview extends StatelessWidget {
       future: marcaLogoService.arquivoExistente(marcaLogoArquivo),
       builder: (context, snapshot) {
         final file = snapshot.data;
-        return Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: colors.surfaceAlt,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: colors.border),
+        if (modo == _LogoMarcaPreviewModo.cabecalhoLaudo) {
+          return _chipLogo(
+            colors: colors,
+            borderRadius: 4,
+            child: file != null
+                ? Image.file(
+                    file,
+                    key: ValueKey(
+                      'logo-$imageCacheEpoch-${file.path}',
+                    ),
+                    height: _logoMarcaAlturaCabecalhoLaudo,
+                    fit: BoxFit.contain,
+                  )
+                : SizedBox(
+                    height: _logoMarcaAlturaCabecalhoLaudo,
+                    width: _logoMarcaAlturaCabecalhoLaudo,
+                    child: Icon(
+                      Icons.business_outlined,
+                      size: 18,
+                      color: colors.textTertiary,
+                    ),
+                  ),
+          );
+        }
+
+        const outer = 56.0;
+        return SizedBox(
+          width: outer,
+          height: outer,
+          child: _chipLogo(
+            colors: colors,
+            borderRadius: AppRadius.md,
+            clip: true,
+            child: file != null
+                ? Image.file(
+                    file,
+                    key: ValueKey(
+                      'logo-$imageCacheEpoch-${file.path}',
+                    ),
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    height: double.infinity,
+                  )
+                : Icon(Icons.business_outlined, color: colors.textTertiary),
           ),
-          clipBehavior: Clip.antiAlias,
-          alignment: Alignment.center,
-          child: file != null
-              ? Image.file(file, fit: BoxFit.contain)
-              : Icon(Icons.business_outlined, color: colors.textTertiary),
         );
       },
+    );
+  }
+
+  Widget _chipLogo({
+    required AppThemeColors colors,
+    required double borderRadius,
+    required Widget child,
+    bool clip = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(_logoMarcaPaddingChip),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: colors.border.withValues(alpha: 0.65)),
+      ),
+      clipBehavior: clip ? Clip.antiAlias : Clip.none,
+      alignment: Alignment.center,
+      child: child,
     );
   }
 }
 
 class _CorMarcaSelector extends StatelessWidget {
   const _CorMarcaSelector({
-    required this.config,
+    required this.selected,
+    required this.swatchPersonalizada,
     required this.onPreset,
     required this.onPersonalizada,
   });
 
-  final Configuracoes config;
+  final CorMarcaPdf selected;
+  final Color swatchPersonalizada;
   final ValueChanged<CorMarcaPdf> onPreset;
   final VoidCallback onPersonalizada;
 
@@ -748,9 +1187,9 @@ class _CorMarcaSelector extends StatelessWidget {
           _CorMarcaOption(
             cor: cor,
             swatch: cor == CorMarcaPdf.personalizada
-                ? corMarcaCabecalhoLaudo(config)
+                ? swatchPersonalizada
                 : cor.color,
-            selected: cor == config.corMarcaPdf,
+            selected: cor == selected,
             onTap: () {
               if (cor == CorMarcaPdf.personalizada) {
                 onPersonalizada();

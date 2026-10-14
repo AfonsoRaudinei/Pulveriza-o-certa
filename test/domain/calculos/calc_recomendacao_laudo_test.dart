@@ -101,15 +101,25 @@ void main() {
     expect(d.planoLaudo.acoes.trocar, isEmpty);
   });
 
-  test('(d) custo igual ao prejuízo → unitária', () {
+  test('(d) custo igual ao prejuízo da safra → troca completa', () {
     final d = _diagnosticoNova4();
     final precoIgual = d.perdaTotal / d.totalPontas;
     final d2 = _diagnosticoNova4(precoBico: precoIgual);
-    expect(d2.planoLaudo.tipo, TipoRecomendacaoLaudo.unitaria);
+    expect(d2.planoLaudo.tipo, TipoRecomendacaoLaudo.completa);
+    expect(d2.planoLaudo.trocaTodosOsBicos, isTrue);
     expect(
       d2.planoLaudo.custoTrocaCompleta,
       closeTo(d2.perdaTotal, 0.02),
     );
+    expect(d2.recomendacao.tipo, TipoRecomendacao.trocaCompleta);
+  });
+
+  test('(d2) custo logo acima do prejuízo da safra → troca unitária', () {
+    final d = _diagnosticoNova4();
+    final precoEmpate = d.perdaTotal / d.totalPontas;
+    final d2 = _diagnosticoNova4(precoBico: precoEmpate + 0.01);
+    expect(d2.planoLaudo.tipo, TipoRecomendacaoLaudo.unitaria);
+    expect(d2.planoLaudo.trocaTodosOsBicos, isFalse);
   });
 
   test('(e) dados incompletos e pontas pendentes', () {
